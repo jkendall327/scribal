@@ -55,28 +55,49 @@ public class InterfaceManager(CommandService commands, IModelClient client)
             else if (!string.IsNullOrWhiteSpace(input))
             {
                 // Handle as conversation with AI
-                await ProcessAiConversation(input);
+                await ProcessConversation(input);
             }
         }
 
         AnsiConsole.MarkupLine("[yellow]Thank you for using Fiction Aider. Goodbye![/]");
     }
 
-    private async Task ProcessAiConversation(string userInput)
+    private async Task ProcessConversation(string userInput)
     {
         var rule = new Rule();
         
         AnsiConsole.Write(rule);
         
+        // We want to stream in updates ASAP to the UI.
+        // But we also want to save the completed response to store it in our chat history.
+        // ToChatResponseAsync() only works on IAsyncEnumerable<ChatResponseUpdate>,
+        // so use a dummy ToAsyncEnumerable method to get it working.
         var response = client.GetResponse(userInput);
-                
+
+        var updates = new List<ChatResponseUpdate>();
+        
         await foreach (var chunk in response)
         {
+            updates.Add(chunk);
             AnsiConsole.Write(chunk.Text);
         }
 
+        var completedResponse = await ToAsyncEnumerable(updates).ToChatResponseAsync();
+        
+        client.UpdateConversationHistory(completedResponse);
+        
         AnsiConsole.WriteLine();
         
         AnsiConsole.Write(rule);
+    }
+
+    private async IAsyncEnumerable<ChatResponseUpdate> ToAsyncEnumerable(List<ChatResponseUpdate> updates)
+    {
+        await Task.Yield();
+        
+        foreach (var chatResponseUpdate in updates)
+        {
+            yield return chatResponseUpdate;
+        }
     }
 }

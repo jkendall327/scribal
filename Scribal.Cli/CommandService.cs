@@ -4,7 +4,7 @@ namespace Scribal.Cli;
 
 public class CommandService
 {
-    Dictionary<string, Func<string, Task<bool>>> Commands = new()
+    private readonly Dictionary<string, Func<string, Task<bool>>> _commands = new()
     {
         {
             "/quit", QuitCommand
@@ -34,20 +34,20 @@ public class CommandService
 
     public bool TryGetCommand(string command, out Func<string, Task<bool>> func)
     {
-        return Commands.TryGetValue(command, out func!);
+        return _commands.TryGetValue(command, out func!);
     }
 
-    private static async Task<bool> QuitCommand(string arguments)
+    private static Task<bool> QuitCommand(string arguments)
     {
         if (AnsiConsole.Confirm("Are you sure you want to quit?"))
         {
-            return false; // Return false to exit the main loop
+            return Task.FromResult(false); // Return false to exit the main loop
         }
 
-        return true;
+        return Task.FromResult(true);
     }
 
-    private static async Task<bool> HelpCommand(string arguments)
+    private static Task<bool> HelpCommand(string arguments)
     {
         var table = new Table().Border(TableBorder.Rounded).AddColumn("Command").AddColumn("Description");
 
@@ -63,32 +63,32 @@ public class CommandService
         AnsiConsole.WriteLine();
         AnsiConsole.MarkupLine("[italic]Type anything without a leading / to talk directly to your AI assistant[/]");
 
-        return true;
+        return Task.FromResult(true);
     }
 
-    private static async Task<bool> NewProjectCommand(string arguments)
+    private static Task<bool> NewProjectCommand(string arguments)
     {
         AnsiConsole.MarkupLine("[bold]Creating new project:[/] [green]{0}[/]",
             string.IsNullOrEmpty(arguments) ? "Untitled Project" : arguments);
 
         // Project creation logic would go here
 
-        return true;
+        return Task.FromResult(true);
     }
 
-    private static async Task<bool> OpenProjectCommand(string arguments)
+    private static Task<bool> OpenProjectCommand(string arguments)
     {
         if (string.IsNullOrEmpty(arguments))
         {
             AnsiConsole.MarkupLine("[yellow]Please specify a project path.[/]");
-            return true;
+            return Task.FromResult(true);
         }
 
         AnsiConsole.MarkupLine("[bold]Opening project:[/] [green]{0}[/]", arguments);
 
         // Project opening logic would go here
 
-        return true;
+        return Task.FromResult(true);
     }
 
     private static async Task<bool> SaveCommand(string arguments)
@@ -108,7 +108,7 @@ public class CommandService
         return true;
     }
 
-    private static async Task<bool> ListCharactersCommand(string arguments)
+    private static Task<bool> ListCharactersCommand(string arguments)
     {
         // This would pull from actual data in a real implementation
         var characters = new List<(string Name, string Role, string Description)>
@@ -130,10 +130,10 @@ public class CommandService
 
         AnsiConsole.Write(table);
 
-        return true;
+        return Task.FromResult(true);
     }
 
-    private static async Task<bool> ViewPlotCommand(string arguments)
+    private static Task<bool> ViewPlotCommand(string arguments)
     {
         AnsiConsole.MarkupLine("[bold underline]Current Plot Structure[/]");
         AnsiConsole.WriteLine();
@@ -158,6 +158,6 @@ public class CommandService
 
         AnsiConsole.Write(tree);
 
-        return true;
+        return Task.FromResult(true);
     }
 }

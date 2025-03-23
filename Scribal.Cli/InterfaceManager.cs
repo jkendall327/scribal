@@ -4,7 +4,7 @@ namespace Scribal.Cli;
 
 public class InterfaceManager(CommandService commands)
 {
-    public async Task DisplayWelcome()
+    public Task DisplayWelcome()
     {
         AnsiConsole.Clear();
 
@@ -17,6 +17,7 @@ public class InterfaceManager(CommandService commands)
         AnsiConsole.MarkupLine(
             "Type [blue]/help[/] for available commands or just start typing to talk to your assistant.");
         AnsiConsole.WriteLine();
+        return Task.CompletedTask;
     }
 
     public async Task RunMainLoop()
@@ -60,7 +61,7 @@ public class InterfaceManager(CommandService commands)
         AnsiConsole.MarkupLine("[yellow]Thank you for using Fiction Aider. Goodbye![/]");
     }
 
-    static async Task ProcessAiConversation(string userInput)
+    private static async Task ProcessAiConversation(string userInput)
     {
         // In a real implementation, this would call the AI service
         // For now, we'll just simulate a response
@@ -68,7 +69,7 @@ public class InterfaceManager(CommandService commands)
         await AnsiConsole.Status()
             .Spinner(Spinner.Known.Dots)
             .StartAsync("Thinking...",
-                async ctx =>
+                async _ =>
                 {
                     // Simulate AI processing time
                     await Task.Delay(1500);
@@ -83,7 +84,7 @@ public class InterfaceManager(CommandService commands)
         AnsiConsole.Write(panel);
     }
 
-    static string GetDummyAiResponse(string userInput)
+    private static string GetDummyAiResponse(string userInput)
     {
         // Just a simple response system for demonstration
         if (userInput.Contains("character", StringComparison.OrdinalIgnoreCase))

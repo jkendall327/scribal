@@ -17,7 +17,6 @@ builder.Services.AddSingleton(new OpenAIClient(key));
 
 builder.Services
     .AddChatClient(services => services.GetRequiredService<OpenAIClient>().AsChatClient("gpt-4o-mini"))
-    .UseDistributedCache()
     .UseLogging()
     .UseFunctionInvocation();
 

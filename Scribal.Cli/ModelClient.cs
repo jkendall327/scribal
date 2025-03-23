@@ -1,14 +1,25 @@
+using System.ComponentModel;
+using Microsoft.Extensions.AI;
+
 namespace Scribal.Cli;
 
 public interface IModelClient
 {
-    IAsyncEnumerable<string> GetResponse(string input);
+    IAsyncEnumerable<ChatResponseUpdate> GetResponse(string input);
 }
 
-public class ModelClient : IModelClient
+public class ModelClient(IChatClient client) : IModelClient
 {
-    public IAsyncEnumerable<string> GetResponse(string input)
+    [Description("Gets the weather")]
+    private string GetWeather() => Random.Shared.NextDouble() > 0.5 ? "It's sunny" : "It's raining";
+
+    public IAsyncEnumerable<ChatResponseUpdate> GetResponse(string input)
     {
-        throw new NotImplementedException();
+        var chatOptions = new ChatOptions
+        {
+            Tools = [AIFunctionFactory.Create(GetWeather)]
+        };
+
+        return client.GetStreamingResponseAsync("input", chatOptions);
     }
 }

@@ -1,3 +1,5 @@
+using LibGit2Sharp;
+
 namespace Scribal.Cli;
 
 public interface IGitService
@@ -10,8 +12,10 @@ public interface IGitService
     Task<bool> CreateCommit();
 }
 
-public class GitService : IGitService
+public sealed class GitService(string path) : IGitService, IDisposable
 {
+    private readonly Repository _repo = new(path);
+
     public Task<string> GetRepoName()
     {
         throw new NotImplementedException();
@@ -24,7 +28,8 @@ public class GitService : IGitService
 
     public Task<string> GetCurrentBranch()
     {
-        throw new NotImplementedException();
+        var name = _repo.Head.FriendlyName;
+        return Task.FromResult(name);
     }
 
     public Task<string> GetCurrentCommit()
@@ -40,5 +45,10 @@ public class GitService : IGitService
     public Task<bool> CreateCommit()
     {
         throw new NotImplementedException();
+    }
+
+    public void Dispose()
+    {
+        _repo.Dispose();
     }
 }

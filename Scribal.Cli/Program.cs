@@ -11,6 +11,7 @@ builder.Configuration.AddUserSecrets<Program>();
 
 builder.Services.AddSingleton<CommandService>();
 builder.Services.AddSingleton<InterfaceManager>();
+builder.Services.AddSingleton<IModelClient, ModelClient>();
 
 var key = builder.Configuration["OPENAI_API_KEY"];
 builder.Services.AddSingleton(new OpenAIClient(key));

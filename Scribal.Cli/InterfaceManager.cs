@@ -1,8 +1,9 @@
+using Microsoft.Extensions.AI;
 using Spectre.Console;
 
 namespace Scribal.Cli;
 
-public class InterfaceManager(CommandService commands)
+public class InterfaceManager(CommandService commands, IModelClient client)
 {
     public Task DisplayWelcome()
     {
@@ -61,20 +62,28 @@ public class InterfaceManager(CommandService commands)
         AnsiConsole.MarkupLine("[yellow]Thank you for using Fiction Aider. Goodbye![/]");
     }
 
-    private static async Task ProcessAiConversation(string userInput)
+    private async Task ProcessAiConversation(string userInput)
     {
         // In a real implementation, this would call the AI service
         // For now, we'll just simulate a response
 
+        IAsyncEnumerable<ChatResponseUpdate> response;
+        
         await AnsiConsole.Status()
             .Spinner(Spinner.Known.Dots)
-            .StartAsync("Thinking...",
+            .Start("Thinking...",
                 async _ =>
                 {
-                    // Simulate AI processing time
-                    await Task.Delay(1500);
+                    response = client.GetResponse(userInput);
+
+                    await foreach (var chunk in response)
+                    {
+                        AnsiConsole.Write(chunk.Text);
+                    }
                 });
 
+        return;
+        
         var panel = new Panel(GetDummyAiResponse(userInput)).Header("AI Assistant")
             .HeaderAlignment(Justify.Center)
             .Padding(1, 1, 1, 1)

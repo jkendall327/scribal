@@ -20,6 +20,6 @@ public class ModelClient(IChatClient client) : IModelClient
             Tools = [AIFunctionFactory.Create(GetWeather)]
         };
 
-        return client.GetStreamingResponseAsync("input", chatOptions);
+        return client.GetStreamingResponseAsync(input, chatOptions);
     }
 }

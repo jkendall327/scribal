@@ -64,57 +64,19 @@ public class InterfaceManager(CommandService commands, IModelClient client)
 
     private async Task ProcessAiConversation(string userInput)
     {
-        // In a real implementation, this would call the AI service
-        // For now, we'll just simulate a response
-
-        IAsyncEnumerable<ChatResponseUpdate> response;
+        var rule = new Rule();
         
-        await AnsiConsole.Status()
-            .Spinner(Spinner.Known.Dots)
-            .Start("Thinking...",
-                async _ =>
-                {
-                    response = client.GetResponse(userInput);
-
-                    await foreach (var chunk in response)
-                    {
-                        AnsiConsole.Write(chunk.Text);
-                    }
-                });
-
-        return;
+        AnsiConsole.Write(rule);
         
-        var panel = new Panel(GetDummyAiResponse(userInput)).Header("AI Assistant")
-            .HeaderAlignment(Justify.Center)
-            .Padding(1, 1, 1, 1)
-            .Border(BoxBorder.Rounded)
-            .BorderColor(Color.Blue);
-
-        AnsiConsole.Write(panel);
-    }
-
-    private static string GetDummyAiResponse(string userInput)
-    {
-        // Just a simple response system for demonstration
-        if (userInput.Contains("character", StringComparison.OrdinalIgnoreCase))
+        var response = client.GetResponse(userInput);
+                
+        await foreach (var chunk in response)
         {
-            return
-                "I can help you develop your character! Consider aspects like their background, motivations, flaws, and how they might grow through your story.";
+            AnsiConsole.Write(chunk.Text);
         }
 
-        if (userInput.Contains("plot", StringComparison.OrdinalIgnoreCase))
-        {
-            return
-                "When developing your plot, remember to include a compelling inciting incident, rising action with appropriate complications, and a satisfying resolution that ties up the important threads.";
-        }
-
-        if (userInput.Contains("scene", StringComparison.OrdinalIgnoreCase))
-        {
-            return
-                "For engaging scenes, balance action, dialogue, and description. Make sure each scene moves the story forward in some way - either through plot advancement or character development.";
-        }
-
-        return
-            "I'm your fiction writing assistant. I can help with character development, plot structure, scene crafting, world-building, and more. What aspect of your story would you like to work on?";
+        AnsiConsole.WriteLine();
+        
+        AnsiConsole.Write(rule);
     }
 }

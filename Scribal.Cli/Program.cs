@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.AI;
+﻿using System.IO.Abstractions;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -9,7 +10,12 @@ var builder = Host.CreateApplicationBuilder(args);
 
 builder.Configuration.AddUserSecrets<Program>();
 
+var filesystem = new FileSystem();
+
+builder.Services.AddSingleton<IFileSystem>(filesystem);
 builder.Services.AddSingleton<CommandService>();
+builder.Services.AddSingleton<PromptBuilder>();
+builder.Services.AddSingleton<IDocumentScanService, DocumentScanService>();
 builder.Services.AddSingleton<InterfaceManager>();
 builder.Services.AddSingleton<IConversationStore, ConversationStore>();
 builder.Services.AddSingleton<IModelClient, ModelClient>();

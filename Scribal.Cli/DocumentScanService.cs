@@ -1,4 +1,4 @@
-using System.IO;
+using System.IO.Abstractions;
 
 namespace Scribal.Cli;
 
@@ -22,14 +22,14 @@ public class DirectoryNode
     public List<DirectoryNode> Subdirectories { get; set; } = new List<DirectoryNode>();
     public List<DocumentInfo> Documents { get; set; } = new List<DocumentInfo>();
 
-    public DirectoryNode(string path)
+    public DirectoryNode(string path, IFileSystem fileSystem)
     {
         Path = path;
-        Name = System.IO.Path.GetFileName(path);
+        Name = fileSystem.Path.GetFileName(path);
         // If it's the root directory and the name is empty, use the directory name
         if (string.IsNullOrEmpty(Name))
         {
-            Name = new DirectoryInfo(path).Name;
+            Name = fileSystem.DirectoryInfo.FromDirectoryName(path).Name;
         }
     }
 
@@ -41,40 +41,46 @@ public class DirectoryNode
 
 public interface IDocumentScanService
 {
-    Task<DirectoryNode> ScanDirectoryForMarkdownAsync(string rootDirectory);
+    Task<DirectoryNode> ScanDirectoryForMarkdownAsync(IDirectoryInfo rootDirectory);
 }
 
 public class DocumentScanService : IDocumentScanService
 {
     private readonly string[] _markdownExtensions = { ".md", ".markdown" };
+    private readonly IFileSystem _fileSystem;
 
-    public async Task<DirectoryNode> ScanDirectoryForMarkdownAsync(string rootDirectory)
+    public DocumentScanService(IFileSystem fileSystem)
     {
-        if (!Directory.Exists(rootDirectory))
+        _fileSystem = fileSystem;
+    }
+
+    public async Task<DirectoryNode> ScanDirectoryForMarkdownAsync(IDirectoryInfo rootDirectory)
+    {
+        if (!rootDirectory.Exists)
         {
-            return new DirectoryNode(rootDirectory);
+            return new DirectoryNode(rootDirectory.FullName, _fileSystem);
         }
 
         return await BuildDirectoryTreeAsync(rootDirectory, rootDirectory);
     }
 
-    private async Task<DirectoryNode> BuildDirectoryTreeAsync(string currentDirectory, string rootDirectory)
+    private async Task<DirectoryNode> BuildDirectoryTreeAsync(IDirectoryInfo currentDirectory, IDirectoryInfo rootDirectory)
     {
-        var directoryNode = new DirectoryNode(currentDirectory);
+        var directoryNode = new DirectoryNode(currentDirectory.FullName, _fileSystem);
         
         // Process all markdown files in the current directory
-        var markdownFiles = Directory.GetFiles(currentDirectory)
-            .Where(file => _markdownExtensions.Contains(Path.GetExtension(file).ToLowerInvariant()))
+        var markdownFiles = currentDirectory.GetFiles()
+            .Where(file => _markdownExtensions.Contains(_fileSystem.Path.GetExtension(file.FullName).ToLowerInvariant()))
             .ToList();
 
-        foreach (var filePath in markdownFiles)
+        foreach (var file in markdownFiles)
         {
-            var documentInfo = await ProcessMarkdownFileAsync(filePath, rootDirectory);
+            var documentInfo = await ProcessMarkdownFileAsync(file, rootDirectory);
             directoryNode.Documents.Add(documentInfo);
         }
 
         // Process all subdirectories
-        var subdirectories = Directory.GetDirectories(currentDirectory);
+        var subdirectories = currentDirectory.GetDirectories();
         foreach (var subdirectory in subdirectories)
         {
             var subdirectoryNode = await BuildDirectoryTreeAsync(subdirectory, rootDirectory);
@@ -84,16 +90,16 @@ public class DocumentScanService : IDocumentScanService
         return directoryNode;
     }
 
-    private async Task<DocumentInfo> ProcessMarkdownFileAsync(string filePath, string rootDirectory)
+    private async Task<DocumentInfo> ProcessMarkdownFileAsync(IFileInfo file, IDirectoryInfo rootDirectory)
     {
-        var content = await File.ReadAllTextAsync(filePath);
+        var content = await _fileSystem.File.ReadAllTextAsync(file.FullName);
         var headers = MarkdownMapExtractor.ExtractHeaders(content);
         
-        var relativePath = Path.GetRelativePath(rootDirectory, filePath);
+        var relativePath = _fileSystem.Path.GetRelativePath(rootDirectory.FullName, file.FullName);
         
         return new DocumentInfo
         {
-            FilePath = filePath,
+            FilePath = file.FullName,
             RelativePath = relativePath,
             Headers = headers
         };

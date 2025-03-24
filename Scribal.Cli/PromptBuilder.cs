@@ -108,6 +108,7 @@ public class PromptBuilder
     
     private async Task AppendSpecialFilesAsync(StringBuilder sb, IDirectoryInfo directory)
     {
+        // Process special files
         foreach (var specialFile in _specialFiles)
         {
             string filePath = _fileSystem.Path.Combine(directory.FullName, specialFile.Key);
@@ -119,6 +120,29 @@ public class PromptBuilder
                 
                 string fileContent = await _fileSystem.File.ReadAllTextAsync(filePath);
                 sb.AppendLine(fileContent);
+            }
+        }
+        
+        // Check for Characters directory
+        string charactersDirectoryPath = _fileSystem.Path.Combine(directory.FullName, "Characters");
+        if (_fileSystem.Directory.Exists(charactersDirectoryPath))
+        {
+            sb.AppendLine();
+            sb.AppendLine("# Character Files");
+            sb.AppendLine();
+            
+            var charactersDirectory = _fileSystem.DirectoryInfo.FromDirectoryName(charactersDirectoryPath);
+            var characterFiles = charactersDirectory.GetFiles()
+                .Where(file => _fileSystem.Path.GetExtension(file.FullName).ToLowerInvariant() == ".md")
+                .OrderBy(file => file.Name)
+                .ToList();
+                
+            foreach (var characterFile in characterFiles)
+            {
+                sb.AppendLine($"## {_fileSystem.Path.GetFileNameWithoutExtension(characterFile.Name)}");
+                string characterContent = await _fileSystem.File.ReadAllTextAsync(characterFile.FullName);
+                sb.AppendLine(characterContent);
+                sb.AppendLine();
             }
         }
     }

@@ -7,6 +7,12 @@ public class PromptBuilder
 {
     private readonly IDocumentScanService _scanService;
     private readonly IFileSystem _fileSystem;
+    private readonly Dictionary<string, string> _specialFiles = new()
+    {
+        { "PLOT.md", "# Plot Overview" },
+        { "CHARACTERS.md", "# Characters" },
+        { "STYLE.md", "# Style Guide" }
+    };
 
     public PromptBuilder(IDocumentScanService scanService, IFileSystem fileSystem)
     {
@@ -37,13 +43,10 @@ public class PromptBuilder
             stringBuilder.AppendLine(readmeContent);
         }
         
+        // Add special files if they exist
+        await AppendSpecialFilesAsync(stringBuilder, directory);
+        
         return stringBuilder.ToString();
-    }
-
-    public async Task<string> BuildPromptAsync()
-    {
-        var currentDirectory = _fileSystem.DirectoryInfo.FromDirectoryName(_fileSystem.Directory.GetCurrentDirectory());
-        return await BuildPromptAsync(currentDirectory);
     }
     
     private void AppendDirectoryStructure(StringBuilder sb, DirectoryNode node, int depth)
@@ -101,5 +104,22 @@ public class PromptBuilder
         }
         
         return null;
+    }
+    
+    private async Task AppendSpecialFilesAsync(StringBuilder sb, IDirectoryInfo directory)
+    {
+        foreach (var specialFile in _specialFiles)
+        {
+            string filePath = _fileSystem.Path.Combine(directory.FullName, specialFile.Key);
+            if (_fileSystem.File.Exists(filePath))
+            {
+                sb.AppendLine();
+                sb.AppendLine(specialFile.Value);
+                sb.AppendLine();
+                
+                string fileContent = await _fileSystem.File.ReadAllTextAsync(filePath);
+                sb.AppendLine(fileContent);
+            }
+        }
     }
 }

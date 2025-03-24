@@ -22,31 +22,34 @@ public class PromptBuilder
 
     public async Task<string> BuildPromptAsync(IDirectoryInfo directory)
     {
-        var directoryTree = await _scanService.ScanDirectoryForMarkdownAsync(directory);
+        var task = _scanService.ScanDirectoryForMarkdownAsync(directory);
         
-        var stringBuilder = new StringBuilder();
-        stringBuilder.AppendLine("# Project Structure");
-        stringBuilder.AppendLine("The following is a map of markdown documents in this project:");
-        stringBuilder.AppendLine();
+        var sb = new StringBuilder();
         
-        AppendDirectoryStructure(stringBuilder, directoryTree, 0);
+        sb.AppendLine("# Project Structure");
+        sb.AppendLine("The following is a map of markdown documents in this project:");
+        sb.AppendLine();
+
+        var directoryTree = await task;
+        
+        AppendDirectoryStructure(sb, directoryTree, 0);
         
         // Add README content if available
         var readmeDoc = FindReadmeDocument(directoryTree);
         if (readmeDoc != null)
         {
-            stringBuilder.AppendLine();
-            stringBuilder.AppendLine("# Project README");
-            stringBuilder.AppendLine();
+            sb.AppendLine();
+            sb.AppendLine("# Project README");
+            sb.AppendLine();
             
             string readmeContent = await _fileSystem.File.ReadAllTextAsync(readmeDoc.FilePath);
-            stringBuilder.AppendLine(readmeContent);
+            sb.AppendLine(readmeContent);
         }
         
         // Add special files if they exist
-        await AppendSpecialFilesAsync(stringBuilder, directory);
+        await AppendSpecialFilesAsync(sb, directory);
         
-        return stringBuilder.ToString();
+        return sb.ToString();
     }
     
     private void AppendDirectoryStructure(StringBuilder sb, DirectoryNode node, int depth)

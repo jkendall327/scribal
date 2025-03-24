@@ -15,35 +15,73 @@ public class DocumentInfo
     }
 }
 
+public class DirectoryNode
+{
+    public string Name { get; set; } = string.Empty;
+    public string Path { get; set; } = string.Empty;
+    public List<DirectoryNode> Subdirectories { get; set; } = new List<DirectoryNode>();
+    public List<DocumentInfo> Documents { get; set; } = new List<DocumentInfo>();
+
+    public DirectoryNode(string path)
+    {
+        Path = path;
+        Name = System.IO.Path.GetFileName(path);
+        // If it's the root directory and the name is empty, use the directory name
+        if (string.IsNullOrEmpty(Name))
+        {
+            Name = new DirectoryInfo(path).Name;
+        }
+    }
+
+    public override string ToString()
+    {
+        return $"{Name} ({Documents.Count} documents, {Subdirectories.Count} subdirectories)";
+    }
+}
+
 public interface IDocumentScanService
 {
-    Task<List<DocumentInfo>> ScanDirectoryForMarkdownAsync(string rootDirectory);
+    Task<DirectoryNode> ScanDirectoryForMarkdownAsync(string rootDirectory);
 }
 
 public class DocumentScanService : IDocumentScanService
 {
     private readonly string[] _markdownExtensions = { ".md", ".markdown" };
 
-    public async Task<List<DocumentInfo>> ScanDirectoryForMarkdownAsync(string rootDirectory)
+    public async Task<DirectoryNode> ScanDirectoryForMarkdownAsync(string rootDirectory)
     {
-        var result = new List<DocumentInfo>();
-        
         if (!Directory.Exists(rootDirectory))
         {
-            return result;
+            return new DirectoryNode(rootDirectory);
         }
 
-        var markdownFiles = Directory.GetFiles(rootDirectory, "*.*", SearchOption.AllDirectories)
+        return await BuildDirectoryTreeAsync(rootDirectory, rootDirectory);
+    }
+
+    private async Task<DirectoryNode> BuildDirectoryTreeAsync(string currentDirectory, string rootDirectory)
+    {
+        var directoryNode = new DirectoryNode(currentDirectory);
+        
+        // Process all markdown files in the current directory
+        var markdownFiles = Directory.GetFiles(currentDirectory)
             .Where(file => _markdownExtensions.Contains(Path.GetExtension(file).ToLowerInvariant()))
             .ToList();
 
         foreach (var filePath in markdownFiles)
         {
             var documentInfo = await ProcessMarkdownFileAsync(filePath, rootDirectory);
-            result.Add(documentInfo);
+            directoryNode.Documents.Add(documentInfo);
         }
 
-        return result;
+        // Process all subdirectories
+        var subdirectories = Directory.GetDirectories(currentDirectory);
+        foreach (var subdirectory in subdirectories)
+        {
+            var subdirectoryNode = await BuildDirectoryTreeAsync(subdirectory, rootDirectory);
+            directoryNode.Subdirectories.Add(subdirectoryNode);
+        }
+
+        return directoryNode;
     }
 
     private async Task<DocumentInfo> ProcessMarkdownFileAsync(string filePath, string rootDirectory)

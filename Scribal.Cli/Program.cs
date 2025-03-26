@@ -17,6 +17,7 @@ builder.Services.AddSingleton<CommandService>();
 builder.Services.AddSingleton<PromptBuilder>();
 builder.Services.AddSingleton<IDocumentScanService, DocumentScanService>();
 builder.Services.AddSingleton<InterfaceManager>();
+builder.Services.AddSingleton<DiffService>();
 builder.Services.AddSingleton<IConversationStore, ConversationStore>();
 builder.Services.AddSingleton<IModelClient, ModelClient>();
 builder.Services.AddSingleton<IGitService, GitService>(s => new(Directory.GetCurrentDirectory()));

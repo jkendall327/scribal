@@ -4,7 +4,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using OpenAI;
-using Ollama.Chat;
 using Scribal.Cli;
 
 var builder = Host.CreateApplicationBuilder(args);

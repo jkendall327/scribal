@@ -24,6 +24,43 @@ public class StickyTreeSelector
         _currentNodeIndex = 0;
     }
 
+    public static void Scan(string startPath)
+    {
+        AnsiConsole.MarkupLine($"Scanning starting from: [cyan]{startPath}[/]");
+
+        try
+        {
+            var selector = new StickyTreeSelector(startPath);
+            var selectedItems = selector.GetSelectedPaths();
+
+            if (selectedItems.Any())
+            {
+                AnsiConsole.MarkupLine("\n[green]You selected:[/]");
+                foreach (var item in selectedItems)
+                {
+                    AnsiConsole.MarkupLine($"- [blue]{item}[/]");
+                }
+            }
+            else
+            {
+                AnsiConsole.MarkupLine("\n[yellow]No items were selected.[/]");
+            }
+        }
+        catch (DirectoryNotFoundException ex)
+        {
+            AnsiConsole.MarkupLine($"[red]Error: {ex.Message}[/]");
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            AnsiConsole.MarkupLine($"[red]Error: Insufficient permissions to access parts of the directory tree. {
+                ex.Message}[/]");
+        }
+        catch (Exception ex)
+        {
+            AnsiConsole.WriteException(ex);
+        }
+    }
+
     public List<string> GetSelectedPaths()
     {
         Console.Clear();
@@ -89,18 +126,18 @@ public class StickyTreeSelector
                 break;
 
             case ConsoleKey.RightArrow:
-                {
-                    currentNode.IsExpanded = true;
-                    needsRedraw = true;
-                }
+            {
+                currentNode.IsExpanded = true;
+                needsRedraw = true;
+            }
 
                 break;
 
             case ConsoleKey.LeftArrow:
-                {
-                    currentNode.IsExpanded = false;
-                    needsRedraw = true;
-                }
+            {
+                currentNode.IsExpanded = false;
+                needsRedraw = true;
+            }
                 break;
         }
 
@@ -126,6 +163,7 @@ public class StickyTreeSelector
         BuildTreeRecursive(rootNode, dirInfo);
         return rootNode;
     }
+
     private void BuildTreeRecursive(FileSystemNode parentNode, DirectoryInfo currentDir)
     {
         try
@@ -163,10 +201,8 @@ public class StickyTreeSelector
     {
         list.Add(node);
         if (!node.IsDirectory || !node.IsExpanded) return;
-        
-        var sortedChildren = node.Children
-            .OrderBy(c => !c.IsDirectory)
-            .ThenBy(c => c.Name);
+
+        var sortedChildren = node.Children.OrderBy(c => !c.IsDirectory).ThenBy(c => c.Name);
 
         foreach (var child in sortedChildren)
         {
@@ -193,9 +229,7 @@ public class StickyTreeSelector
 
         const string selectedMarker = "*";
         const string unselectedMarker = " ";
-        var icon = node.IsDirectory
-            ? node.IsExpanded ? ExpandedPrefix : CollapsedPrefix
-            : FileIcon;
+        var icon = node.IsDirectory ? node.IsExpanded ? ExpandedPrefix : CollapsedPrefix : FileIcon;
 
         var name = Markup.Escape(node.Name);
 
@@ -222,9 +256,9 @@ public class StickyTreeSelector
         globalNodeIndex++;
 
         if (!node.IsDirectory || !node.IsExpanded || !node.Children.Any() || !isNodeVisibleInList) return;
-        
+
         var sortedChildren = node.Children.OrderBy(c => !c.IsDirectory).ThenBy(c => c.Name);
-        
+
         foreach (var child in sortedChildren)
         {
             AddNodeToSpectreTree(child, treeNode, ref globalNodeIndex);

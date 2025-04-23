@@ -7,6 +7,7 @@ public interface IConversationStore
     List<ChatMessage> GetConversation();
     void AddUserMessage(string message);
     void AddAssistantMessage(ChatMessage message);
+    void ClearConversation();
 }
 
 public class ConversationStore : IConversationStore

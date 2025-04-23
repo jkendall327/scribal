@@ -35,9 +35,9 @@ public class CommandService
 
     private readonly IFileSystem _fileSystem;
     private readonly RepoMapStore _repoStore;
-    private readonly ConversationStore _conversationStore;
+    private readonly IConversationStore _conversationStore;
     
-    public CommandService(IFileSystem fileSystem, RepoMapStore repoStore, ConversationStore conversationStore)
+    public CommandService(IFileSystem fileSystem, RepoMapStore repoStore, IConversationStore conversationStore)
     {
         _fileSystem = fileSystem;
         _repoStore = repoStore;

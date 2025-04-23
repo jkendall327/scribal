@@ -7,6 +7,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{6432B1B3-0
 		README.md = README.md
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Scribal", "Scribal\Scribal.csproj", "{56F24F88-8033-47FB-B1AF-9C2900F7497C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -17,5 +19,9 @@ Global
 		{DF317E06-958F-4036-81CC-275C903F40DD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DF317E06-958F-4036-81CC-275C903F40DD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DF317E06-958F-4036-81CC-275C903F40DD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{56F24F88-8033-47FB-B1AF-9C2900F7497C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{56F24F88-8033-47FB-B1AF-9C2900F7497C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{56F24F88-8033-47FB-B1AF-9C2900F7497C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{56F24F88-8033-47FB-B1AF-9C2900F7497C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

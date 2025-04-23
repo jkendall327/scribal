@@ -4,7 +4,12 @@ using Spectre.Console;
 
 namespace Scribal.Cli;
 
-public class InterfaceManager(CommandService commands, IModelClient client, IFileSystem fileSystem)
+public class InterfaceManager(
+    CommandService commands,
+    IModelClient client,
+    IFileSystem fileSystem,
+    PromptBuilder builder,
+    RepoMapStore repoMapStore)
 {
     public Task DisplayWelcome()
     {
@@ -16,10 +21,9 @@ public class InterfaceManager(CommandService commands, IModelClient client, IFil
         AnsiConsole.WriteLine();
 
         var cwd = fileSystem.Directory.GetCurrentDirectory();
-        
+
         AnsiConsole.MarkupLine($"[bold]Current working directory: {cwd}[/]");
-        AnsiConsole.MarkupLine(
-            "Type [blue]/help[/] for available commands or just start typing to talk.");
+        AnsiConsole.MarkupLine("Type [blue]/help[/] for available commands or just start typing to talk.");
         AnsiConsole.WriteLine();
         return Task.CompletedTask;
     }
@@ -68,17 +72,28 @@ public class InterfaceManager(CommandService commands, IModelClient client, IFil
     private async Task ProcessConversation(string userInput)
     {
         var rule = new Rule();
-        
+
         AnsiConsole.Write(rule);
+
+        var files = repoMapStore.Paths.ToList();
         
+        foreach (var file in files)
+        {
+            AnsiConsole.MarkupLine($"[yellow]{file}[/]");
+        }
+
+        var cwd = fileSystem.Directory.GetCurrentDirectory();
+        var cwdDir = fileSystem.DirectoryInfo.New(cwd);
+        var prompt = await builder.BuildPromptAsync(cwdDir, userInput);
+
         // We want to stream in updates ASAP to the UI.
         // But we also want to save the completed response to store it in our chat history.
         // ToChatResponseAsync() only works on IAsyncEnumerable<ChatResponseUpdate>,
         // so use a dummy ToAsyncEnumerable method to get it working.
-        var response = client.GetResponse(userInput);
+        var response = client.GetResponse(prompt);
 
         var updates = new List<ChatResponseUpdate>();
-        
+
         await foreach (var chunk in response)
         {
             updates.Add(chunk);
@@ -86,18 +101,18 @@ public class InterfaceManager(CommandService commands, IModelClient client, IFil
         }
 
         var completedResponse = await ToAsyncEnumerable(updates).ToChatResponseAsync();
-        
+
         client.UpdateConversationHistory(completedResponse);
-        
+
         AnsiConsole.WriteLine();
-        
+
         AnsiConsole.Write(rule);
     }
 
     private async IAsyncEnumerable<ChatResponseUpdate> ToAsyncEnumerable(List<ChatResponseUpdate> updates)
     {
         await Task.Yield();
-        
+
         foreach (var chatResponseUpdate in updates)
         {
             yield return chatResponseUpdate;

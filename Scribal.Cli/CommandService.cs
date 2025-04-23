@@ -1,3 +1,4 @@
+using System.IO.Abstractions;
 using Spectre.Console;
 
 namespace Scribal.Cli;
@@ -32,11 +33,28 @@ public class CommandService
         }
     };
 
+    private readonly IFileSystem _fileSystem;
+    
+    public CommandService(IFileSystem fileSystem)
+    {
+        _fileSystem = fileSystem;
+        _commands.Add("/tree", TreeCommand);
+    }
+
     public bool TryGetCommand(string command, out Func<string, Task<bool>> func)
     {
         return _commands.TryGetValue(command, out func!);
     }
 
+    private Task<bool> TreeCommand(string arg)
+    {
+        var cwd = _fileSystem.Directory.GetCurrentDirectory();
+        
+        var files = StickyTreeSelector.Scan(cwd);
+
+        return Task.FromResult(true);
+    }
+    
     private static Task<bool> QuitCommand(string arguments)
     {
         if (AnsiConsole.Confirm("Are you sure you want to quit?"))

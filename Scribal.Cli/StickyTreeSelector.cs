@@ -24,7 +24,7 @@ public class StickyTreeSelector
         _currentNodeIndex = 0;
     }
 
-    public static void Scan(string startPath)
+    public static List<string> Scan(string startPath)
     {
         AnsiConsole.MarkupLine($"Scanning starting from: [cyan]{startPath}[/]");
 
@@ -45,19 +45,24 @@ public class StickyTreeSelector
             {
                 AnsiConsole.MarkupLine("\n[yellow]No items were selected.[/]");
             }
+
+            return selectedItems;
         }
         catch (DirectoryNotFoundException ex)
         {
             AnsiConsole.MarkupLine($"[red]Error: {ex.Message}[/]");
+            return [];
         }
         catch (UnauthorizedAccessException ex)
         {
             AnsiConsole.MarkupLine($"[red]Error: Insufficient permissions to access parts of the directory tree. {
                 ex.Message}[/]");
+            return [];
         }
         catch (Exception ex)
         {
             AnsiConsole.WriteException(ex);
+            return [];
         }
     }
 

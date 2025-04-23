@@ -44,37 +44,47 @@ Use the following project information to inform your assistance:
 
     public async Task<string> BuildPromptAsync(IDirectoryInfo directory)
     {
-        var task = _scanService.ScanDirectoryForMarkdownAsync(directory);
-        
-        var sb = new StringBuilder();
-        
-        // Add the system prompt first
-        sb.AppendLine(SYSTEM_PROMPT);
-        
-        sb.AppendLine("# Project Structure");
-        sb.AppendLine("The following is a map of markdown documents in this project:");
-        sb.AppendLine();
-
-        var directoryTree = await task;
-        
-        AppendDirectoryStructure(sb, directoryTree, 0);
-        
-        // Add README content if available
-        var readmeDoc = FindReadmeDocument(directoryTree);
-        if (readmeDoc != null)
+        try
         {
-            sb.AppendLine();
-            sb.AppendLine("# Project README");
-            sb.AppendLine();
+            var task = await _scanService.ScanDirectoryForMarkdownAsync(directory);
             
-            string readmeContent = await _fileSystem.File.ReadAllTextAsync(readmeDoc.FilePath);
-            sb.AppendLine(readmeContent);
+            var sb = new StringBuilder();
+        
+            // Add the system prompt first
+            sb.AppendLine(SYSTEM_PROMPT);
+        
+            sb.AppendLine("# Project Structure");
+            sb.AppendLine("The following is a map of markdown documents in this project:");
+            sb.AppendLine();
+
+            var directoryTree = task;
+        
+            AppendDirectoryStructure(sb, directoryTree, 0);
+        
+            // Add README content if available
+            var readmeDoc = FindReadmeDocument(directoryTree);
+            if (readmeDoc != null)
+            {
+                sb.AppendLine();
+                sb.AppendLine("# Project README");
+                sb.AppendLine();
+            
+                string readmeContent = await _fileSystem.File.ReadAllTextAsync(readmeDoc.FilePath);
+                sb.AppendLine(readmeContent);
+            }
+        
+            // Add special files if they exist
+            await AppendSpecialFilesAsync(sb, directory);
+        
+            return sb.ToString();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
         }
         
-        // Add special files if they exist
-        await AppendSpecialFilesAsync(sb, directory);
-        
-        return sb.ToString();
+
     }
     
     private void AppendDirectoryStructure(StringBuilder sb, DirectoryNode node, int depth)

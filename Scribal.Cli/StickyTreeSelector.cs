@@ -17,7 +17,7 @@ public class StickyTreeSelector
     private const string UnselectedPrefix = "[dim][ ][/]";
     private const string ExpandedPrefix = "v "; // Or use Emoji.Known.OpenFolder
     private const string CollapsedPrefix = "> "; // Or use Emoji.Known.ClosedFolder
-    private const string FileIcon = "  ";     // Or use Emoji.Known.PageFacingUp
+    private const string FileIcon = "  "; // Or use Emoji.Known.PageFacingUp
 
     // --- Constructor ---
     // Option 1: Build from a starting path
@@ -37,7 +37,6 @@ public class StickyTreeSelector
     //     _visibleNodes = GetVisibleNodes(_root);
     //     _currentNodeIndex = 0; // Start at the root
     // }
-
 
     // --- Public Method to Start Selection ---
     public List<string> GetSelectedPaths()
@@ -120,6 +119,7 @@ public class StickyTreeSelector
                     currentNode.IsExpanded = true;
                     needsRedraw = true; // Expansion state changed, rebuild visible list
                 }
+
                 break;
 
             case ConsoleKey.LeftArrow:
@@ -128,6 +128,7 @@ public class StickyTreeSelector
                     currentNode.IsExpanded = false;
                     needsRedraw = true; // Expansion state changed, rebuild visible list
                 }
+
                 // Optional: Navigate to parent if already collapsed or a file
                 // else if (currentNode.Parent != null)
                 // {
@@ -137,6 +138,7 @@ public class StickyTreeSelector
                 // }
                 break;
         }
+
         return needsRedraw; // Indicate if the display needs updating
     }
 
@@ -187,17 +189,16 @@ public class StickyTreeSelector
         {
             // Skip directories/files we don't have access to
             // Optionally add a node indicating access denied
-             var inaccessibleNode = new FileSystemNode(Path.Combine(parentNode.Path, "[Access Denied]"), false);
-             // Mark it visually later? Or just ignore.
-             // parentNode.AddChild(inaccessibleNode);
+            var inaccessibleNode = new FileSystemNode(Path.Combine(parentNode.Path, "[Access Denied]"), false);
+            // Mark it visually later? Or just ignore.
+            // parentNode.AddChild(inaccessibleNode);
         }
-         catch (Exception ex) // Catch other potential IO errors
+        catch (Exception ex) // Catch other potential IO errors
         {
-             AnsiConsole.MarkupLine($"[red]Error accessing {currentDir.FullName}: {ex.Message}[/]");
-             // Maybe add an error node?
+            AnsiConsole.MarkupLine($"[red]Error accessing {currentDir.FullName}: {ex.Message}[/]");
+            // Maybe add an error node?
         }
     }
-
 
     // Get flat list of currently visible nodes based on expansion state
     private List<FileSystemNode> GetVisibleNodes(FileSystemNode node)
@@ -213,9 +214,8 @@ public class StickyTreeSelector
         if (node.IsDirectory && node.IsExpanded)
         {
             // Sort children for consistent order (optional)
-            var sortedChildren = node.Children
-                                     .OrderBy(c => !c.IsDirectory) // Dirs first
-                                     .ThenBy(c => c.Name);          // Then by name
+            var sortedChildren = node.Children.OrderBy(c => !c.IsDirectory) // Dirs first
+                .ThenBy(c => c.Name); // Then by name
 
             foreach (var child in sortedChildren)
             {
@@ -237,70 +237,64 @@ public class StickyTreeSelector
         return tree;
     }
 
-private void AddNodeToSpectreTree(FileSystemNode node, IHasTreeNodes parentSpectreNode, ref int globalNodeIndex)
-{
-    // Determine if this node is the currently highlighted one
-    bool isCurrentNode = (_visibleNodes.Count > _currentNodeIndex) && (_visibleNodes[_currentNodeIndex] == node);
-
-    // --- Refactored Label Construction ---
-
-    // 1. Define Markers & Icons (plain text or Emoji)
-    const string SelectedMarker = "*"; // Use Emoji.Known.CheckMark?
-    const string UnselectedMarker = " ";
-    string icon = node.IsDirectory
-        ? (node.IsExpanded ? ExpandedPrefix : CollapsedPrefix) // Use constants like "> ", "v " or Emojis
-        : FileIcon; // Use constant like "  " or Emoji
-
-    // 2. Get the node name (escaped)
-    string name = Markup.Escape(node.Name);
-
-    // 3. Build the core text content
-    string baseLabelText = $"{ (node.IsSelected ? SelectedMarker : UnselectedMarker) } {icon}{name}";
-
-    // 4. Apply styling based on state (wrap the base text)
-    string finalLabelMarkup;
-    if (isCurrentNode)
+    private void AddNodeToSpectreTree(FileSystemNode node, IHasTreeNodes parentSpectreNode, ref int globalNodeIndex)
     {
-        // Highlight takes precedence. Apply bold *inside* if also selected.
-        string styledBase = node.IsSelected
-                                ? $"[bold]{baseLabelText}[/]"
-                                : baseLabelText;
-        finalLabelMarkup = $"[underline yellow on blue]{styledBase}[/]";
-    }
-    else if (node.IsSelected)
-    {
-        // Selected but not current: Apply bold style
-        finalLabelMarkup = $"[bold]{baseLabelText}[/]";
-    }
-    else
-    {
-        // Not selected, not current: Apply dim style (optional, remove [dim]...[/] if too faint)
-        finalLabelMarkup = $"[dim]{baseLabelText}[/]";
-    }
-    // --- End Refactored Label Construction ---
+        // Determine if this node is the currently highlighted one
+        bool isCurrentNode = (_visibleNodes.Count > _currentNodeIndex) && (_visibleNodes[_currentNodeIndex] == node);
 
+        // --- Refactored Label Construction ---
 
-    // Add the node to the Spectre Tree using the final markup string
-    var treeNode = parentSpectreNode.AddNode(finalLabelMarkup);
+        // 1. Define Markers & Icons (plain text or Emoji)
+        const string SelectedMarker = "*"; // Use Emoji.Known.CheckMark?
+        const string UnselectedMarker = " ";
+        string icon = node.IsDirectory
+            ? (node.IsExpanded ? ExpandedPrefix : CollapsedPrefix) // Use constants like "> ", "v " or Emojis
+            : FileIcon; // Use constant like "  " or Emoji
 
-    // Check if this specific node instance is actually visible in the flattened list
-    bool isNodeVisibleInList = globalNodeIndex < _visibleNodes.Count && _visibleNodes[globalNodeIndex] == node;
-    globalNodeIndex++; // Increment linear index *after* processing this node
+        // 2. Get the node name (escaped)
+        string name = Markup.Escape(node.Name);
 
-    if (node.IsDirectory && node.IsExpanded && node.Children.Any() && isNodeVisibleInList)
-    {
-        var sortedChildren = node.Children
-                                 .OrderBy(c => !c.IsDirectory)
-                                 .ThenBy(c => c.Name);
-        foreach (var child in sortedChildren)
+        // 3. Build the core text content
+        string baseLabelText = $"{(node.IsSelected ? SelectedMarker : UnselectedMarker)} {icon}{name}";
+
+        // 4. Apply styling based on state (wrap the base text)
+        string finalLabelMarkup;
+        if (isCurrentNode)
         {
-            AddNodeToSpectreTree(child, treeNode, ref globalNodeIndex);
+            // Highlight takes precedence. Apply bold *inside* if also selected.
+            string styledBase = node.IsSelected ? $"[bold]{baseLabelText}[/]" : baseLabelText;
+            finalLabelMarkup = $"[underline yellow on blue]{styledBase}[/]";
         }
-    }
-    // Optional placeholder for collapsed nodes (no change needed here)
-    // else if (node.IsDirectory && !node.IsExpanded && node.Children.Any() && isNodeVisibleInList) { ... }
-}
+        else if (node.IsSelected)
+        {
+            // Selected but not current: Apply bold style
+            finalLabelMarkup = $"[bold]{baseLabelText}[/]";
+        }
+        else
+        {
+            // Not selected, not current: Apply dim style (optional, remove [dim]...[/] if too faint)
+            finalLabelMarkup = $"[dim]{baseLabelText}[/]";
+        }
+        // --- End Refactored Label Construction ---
 
+        // Add the node to the Spectre Tree using the final markup string
+        var treeNode = parentSpectreNode.AddNode(finalLabelMarkup);
+
+        // Check if this specific node instance is actually visible in the flattened list
+        bool isNodeVisibleInList = globalNodeIndex < _visibleNodes.Count && _visibleNodes[globalNodeIndex] == node;
+        globalNodeIndex++; // Increment linear index *after* processing this node
+
+        if (node.IsDirectory && node.IsExpanded && node.Children.Any() && isNodeVisibleInList)
+        {
+            var sortedChildren = node.Children.OrderBy(c => !c.IsDirectory).ThenBy(c => c.Name);
+            foreach (var child in sortedChildren)
+            {
+                AddNodeToSpectreTree(child, treeNode, ref globalNodeIndex);
+            }
+        }
+        // Optional placeholder for collapsed nodes (no change needed here)
+        // else if (node.IsDirectory && !node.IsExpanded && node.Children.Any() && isNodeVisibleInList) { ... }
+    }
 
     // --- Result Collection ---
     private List<string> CollectSelectedPaths(FileSystemNode node)
@@ -319,6 +313,7 @@ private void AddNodeToSpectreTree(FileSystemNode node, IHasTreeNodes parentSpect
             // depending on the use case. Let's assume selecting a dir means the dir itself.
             // If you want all *files* within selected dirs, you'd modify this.
         }
+
         // Even if the parent is selected, check children unless requirement changes
         foreach (var child in node.Children)
         {

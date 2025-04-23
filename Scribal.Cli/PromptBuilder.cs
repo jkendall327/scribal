@@ -29,6 +29,8 @@ Use the following project information to inform your assistance:
 
     private readonly IDocumentScanService _scanService;
     private readonly IFileSystem _fileSystem;
+    private readonly RepoMapStore _store;
+    
     private readonly Dictionary<string, string> _specialFiles = new()
     {
         { "PLOT.md", "# Plot Overview" },
@@ -36,17 +38,18 @@ Use the following project information to inform your assistance:
         { "STYLE.md", "# Style Guide" }
     };
 
-    public PromptBuilder(IDocumentScanService scanService, IFileSystem fileSystem)
+    public PromptBuilder(IDocumentScanService scanService, IFileSystem fileSystem, RepoMapStore store)
     {
         _scanService = scanService;
         _fileSystem = fileSystem;
+        _store = store;
     }
 
     public async Task<string> BuildPromptAsync(IDirectoryInfo directory)
     {
         try
         {
-            var task = await _scanService.ScanDirectoryForMarkdownAsync(directory);
+            var directoryTree = await _scanService.ScanDirectoryForMarkdownAsync(directory);
             
             var sb = new StringBuilder();
         
@@ -57,9 +60,7 @@ Use the following project information to inform your assistance:
             sb.AppendLine("The following is a map of markdown documents in this project:");
             sb.AppendLine();
 
-            var directoryTree = task;
-        
-            AppendDirectoryStructure(sb, directoryTree, 0);
+            AppendDirectoryMap(sb, directoryTree, 0);
         
             // Add README content if available
             var readmeDoc = FindReadmeDocument(directoryTree);
@@ -71,6 +72,24 @@ Use the following project information to inform your assistance:
             
                 string readmeContent = await _fileSystem.File.ReadAllTextAsync(readmeDoc.FilePath);
                 sb.AppendLine(readmeContent);
+            }
+
+            if (_store.Paths.Any())
+            {
+                sb.AppendLine("---");
+                sb.AppendLine("# Selected Files");
+                sb.AppendLine("The user has selected to provide these files to you in full:");
+                
+                foreach (var path in _store.Paths)
+                {
+                    var content = await _fileSystem.File.ReadAllTextAsync(path);
+                    var filename = _fileSystem.Path.GetFileName(path);
+                    
+                    sb.AppendLine("---");
+                    sb.AppendLine(filename);
+                    sb.AppendLine(content);
+                    sb.AppendLine("---");
+                }
             }
         
             // Add special files if they exist
@@ -87,7 +106,7 @@ Use the following project information to inform your assistance:
 
     }
     
-    private void AppendDirectoryStructure(StringBuilder sb, DirectoryNode node, int depth)
+    private void AppendDirectoryMap(StringBuilder sb, DirectoryNode node, int depth)
     {
         string indent = new string(' ', depth * 2);
         
@@ -116,7 +135,7 @@ Use the following project information to inform your assistance:
         // Process subdirectories
         foreach (var subdir in node.Subdirectories.OrderBy(d => d.Name))
         {
-            AppendDirectoryStructure(sb, subdir, depth + 1);
+            AppendDirectoryMap(sb, subdir, depth + 1);
         }
     }
     

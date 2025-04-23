@@ -34,10 +34,12 @@ public class CommandService
     };
 
     private readonly IFileSystem _fileSystem;
+    private readonly RepoMapStore _store;
     
-    public CommandService(IFileSystem fileSystem)
+    public CommandService(IFileSystem fileSystem, RepoMapStore store)
     {
         _fileSystem = fileSystem;
+        _store = store;
         _commands.Add("/tree", TreeCommand);
     }
 
@@ -52,6 +54,8 @@ public class CommandService
         
         var files = StickyTreeSelector.Scan(cwd);
 
+        _store.Paths = files;
+        
         return Task.FromResult(true);
     }
     

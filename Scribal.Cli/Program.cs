@@ -5,7 +5,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using OpenAI;
 using Scribal.Cli;
-using Spectre.Console;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -17,6 +16,7 @@ builder.Configuration.GetSection(ModelConfiguration.SectionName).Bind(modelConfi
 var filesystem = new FileSystem();
 
 builder.Services.AddSingleton<IFileSystem>(filesystem);
+builder.Services.AddSingleton<RepoMapStore>();
 builder.Services.AddSingleton<CommandService>();
 builder.Services.AddSingleton<PromptBuilder>();
 builder.Services.AddSingleton<IDocumentScanService, DocumentScanService>();

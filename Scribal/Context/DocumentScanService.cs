@@ -29,7 +29,7 @@ public class DirectoryNode
         // If it's the root directory and the name is empty, use the directory name
         if (string.IsNullOrEmpty(Name))
         {
-            Name = fileSystem.DirectoryInfo.FromDirectoryName(path).Name;
+            Name = fileSystem.DirectoryInfo.New(path).Name;
         }
     }
 

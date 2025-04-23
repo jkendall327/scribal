@@ -5,7 +5,7 @@ namespace Scribal.Cli;
 
 public class PromptBuilder(IDocumentScanService scanService, IFileSystem fileSystem, RepoMapStore store)
 {
-    private const string SystemPrompt = """
+    public const string SystemPrompt = """
                                         # Scribal - Fiction Writing Assistant
 
                                         You are an expert fiction writer, editor, and creative consultant. Your purpose is to help the user with their fiction writing project.
@@ -41,7 +41,7 @@ public class PromptBuilder(IDocumentScanService scanService, IFileSystem fileSys
         }
     };
 
-    public async Task<string> BuildPromptAsync(IDirectoryInfo directory)
+    public async Task<string> BuildPromptAsync(IDirectoryInfo directory, string userInput)
     {
         try
         {
@@ -49,8 +49,8 @@ public class PromptBuilder(IDocumentScanService scanService, IFileSystem fileSys
 
             var sb = new StringBuilder();
 
-            // Add the system prompt first
-            sb.AppendLine(SystemPrompt);
+            sb.AppendLine(
+                "You are about to be asked a question or given a command by the user. Here is some information to help you.");
 
             sb.AppendLine("# Project Structure");
             sb.AppendLine("The following is a map of markdown documents in this project:");
@@ -91,6 +91,9 @@ public class PromptBuilder(IDocumentScanService scanService, IFileSystem fileSys
             // Add special files if they exist
             await AppendSpecialFilesAsync(sb, directory);
 
+            sb.AppendLine("You have received all the necessary context to respond to the user. Here is their message:");
+            sb.AppendLine(userInput);
+            
             return sb.ToString();
         }
         catch (Exception e)

@@ -13,7 +13,7 @@ public class ConversationStore : IConversationStore
 {
     private readonly List<ChatMessage> _conversation =
     [
-        new(ChatRole.System, "You are a helpful AI assistant"),
+        new(ChatRole.System, PromptBuilder.SystemPrompt),
     ];
     
     public List<ChatMessage> GetConversation()

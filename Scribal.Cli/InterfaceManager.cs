@@ -1,22 +1,25 @@
+using System.IO.Abstractions;
 using Microsoft.Extensions.AI;
 using Spectre.Console;
 
 namespace Scribal.Cli;
 
-public class InterfaceManager(CommandService commands, IModelClient client)
+public class InterfaceManager(CommandService commands, IModelClient client, IFileSystem fileSystem)
 {
     public Task DisplayWelcome()
     {
         AnsiConsole.Clear();
 
-        var figlet = new FigletText("Fiction Aider").LeftJustified().Color(Color.Green);
+        var figlet = new FigletText("Scribal").LeftJustified().Color(Color.Green);
 
         AnsiConsole.Write(figlet);
         AnsiConsole.WriteLine();
 
-        AnsiConsole.MarkupLine("[bold]Your AI fiction writing assistant[/]");
+        var cwd = fileSystem.Directory.GetCurrentDirectory();
+        
+        AnsiConsole.MarkupLine($"[bold]Current working directory: {cwd}[/]");
         AnsiConsole.MarkupLine(
-            "Type [blue]/help[/] for available commands or just start typing to talk to your assistant.");
+            "Type [blue]/help[/] for available commands or just start typing to talk.");
         AnsiConsole.WriteLine();
         return Task.CompletedTask;
     }

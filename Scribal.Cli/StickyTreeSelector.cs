@@ -222,54 +222,69 @@ public class StickyTreeSelector
         return tree;
     }
 
-    private void AddNodeToSpectreTree(FileSystemNode node, IHasTreeNodes parentSpectreNode, ref int globalNodeIndex)
+private void AddNodeToSpectreTree(FileSystemNode node, IHasTreeNodes parentSpectreNode, ref int globalNodeIndex)
+{
+    // Determine if this node is the currently highlighted one
+    bool isCurrentNode = (_visibleNodes.Count > _currentNodeIndex) && (_visibleNodes[_currentNodeIndex] == node);
+
+    // --- Refactored Label Construction ---
+
+    // 1. Define Markers & Icons (plain text or Emoji)
+    const string SelectedMarker = "*"; // Use Emoji.Known.CheckMark?
+    const string UnselectedMarker = " ";
+    string icon = node.IsDirectory
+        ? (node.IsExpanded ? ExpandedPrefix : CollapsedPrefix) // Use constants like "> ", "v " or Emojis
+        : FileIcon; // Use constant like "  " or Emoji
+
+    // 2. Get the node name (escaped)
+    string name = Markup.Escape(node.Name);
+
+    // 3. Build the core text content
+    string baseLabelText = $"{ (node.IsSelected ? SelectedMarker : UnselectedMarker) } {icon}{name}";
+
+    // 4. Apply styling based on state (wrap the base text)
+    string finalLabelMarkup;
+    if (isCurrentNode)
     {
-        // Determine if this node is the currently highlighted one
-        bool isCurrentNode = (_visibleNodes.Count > _currentNodeIndex) && (_visibleNodes[_currentNodeIndex] == node);
-
-        // Build the display label with markup
-        string prefix = node.IsSelected ? SelectedPrefix : UnselectedPrefix;
-        string icon = node.IsDirectory ? (node.IsExpanded ? ExpandedPrefix : CollapsedPrefix) : FileIcon;
-        string name = Markup.Escape(node.Name); // Escape any markup in file/dir names
-        string label = $"{prefix} {icon}{name}";
-
-        if (isCurrentNode)
-        {
-            label = $"[underline yellow on blue]{label}[/]"; // Highlight current node
-        }
-        else if (node.IsSelected) {
-             label = $"[bold]{label}[/]"; // Make selected items bold
-        }
-
-        // Add the node to the Spectre Tree
-        var treeNode = parentSpectreNode.AddNode(label);
-
-        // Check if this specific node instance is actually visible in the flattened list
-        // This prevents adding children to a node that *exists* but is currently hidden
-        // because its parent is collapsed.
-        bool isNodeVisibleInList = globalNodeIndex < _visibleNodes.Count && _visibleNodes[globalNodeIndex] == node;
-        globalNodeIndex++; // Increment linear index *after* processing this node
-
-        if (node.IsDirectory && node.IsExpanded && node.Children.Any() && isNodeVisibleInList)
-        {
-             // Sort children for consistent order (optional, same as in GetVisibleNodes)
-            var sortedChildren = node.Children
-                                     .OrderBy(c => !c.IsDirectory) // Dirs first
-                                     .ThenBy(c => c.Name);          // Then by name
-
-            foreach (var child in sortedChildren)
-            {
-                // Recursively add children
-                AddNodeToSpectreTree(child, treeNode, ref globalNodeIndex);
-            }
-        }
-         else if (node.IsDirectory && !node.IsExpanded && node.Children.Any() && isNodeVisibleInList)
-        {
-             // Optional: Add a placeholder if collapsed but has children
-             // treeNode.AddNode("[dim]...[/]");
-        }
-
+        // Highlight takes precedence. Apply bold *inside* if also selected.
+        string styledBase = node.IsSelected
+                                ? $"[bold]{baseLabelText}[/]"
+                                : baseLabelText;
+        finalLabelMarkup = $"[underline yellow on blue]{styledBase}[/]";
     }
+    else if (node.IsSelected)
+    {
+        // Selected but not current: Apply bold style
+        finalLabelMarkup = $"[bold]{baseLabelText}[/]";
+    }
+    else
+    {
+        // Not selected, not current: Apply dim style (optional, remove [dim]...[/] if too faint)
+        finalLabelMarkup = $"[dim]{baseLabelText}[/]";
+    }
+    // --- End Refactored Label Construction ---
+
+
+    // Add the node to the Spectre Tree using the final markup string
+    var treeNode = parentSpectreNode.AddNode(finalLabelMarkup);
+
+    // Check if this specific node instance is actually visible in the flattened list
+    bool isNodeVisibleInList = globalNodeIndex < _visibleNodes.Count && _visibleNodes[globalNodeIndex] == node;
+    globalNodeIndex++; // Increment linear index *after* processing this node
+
+    if (node.IsDirectory && node.IsExpanded && node.Children.Any() && isNodeVisibleInList)
+    {
+        var sortedChildren = node.Children
+                                 .OrderBy(c => !c.IsDirectory)
+                                 .ThenBy(c => c.Name);
+        foreach (var child in sortedChildren)
+        {
+            AddNodeToSpectreTree(child, treeNode, ref globalNodeIndex);
+        }
+    }
+    // Optional placeholder for collapsed nodes (no change needed here)
+    // else if (node.IsDirectory && !node.IsExpanded && node.Children.Any() && isNodeVisibleInList) { ... }
+}
 
 
     // --- Result Collection ---

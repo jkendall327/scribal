@@ -18,6 +18,7 @@ var filesystem = new FileSystem();
 builder.Services.AddSingleton<IFileSystem>(filesystem);
 builder.Services.AddSingleton<RepoMapStore>();
 builder.Services.AddSingleton<CommandService>();
+builder.Services.AddSingleton<FileReader>();
 builder.Services.AddSingleton<PromptBuilder>();
 builder.Services.AddSingleton<IDocumentScanService, DocumentScanService>();
 builder.Services.AddSingleton<InterfaceManager>();

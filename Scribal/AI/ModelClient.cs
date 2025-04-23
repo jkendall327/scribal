@@ -11,8 +11,11 @@ public interface IModelClient
     void UpdateConversationHistory(ChatResponse response);
 }
 
-public class ModelClient(IChatClient client, DiffService diffService, IConversationStore conversationStore)
-    : IModelClient
+public class ModelClient(
+    IChatClient client,
+    DiffService diffService,
+    FileReader reader,
+    IConversationStore conversationStore) : IModelClient
 {
     public IAsyncEnumerable<ChatResponseUpdate> GetResponse(string input)
     {
@@ -20,7 +23,8 @@ public class ModelClient(IChatClient client, DiffService diffService, IConversat
         {
             Tools =
             [
-                AIFunctionFactory.Create(diffService.ApplyUnifiedDiffAsync)
+                AIFunctionFactory.Create(diffService.ApplyUnifiedDiffAsync),
+                AIFunctionFactory.Create(reader.ReadFileContentAsync),
             ]
         };
 

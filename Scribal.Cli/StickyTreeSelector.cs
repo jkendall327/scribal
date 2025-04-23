@@ -65,7 +65,7 @@ public class StickyTreeSelector
                     // 3. Wait for and process input
                     ConsoleKeyInfo keyInfo = Console.ReadKey(true); // Don't echo key
 
-                    if (keyInfo.Key == ConsoleKey.Escape)
+                    if (keyInfo.Key == ConsoleKey.Backspace)
                     {
                         break; // Exit loop
                     }
@@ -105,9 +105,14 @@ public class StickyTreeSelector
                 break;
 
             case ConsoleKey.Enter:
-                currentNode.IsSelected = !currentNode.IsSelected;
-                needsRedraw = true;
-                break;
+                // Determine the NEW state we want to apply
+                bool newSelectedState = !currentNode.IsSelected;
+
+                // Apply the new state recursively starting from the current node
+                SetSelectionRecursive(currentNode, newSelectedState);
+
+                needsRedraw = true; // Signal that the display needs updating
+                break; // Added break statement, essential for switch cases!
 
             case ConsoleKey.RightArrow:
                 if (currentNode.IsDirectory && !currentNode.IsExpanded)
@@ -135,6 +140,16 @@ public class StickyTreeSelector
         return needsRedraw; // Indicate if the display needs updating
     }
 
+    private void SetSelectionRecursive(FileSystemNode node, bool isSelected)
+    {
+        node.IsSelected = isSelected;
+
+        // No need to check IsDirectory here, as files have empty Children lists.
+        foreach (var child in node.Children)
+        {
+            SetSelectionRecursive(child, isSelected); // Recurse
+        }
+    }
 
     // --- Tree Building & Traversal ---
 

@@ -5,6 +5,54 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using OpenAI;
 using Scribal.Cli;
+using Spectre.Console;
+
+// --- Option 1: Start from Current Working Directory ---
+string startPath = "/home/jackkendall/Documents/writing/notes";
+AnsiConsole.MarkupLine($"Scanning starting from: [cyan]{startPath}[/]");
+
+try
+{
+    var selector = new StickyTreeSelector(startPath);
+    List<string> selectedItems = selector.GetSelectedPaths();
+
+    if (selectedItems.Any())
+    {
+        AnsiConsole.MarkupLine("\n[green]You selected:[/]");
+        foreach (var item in selectedItems)
+        {
+            AnsiConsole.MarkupLine($"- [blue]{item}[/]");
+        }
+    }
+    else
+    {
+        AnsiConsole.MarkupLine("\n[yellow]No items were selected.[/]");
+    }
+}
+catch (DirectoryNotFoundException ex)
+{
+    AnsiConsole.MarkupLine($"[red]Error: {ex.Message}[/]");
+}
+catch (UnauthorizedAccessException ex)
+{
+    AnsiConsole.MarkupLine($"[red]Error: Insufficient permissions to access parts of the directory tree. {ex.Message}[/]");
+}
+catch (Exception ex) // Catch other potential errors during setup
+{
+    AnsiConsole.WriteException(ex);
+}
+
+
+// --- Option 2: If using your own pre-built tree ---
+// YourFileSystemTree myRoot = BuildMyTreeLogic(); // Your method here
+// var selector = new StickyTreeSelector(myRoot);
+// List<string> selectedItems = selector.GetSelectedPaths();
+// ... (rest is the same)
+
+Console.WriteLine("\nPress any key to exit.");
+Console.ReadKey();
+
+return;
 
 var builder = Host.CreateApplicationBuilder(args);
 

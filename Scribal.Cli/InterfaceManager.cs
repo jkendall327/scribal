@@ -62,7 +62,7 @@ public class InterfaceManager(CommandService commands, IModelClient client, IFil
             }
         }
 
-        AnsiConsole.MarkupLine("[yellow]Thank you for using Fiction Aider. Goodbye![/]");
+        AnsiConsole.MarkupLine("[yellow]Thank you for using Scribal. Goodbye![/]");
     }
 
     private async Task ProcessConversation(string userInput)

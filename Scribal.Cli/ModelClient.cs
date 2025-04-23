@@ -11,10 +11,8 @@ public interface IModelClient
     void UpdateConversationHistory(ChatResponse response);
 }
 
-public class ModelClient(
-    IChatClient client, 
-    DiffService diffService,
-    IConversationStore conversationStore) : IModelClient
+public class ModelClient(IChatClient client, DiffService diffService, IConversationStore conversationStore)
+    : IModelClient
 {
     public IAsyncEnumerable<ChatResponseUpdate> GetResponse(string input)
     {

@@ -34,13 +34,24 @@ public class CommandService
     };
 
     private readonly IFileSystem _fileSystem;
-    private readonly RepoMapStore _store;
+    private readonly RepoMapStore _repoStore;
+    private readonly ConversationStore _conversationStore;
     
-    public CommandService(IFileSystem fileSystem, RepoMapStore store)
+    public CommandService(IFileSystem fileSystem, RepoMapStore repoStore, ConversationStore conversationStore)
     {
         _fileSystem = fileSystem;
-        _store = store;
+        _repoStore = repoStore;
+        _conversationStore = conversationStore;
+        
         _commands.Add("/tree", TreeCommand);
+        _commands.Add("/clear", ClearCommand);
+    }
+
+    private Task<bool> ClearCommand(string arg)
+    {
+        _conversationStore.ClearConversation();
+        
+        return Task.FromResult(true);
     }
 
     public bool TryGetCommand(string command, out Func<string, Task<bool>> func)
@@ -54,7 +65,7 @@ public class CommandService
         
         var files = StickyTreeSelector.Scan(cwd);
 
-        _store.Paths = files;
+        _repoStore.Paths = files;
         
         return Task.FromResult(true);
     }

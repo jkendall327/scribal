@@ -17,9 +17,8 @@ public static class ScribalServiceCollectionExtensions
         {
             var kb = Kernel.CreateBuilder();
             
-            var fileSystem = sp.GetRequiredService<IFileSystem>();
-            
-            kb.Services.AddSingleton(fileSystem);
+            kb.Services.AddSingleton(sp.GetRequiredService<IFileSystem>());
+            kb.Services.AddSingleton(sp.GetRequiredService<IConfiguration>());
 
             var oaiKey = cfg["OPENAI_API_KEY"];
             var geminiKey = cfg["GEMINI_API_KEY"];

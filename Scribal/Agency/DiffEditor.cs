@@ -1,11 +1,12 @@
 using System.ComponentModel;
 using System.IO.Abstractions;
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.Configuration;
 using Microsoft.SemanticKernel;
 
 namespace Scribal.Cli;
 
-public partial class DiffEditor(IFileSystem fileSystem)
+public partial class DiffEditor(IFileSystem fileSystem, IConfiguration configuration)
 {
     public const string DiffEditorToolName = "apply_diff";
     
@@ -35,7 +36,10 @@ public partial class DiffEditor(IFileSystem fileSystem)
         }
             
         // Write the modified content back to the file
-        await fileSystem.File.WriteAllLinesAsync(file, newFileContent);
+        if (!configuration.GetValue<bool>("DryRun"))
+        {
+            await fileSystem.File.WriteAllLinesAsync(file, newFileContent);
+        }
 
         return diff;
     }

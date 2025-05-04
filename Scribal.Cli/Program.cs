@@ -36,6 +36,7 @@ builder.Services.AddSingleton<RepoMapStore>();
 builder.Services.AddSingleton<CommitGenerator>();
 builder.Services.AddSingleton<CancellationService>();
 builder.Services.AddSingleton<CommandService>();
+builder.Services.AddSingleton<PromptRenderer>();
 builder.Services.AddSingleton<FileReader>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<PromptBuilder>();

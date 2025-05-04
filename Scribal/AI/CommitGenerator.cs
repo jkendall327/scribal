@@ -1,4 +1,5 @@
 using System.IO.Abstractions;
+using System.Reflection;
 using System.Text;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
@@ -27,7 +28,9 @@ public class CommitGenerator(IFileSystem fileSystem)
     private async Task<string> RenderCommitPromptTemplateAsync(Kernel kernel, List<string> diffs)
     {
         // Define the Handlebars template
-        var template = await fileSystem.File.ReadAllTextAsync("Prompts/Commits.md");
+        var contentRoot = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+        var path = Path.Combine(contentRoot, "Prompts", "Commits.md");
+        var template = await fileSystem.File.ReadAllTextAsync(path);
 
         // Create prompt template configuration
         var promptConfig = new PromptTemplateConfig

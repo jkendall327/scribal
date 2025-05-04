@@ -24,6 +24,7 @@ builder.Services.AddScribalAi(modelConfiguration);
 
 builder.Services.AddSingleton<IFileSystem>(filesystem);
 builder.Services.AddSingleton<RepoMapStore>();
+builder.Services.AddSingleton<CommitGenerator>();
 builder.Services.AddSingleton<CancellationService>();
 builder.Services.AddSingleton<CommandService>();
 builder.Services.AddSingleton<FileReader>();

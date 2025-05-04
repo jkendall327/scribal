@@ -5,7 +5,7 @@ using Scribal.Cli;
 
 namespace Scribal.Agency;
 
-public sealed class GitCommitFilter(IGitService git, IAiChatService aiChatService, ILogger<GitCommitFilter> logger) : IFunctionInvocationFilter
+public sealed class GitCommitFilter(IGitService git, CommitGenerator generator, ILogger<GitCommitFilter> logger) : IFunctionInvocationFilter
 {
     public async Task OnFunctionInvocationAsync(FunctionInvocationContext ctx,
         Func<FunctionInvocationContext, Task> next)
@@ -23,7 +23,8 @@ public sealed class GitCommitFilter(IGitService git, IAiChatService aiChatServic
         {
             logger.LogInformation("Creating commit after diff editor tool invocation");
             
-            var file = ctx.Arguments["path"]?.ToString();
+            var file = ctx.Arguments["file"]?.ToString();
+            var diff = ctx.Arguments["diff"]?.ToString();
 
             if (string.IsNullOrEmpty(file))
             {
@@ -31,15 +32,13 @@ public sealed class GitCommitFilter(IGitService git, IAiChatService aiChatServic
                 return;
             }
 
-            var diff = ctx.Result.GetValue<string>();
-
             if (string.IsNullOrEmpty(diff))
             {
                 logger.LogWarning("No valid diff returned from the tool call; exiting");
                 return;
             }
             
-            var message = await aiChatService.GetCommitMessage([diff]);
+            var message = await generator.GetCommitMessage(ctx.Kernel, [diff]);
             
             await git.CreateCommit(file, message);
         }

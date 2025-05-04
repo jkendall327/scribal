@@ -16,8 +16,8 @@ public partial class DiffEditor(IFileSystem fileSystem, IConfiguration configura
     /// <param name="file">The file path to apply the diff to</param>
     /// <param name="diff">The unified diff content as a string</param>
     /// <returns>The unified diff, for further inspection.</returns>
-    [KernelFunction(DiffEditorToolName), Description("Applies an edit to a file. Returns the provided diff.")]
-    public async Task<string> ApplyUnifiedDiffAsync(
+    [KernelFunction(DiffEditorToolName), Description("Applies an edit to a file.")]
+    public async Task ApplyUnifiedDiffAsync(
         [Description("The path to the file to edit.")] string file, 
         [Description("The edit to apply, in unified diff format.")] string diff)
     {
@@ -42,8 +42,6 @@ public partial class DiffEditor(IFileSystem fileSystem, IConfiguration configura
         {
             await fileSystem.File.WriteAllLinesAsync(file, newFileContent);
         }
-
-        return diff;
     }
         
     private class DiffHunk

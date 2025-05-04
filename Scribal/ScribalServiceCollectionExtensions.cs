@@ -40,6 +40,7 @@ public static class ScribalServiceCollectionExtensions
             if (!string.IsNullOrEmpty(oaiKey))
             {
                 kb.AddOpenAIChatCompletion(modelId: oaiModel, apiKey: oaiKey, serviceId: "openai");
+                kb.AddOpenAIChatCompletion(modelId: "gpt-4o-mini", apiKey: oaiKey, serviceId: "openai-weak");
             }
 
             if (!string.IsNullOrEmpty(geminiKey))
@@ -47,6 +48,10 @@ public static class ScribalServiceCollectionExtensions
                 kb.AddGoogleAIGeminiChatCompletion(geminiModel,
                     apiKey: geminiKey,
                     serviceId: "gemini");
+                
+                kb.AddGoogleAIGeminiChatCompletion("gemini-1.5-pro",
+                    apiKey: geminiKey,
+                    serviceId: "gemini-weak");
             }
 
             if (!string.IsNullOrEmpty(deepseekKey))
@@ -55,6 +60,11 @@ public static class ScribalServiceCollectionExtensions
                     apiKey: deepseekKey,
                     endpoint: new("https://api.deepseek.com"),
                     serviceId: "deepseek");
+                
+                kb.AddOpenAIChatCompletion(modelId: "deepseek-chat",
+                    apiKey: deepseekKey,
+                    endpoint: new("https://api.deepseek.com"),
+                    serviceId: "deepseek-weak");
             }
 
             kb.Plugins.AddFromType<FileReader>(nameof(FileReader));

@@ -137,7 +137,7 @@ public sealed class AiChatService(
         // New conversation, ensure system prompt is there.
         if (history.All(m => m.Role != AuthorRole.System))
         {
-            var system = await prompts.BuildSystemPrompt();
+            var system = await prompts.BuildSystemPrompt(kernel);
             history.AddSystemMessage(system);
         }
 

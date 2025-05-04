@@ -1,34 +1,18 @@
 using System.IO.Abstractions;
 using System.Text;
 using Microsoft.Extensions.Configuration;
+using Microsoft.SemanticKernel;
+using Scribal.AI;
 
 namespace Scribal.Cli;
 
-public class PromptBuilder(IDocumentScanService scanService, IFileSystem fileSystem, RepoMapStore store, IConfiguration config)
+public class PromptBuilder(
+    IDocumentScanService scanService,
+    PromptRenderer renderer,
+    IFileSystem fileSystem,
+    RepoMapStore store,
+    IConfiguration config)
 {
-    private const string SystemPrompt = """
-                                        # Scribal - Fiction Writing Assistant
-
-                                        You are an expert fiction writer, editor, and creative consultant. Your purpose is to help the user with their fiction writing project.
-
-                                        ## Your Capabilities
-                                        - Draft new scenes based on the project's existing structure and style
-                                        - Revise and improve existing scenes
-                                        - Provide feedback on character development, plot coherence, and pacing
-                                        - Suggest new plot directions or character arcs
-                                        - Help maintain consistency with established world-building and character traits
-                                        - Adapt your writing style to match the project's tone and voice
-
-                                        ## Your Approach
-                                        - Be constructive and supportive in your feedback
-                                        - Respect the user's creative vision while offering improvements
-                                        - Consider the project's genre conventions and target audience
-                                        - Maintain continuity with existing content
-                                        - Provide specific, actionable suggestions rather than vague advice
-
-                                        Use the following project information to inform your assistance:
-                                        """;
-
     private readonly Dictionary<string, string> _specialFiles = new()
     {
         {
@@ -43,23 +27,29 @@ public class PromptBuilder(IDocumentScanService scanService, IFileSystem fileSys
     };
 
     private string? _prefixedSystemPrompt;
-    
-    public Task<string> BuildSystemPrompt()
+
+    public async Task<string> BuildSystemPrompt(Kernel kernel)
     {
         if (!string.IsNullOrEmpty(_prefixedSystemPrompt))
         {
-            return Task.FromResult(_prefixedSystemPrompt);
+            return _prefixedSystemPrompt;
         }
-        
+
         var prefix = config.GetValue<string>("SystemPromptPrefix");
 
-        var sb = new StringBuilder(prefix).AppendLine(SystemPrompt).ToString();
-        
-        _prefixedSystemPrompt = string.IsNullOrEmpty(prefix) ? SystemPrompt : sb;
-        
-        return Task.FromResult(_prefixedSystemPrompt);
+        var request = new RenderRequest("System",
+            "SystemPrompt",
+            "Main prompt establishing the Scribal agent",
+            new()
+            {
+                ["prefix"] = prefix
+            });
+
+        _prefixedSystemPrompt = await renderer.RenderPromptTemplateFromFileAsync(kernel, request);
+
+        return _prefixedSystemPrompt;
     }
-    
+
     public async Task<string> BuildPromptAsync(IDirectoryInfo directory, string userInput)
     {
         try
@@ -112,7 +102,7 @@ public class PromptBuilder(IDocumentScanService scanService, IFileSystem fileSys
 
             sb.AppendLine("You have received all the necessary context to respond to the user. Here is their message:");
             sb.AppendLine(userInput);
-            
+
             return sb.ToString();
         }
         catch (Exception e)
@@ -139,7 +129,7 @@ public class PromptBuilder(IDocumentScanService scanService, IFileSystem fileSys
 
             // Add headers for each document, with proper indentation based on header level
             if (doc.Headers.Count <= 0) continue;
-            
+
             foreach (var header in doc.Headers.OrderBy(h => h.Line))
             {
                 var headerIndent = new string(' ', depth * 2 + 4 + header.Level - 1);
@@ -204,9 +194,10 @@ public class PromptBuilder(IDocumentScanService scanService, IFileSystem fileSys
             sb.AppendLine();
 
             var charactersDirectory = fileSystem.DirectoryInfo.New(charactersDirectoryPath);
-            
+
             var characterFiles = charactersDirectory.GetFiles()
-                .Where(file => fileSystem.Path.GetExtension(file.FullName).Equals(".md", StringComparison.OrdinalIgnoreCase))
+                .Where(file =>
+                    fileSystem.Path.GetExtension(file.FullName).Equals(".md", StringComparison.OrdinalIgnoreCase))
                 .OrderBy(file => file.Name)
                 .ToList();
 

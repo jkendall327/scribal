@@ -14,29 +14,17 @@ public class PromptRendererTests
     {
         // Arrange
         var mockFileSystem = new MockFileSystem();
-        var assemblyLocation = "/fake/path/Scribal.dll";
-        var promptsDirectory = "/fake/path/Prompts";
-        var templatePath = "/fake/path/Prompts/TestTemplate.hbs";
+        var templatePath = "/fake/Prompts/TestTemplate.hbs";
         var templateContent = "Hello {{name}}!";
         
         // Setup mock file system
-        mockFileSystem.AddFile(templatePath, new MockFileData(templateContent));
-        mockFileSystem.AddDirectory(promptsDirectory);
-        
-        // Create a mock Assembly to return our fake path
-        var mockAssembly = new Mock<Assembly>();
-        mockAssembly.Setup(a => a.Location).Returns(assemblyLocation);
+        mockFileSystem.AddFile(templatePath, new(templateContent));
         
         // Create the renderer with our mock file system
         var renderer = new PromptRenderer(mockFileSystem);
         
-        // Use reflection to set the private field for the assembly
-        var fieldInfo = typeof(PromptRenderer).GetField("_assembly", 
-            BindingFlags.NonPublic | BindingFlags.Instance);
-        fieldInfo?.SetValue(renderer, mockAssembly.Object);
-        
         // Create kernel and arguments
-        var kernel = Kernel.Builder.Build();
+        var kernel = Kernel.CreateBuilder().Build();
         var arguments = new KernelArguments
         {
             ["name"] = "World"
@@ -49,7 +37,7 @@ public class PromptRendererTests
             arguments);
         
         // Act
-        var result = await renderer.RenderPromptTemplateFromFileAsync(kernel, request);
+        var result = await renderer.RenderPromptTemplateFromFileAsync(kernel, request, "/fake/Prompts/");
         
         // Assert
         Assert.Equal("Hello World!", result);

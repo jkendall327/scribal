@@ -11,11 +11,15 @@ public class PromptRenderer(IFileSystem fileSystem)
 {
     private readonly HandlebarsPromptTemplateFactory _templateFactory = new();
 
-    public async Task<string> RenderPromptTemplateFromFileAsync(Kernel kernel, RenderRequest request)
+    public async Task<string> RenderPromptTemplateFromFileAsync(Kernel kernel, RenderRequest request, string? promptsFolder = null)
     {
         (var promptFilename, var logicalName, var description, var arguments) = request;
         
-        var template = await GetRawTemplate(promptFilename);
+        promptsFolder ??= GetPromptsFolder();
+        
+        var path = fileSystem.Path.Combine(promptsFolder, $"{promptFilename}.hbs");
+        
+        var template = await fileSystem.File.ReadAllTextAsync(path);
 
         var promptConfig = new PromptTemplateConfig
         {
@@ -30,7 +34,7 @@ public class PromptRenderer(IFileSystem fileSystem)
         return await promptTemplate.RenderAsync(kernel, arguments);
     }
 
-    private async Task<string> GetRawTemplate(string promptFilename)
+    private string GetPromptsFolder()
     {
         var location = Assembly.GetExecutingAssembly().Location;
         
@@ -41,10 +45,8 @@ public class PromptRenderer(IFileSystem fileSystem)
             throw new InvalidOperationException("Somehow, Assembly.GetExecutingAssembly failed to return a valid path");
         }
         
-        var path = fileSystem.Path.Combine(contentRoot, "Prompts", $"{promptFilename}.hbs");
-        
-        var template = await fileSystem.File.ReadAllTextAsync(path);
-        
-        return template;
+        var path = fileSystem.Path.Combine(contentRoot, "Prompts");
+
+        return path;
     }
 }

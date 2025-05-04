@@ -16,10 +16,12 @@ public interface IGitService
     Task<bool> CreateCommit(string filepath, string message);
 }
 
-public sealed class GitService(ILogger<GitService> logger) : IGitService, IDisposable
+public sealed class GitService(TimeProvider time, ILogger<GitService> logger) : IGitService, IDisposable
 {
     private Repository? _repo;
-
+    private string? _name;
+    private string? _email;
+    
     public bool Enabled => _repo is not null;
     
     public void Initialise(string path)
@@ -27,6 +29,15 @@ public sealed class GitService(ILogger<GitService> logger) : IGitService, IDispo
         try
         {
             _repo = new(path);
+            
+            _name = _repo.Config.GetValueOrDefault<string>("user.name");
+            _email = _repo.Config.GetValueOrDefault<string>("user.email");
+
+            if (string.IsNullOrEmpty(_name) || string.IsNullOrEmpty(_email))
+            {
+                // TODO surface this to the user or make it optional.
+                throw new InvalidOperationException("No username or email set in git config.");
+            }
         }
         catch (Exception ex)
         {
@@ -35,6 +46,8 @@ public sealed class GitService(ILogger<GitService> logger) : IGitService, IDispo
     }
     
     [MemberNotNull(nameof(_repo))]
+    [MemberNotNull(nameof(_name))]
+    [MemberNotNull(nameof(_email))]
     private void EnsureValidRepository()
     {
         if (_repo is null)
@@ -63,7 +76,9 @@ public sealed class GitService(ILogger<GitService> logger) : IGitService, IDispo
 
     public Task<string> GetCurrentCommit()
     {
-        throw new NotImplementedException();
+        EnsureValidRepository();
+        
+        return Task.FromResult(_repo.Head.Tip.MessageShort);
     }
 
     public Task<bool> StageChange()
@@ -73,9 +88,13 @@ public sealed class GitService(ILogger<GitService> logger) : IGitService, IDispo
 
     public Task<bool> CreateCommit(string filepath, string message)
     {
+        EnsureValidRepository();
+        
         Commands.Stage(_repo, filepath);
-        var sig = new Signature("AI-assistant", "ai@example.com", DateTimeOffset.Now);
-        _repo.Commit($"AI edited {filepath}", sig, sig);
+        
+        var sig = new Signature($"{_name} (scribal)", _email, time.GetLocalNow());
+        
+        _repo.Commit(message, sig, sig);
         
         return Task.FromResult(true);
     }

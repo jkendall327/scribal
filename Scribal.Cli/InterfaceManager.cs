@@ -9,12 +9,13 @@ public class InterfaceManager(
     CommandService commands,
     IFileSystem fileSystem,
     IAiChatService aiChatService,
+    IGitService gitService,
     CancellationService cancellationService,
     RepoMapStore repoMapStore)
 {
-    private Guid _conversationId = Guid.NewGuid();
+    private readonly Guid _conversationId = Guid.NewGuid();
 
-    public Task DisplayWelcome()
+    public async Task DisplayWelcome()
     {
         AnsiConsole.Clear();
 
@@ -26,9 +27,19 @@ public class InterfaceManager(
         var cwd = fileSystem.Directory.GetCurrentDirectory();
 
         AnsiConsole.MarkupLine($"[bold]Current working directory: {cwd}[/]");
+        
+        if (gitService.Enabled)
+        {
+            var currentBranch = await gitService.GetCurrentBranch();
+            AnsiConsole.MarkupLine($"[bold]Current branch: {currentBranch}[/]");
+        }
+        else
+        {
+            AnsiConsole.MarkupLine("[red rapidblink]You are not in a valid Git repository! AI edits will be destructive![/]");
+        }
+        
         AnsiConsole.MarkupLine("Type [blue]/help[/] for available commands or just start typing to talk.");
         AnsiConsole.WriteLine();
-        return Task.CompletedTask;
     }
 
     public async Task RunMainLoop()

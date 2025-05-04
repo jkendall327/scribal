@@ -7,6 +7,7 @@ namespace Scribal.Cli;
 public class InterfaceManager(
     CommandService commands,
     IFileSystem fileSystem,
+    IAiChatService aiChatService,
     PromptBuilder builder,
     RepoMapStore repoMapStore)
 {
@@ -70,51 +71,27 @@ public class InterfaceManager(
 
     private async Task ProcessConversation(string userInput)
     {
-        // var rule = new Rule();
-        //
-        // AnsiConsole.Write(rule);
-        //
-        // var files = repoMapStore.Paths.ToList();
-        //
-        // foreach (var file in files)
-        // {
-        //     AnsiConsole.MarkupLine($"[yellow]{file}[/]");
-        // }
-        //
-        // var cwd = fileSystem.Directory.GetCurrentDirectory();
-        // var cwdDir = fileSystem.DirectoryInfo.New(cwd);
-        // var prompt = await builder.BuildPromptAsync(cwdDir, userInput);
-        //
-        // // We want to stream in updates ASAP to the UI.
-        // // But we also want to save the completed response to store it in our chat history.
-        // // ToChatResponseAsync() only works on IAsyncEnumerable<ChatResponseUpdate>,
-        // // so use a dummy ToAsyncEnumerable method to get it working.
-        // var response = client.GetResponse(prompt);
-        //
-        // var updates = new List<ChatResponseUpdate>();
-        //
-        // await foreach (var chunk in response)
-        // {
-        //     updates.Add(chunk);
-        //     AnsiConsole.Write(chunk.Text);
-        // }
-        //
-        // var completedResponse = await ToAsyncEnumerable(updates).ToChatResponseAsync();
-        //
-        // client.UpdateConversationHistory(completedResponse);
-        //
-        // AnsiConsole.WriteLine();
-        //
-        // AnsiConsole.Write(rule);
-    }
-
-    private async IAsyncEnumerable<ChatResponseUpdate> ToAsyncEnumerable(List<ChatResponseUpdate> updates)
-    {
-        await Task.Yield();
-
-        foreach (var chatResponseUpdate in updates)
+        var rule = new Rule();
+        
+        AnsiConsole.Write(rule);
+        
+        var files = repoMapStore.Paths.ToList();
+        
+        foreach (var file in files)
         {
-            yield return chatResponseUpdate;
+            AnsiConsole.MarkupLine($"[yellow]{file}[/]");
         }
+        
+        var cwd = fileSystem.Directory.GetCurrentDirectory();
+        var cwdDir = fileSystem.DirectoryInfo.New(cwd);
+        var prompt = await builder.BuildPromptAsync(cwdDir, userInput);
+
+        await foreach (var update in aiChatService.StreamAsync(string.Empty, userInput, null, CancellationToken.None))
+        {
+            AnsiConsole.Write(update);
+        }
+        
+        AnsiConsole.WriteLine();
+        AnsiConsole.Write(rule);
     }
 }

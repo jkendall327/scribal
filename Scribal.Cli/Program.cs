@@ -18,9 +18,9 @@ var modelConfiguration = new ConfigurationBuilder()
     .AddUserSecrets<Program>()
     .Build();
 
-builder.Services.AddScribalAi(modelConfiguration);
-
 var filesystem = new FileSystem();
+
+builder.Services.AddScribalAi(modelConfiguration);
 
 builder.Services.AddSingleton<IFileSystem>(filesystem);
 builder.Services.AddSingleton<RepoMapStore>();

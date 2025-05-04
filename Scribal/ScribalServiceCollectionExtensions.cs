@@ -1,8 +1,8 @@
+using System.IO.Abstractions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
 using Scribal.Cli;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Scribal;
 
@@ -13,16 +13,13 @@ public static class ScribalServiceCollectionExtensions
 {
     public static IServiceCollection AddScribalAi(this IServiceCollection services, IConfiguration cfg)
     {
-        // Store the IServiceCollection so we can populate the kernel's service collection with it in the lambda.
-        services.AddSingleton(services);
-
         services.AddSingleton<Kernel>(sp =>
         {
             var kb = Kernel.CreateBuilder();
-
-            var existingServices = sp.GetRequiredService<IServiceCollection>();
-
-            kb.Services.Add(existingServices);
+            
+            var fileSystem = sp.GetRequiredService<IFileSystem>();
+            
+            kb.Services.AddSingleton(fileSystem);
 
             var oaiKey = cfg["OPENAI_API_KEY"];
             var geminiKey = cfg["GEMINI_API_KEY"];

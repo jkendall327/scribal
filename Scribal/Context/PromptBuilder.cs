@@ -146,6 +146,11 @@ public class PromptBuilder(
 
             foreach (var header in doc.Headers.OrderBy(h => h.Line))
             {
+                if (string.IsNullOrWhiteSpace(header.Text))
+                {
+                    continue;
+                }
+                
                 var headerIndent = new string(' ', depth * 2 + 4 + header.Level - 1);
                 sb.AppendLine($"{headerIndent}• {header.Text}");
             }

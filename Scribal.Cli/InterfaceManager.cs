@@ -9,7 +9,7 @@ public class InterfaceManager(
     CommandService commands,
     IFileSystem fileSystem,
     IAiChatService aiChatService,
-    PromptBuilder builder,
+    CancellationService cancellationService,
     RepoMapStore repoMapStore)
 {
     private Guid _conversationId = Guid.NewGuid();
@@ -85,34 +85,47 @@ public class InterfaceManager(
             AnsiConsole.MarkupLine($"[yellow]{file}[/]");
         }
 
-        var enumerable = aiChatService.StreamAsync(_conversationId.ToString(),
-            userInput,
-            "gemini",
-            CancellationToken.None);
-
-        await foreach (var update in enumerable)
-        {
-            switch (update)
-            {
-                case ChatStreamItem.TokenChunk tc: AnsiConsole.Write(tc.Content); break;
-                case ChatStreamItem.Metadata md:
-                {
-                    AnsiConsole.WriteLine();
-
-                    AnsiConsole.Decoration = Decoration.Italic;
-
-                    var time = FormatTimeSpan(md.Elapsed);
-                    
-                    AnsiConsole.Write($"{md.ServiceId}. Total time: {time}, {md.CompletionTokens} output tokens.");
-                    
-                    AnsiConsole.ResetDecoration();
-                    break;
-                }
-            }
-        }
+        await CallAssistant(userInput);
 
         AnsiConsole.WriteLine();
         AnsiConsole.Write(rule);
+    }
+
+    private async Task CallAssistant(string userInput)
+    {
+        try
+        {
+            var enumerable = aiChatService.StreamAsync(_conversationId.ToString(),
+                userInput,
+                "gemini",
+                cancellationService.Source.Token);
+
+            await foreach (var update in enumerable)
+            {
+                switch (update)
+                {
+                    case ChatStreamItem.TokenChunk tc: AnsiConsole.Write(tc.Content); break;
+                    case ChatStreamItem.Metadata md:
+                    {
+                        AnsiConsole.WriteLine();
+
+                        AnsiConsole.Decoration = Decoration.Italic;
+
+                        var time = FormatTimeSpan(md.Elapsed);
+                    
+                        AnsiConsole.Write($"{md.ServiceId}. Total time: {time}, {md.CompletionTokens} output tokens.");
+                    
+                        AnsiConsole.ResetDecoration();
+                        break;
+                    }
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            AnsiConsole.WriteLine();
+            AnsiConsole.WriteLine("(cancelled)");
+        }
     }
 
     private static string FormatTimeSpan(TimeSpan timeSpan)

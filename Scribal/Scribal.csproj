@@ -20,13 +20,13 @@
     </ItemGroup>
 
     <ItemGroup>
-      <None Update="Prompts\Commits.md">
+      <None Update="Prompts\Commits.hbs">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
-      <None Update="Prompts\System.md">
+      <None Update="Prompts\System.hbs">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
-      <None Update="Prompts\Primer.md">
+      <None Update="Prompts\Primer.hbs">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
     </ItemGroup>

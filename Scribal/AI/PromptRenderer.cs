@@ -41,7 +41,7 @@ public class PromptRenderer(IFileSystem fileSystem)
             throw new InvalidOperationException("Somehow, Assembly.GetExecutingAssembly failed to return a valid path");
         }
         
-        var path = fileSystem.Path.Combine(contentRoot, "Prompts", $"{promptFilename}.md");
+        var path = fileSystem.Path.Combine(contentRoot, "Prompts", $"{promptFilename}.hbs");
         
         var template = await fileSystem.File.ReadAllTextAsync(path);
         

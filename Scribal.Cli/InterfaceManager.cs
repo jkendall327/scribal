@@ -13,7 +13,7 @@ public class InterfaceManager(
     RepoMapStore repoMapStore)
 {
     private Guid _conversationId = Guid.NewGuid();
-    
+
     public Task DisplayWelcome()
     {
         AnsiConsole.Clear();
@@ -75,21 +75,30 @@ public class InterfaceManager(
     private async Task ProcessConversation(string userInput)
     {
         var rule = new Rule();
-        
+
         AnsiConsole.Write(rule);
-        
+
         var files = repoMapStore.Paths.ToList();
-        
+
         foreach (var file in files)
         {
             AnsiConsole.MarkupLine($"[yellow]{file}[/]");
         }
+
+        var enumerable = aiChatService.StreamAsync(_conversationId.ToString(),
+            userInput,
+            "openai",
+            CancellationToken.None);
         
-        await foreach (var update in aiChatService.StreamAsync(_conversationId.ToString(), userInput, null, CancellationToken.None))
+        await foreach (var update in enumerable)
         {
-            AnsiConsole.Write(update);
+            switch (update)
+            {
+                case ChatStreamItem.TokenChunk tc: AnsiConsole.Write(tc.Content); break;
+                case ChatStreamItem.Metadata md: AnsiConsole.Write(md.PromptTokens); break;
+            }
         }
-        
+
         AnsiConsole.WriteLine();
         AnsiConsole.Write(rule);
     }

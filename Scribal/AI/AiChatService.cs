@@ -1,8 +1,11 @@
 using System.IO.Abstractions;
 using System.Runtime.CompilerServices;
+using System.Text.Json;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
+using Microsoft.SemanticKernel.Connectors.Google;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
+using OpenAI.Chat;
 using Scribal.Cli;
 
 #pragma warning disable SKEXP0070
@@ -16,16 +19,31 @@ public interface IAiChatService
         string? serviceId = null,
         CancellationToken ct = default);
 
-    IAsyncEnumerable<string> StreamAsync(string conversationId,
+    IAsyncEnumerable<ChatStreamItem> StreamAsync(string conversationId,
         string userMessage,
         string? serviceId = null,
         CancellationToken ct = default);
 }
 
-public sealed class AiChatService(Kernel kernel, IChatSessionStore store, PromptBuilder prompts, IFileSystem fileSystem)
-    : IAiChatService
+public record ChatStreamItem
 {
+    private ChatStreamItem()
+    {
+    }
 
+    public sealed record TokenChunk(string Content) : ChatStreamItem;
+
+    public sealed record Metadata(TimeSpan Elapsed, string ServiceId, int PromptTokens, int CompletionTokens)
+        : ChatStreamItem;
+}
+
+public sealed class AiChatService(
+    Kernel kernel,
+    IChatSessionStore store,
+    PromptBuilder prompts,
+    IFileSystem fileSystem,
+    TimeProvider time) : IAiChatService
+{
     private static OpenAIPromptExecutionSettings Settings =>
         new()
         {
@@ -44,28 +62,53 @@ public sealed class AiChatService(Kernel kernel, IChatSessionStore store, Prompt
         return reply.Content;
     }
 
-    public async IAsyncEnumerable<string> StreamAsync(string cid,
+    public async IAsyncEnumerable<ChatStreamItem> StreamAsync(string cid,
         string user,
         string? sid,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
-        var chat = kernel.GetRequiredService<IChatCompletionService>(sid);
-        var hist = await PrepareHistoryAsync(cid, user, ct);
+        var start = time.GetTimestamp();
 
-        await foreach (var chunk in chat.GetStreamingChatMessageContentsAsync(hist, Settings, kernel, ct))
+        var chat = kernel.GetRequiredService<IChatCompletionService>(sid);
+        var history = await PrepareHistoryAsync(cid, user, ct);
+
+        var stream = chat.GetStreamingChatMessageContentsAsync(history, Settings, kernel, ct);
+
+        await foreach (var chunk in stream)
         {
             if (chunk.Content is {Length: > 0} text)
             {
                 // push token/partial phrase upstream
-                yield return text; 
+                yield return new ChatStreamItem.TokenChunk(text);
             }
         }
 
         // collect the full assistant message from streamed chunks
-        var assistant = string.Concat(await chat.GetChatMessageContentAsync(hist, Settings, kernel, ct)).Trim();
+        var final = await chat.GetChatMessageContentAsync(history, Settings, kernel, ct);
+        var assistant = string.Concat(final).Trim();
 
-        hist.AddAssistantMessage(assistant);
-        await store.SaveAsync(cid, hist, ct);
+        history.AddAssistantMessage(assistant);
+        await store.SaveAsync(cid, history, ct);
+
+        var elapsed = time.GetElapsedTime(start);
+
+        int promptTokens = 0, completionTokens = 0;
+
+        if (final.Metadata is GeminiMetadata geminiMetadata)
+        {
+            promptTokens = geminiMetadata.PromptTokenCount;
+            completionTokens = geminiMetadata.CandidatesTokenCount;
+        }
+        else if (final.Metadata?.TryGetValue("Usage", out var u) is true && u is ChatTokenUsage usage)
+        {
+            promptTokens = usage.InputTokenCount;
+            completionTokens = usage.OutputTokenCount;
+        }
+        
+        yield return new ChatStreamItem.Metadata(Elapsed: elapsed,
+            ServiceId: sid ?? final.ModelId ?? "[unknown]",
+            PromptTokens: promptTokens,
+            CompletionTokens: completionTokens);
     }
 
     private async Task<ChatHistory> PrepareHistoryAsync(string cid, string user, CancellationToken ct)
@@ -76,17 +119,16 @@ public sealed class AiChatService(Kernel kernel, IChatSessionStore store, Prompt
         {
             hist.AddSystemMessage(PromptBuilder.SystemPrompt);
         }
-        
+
         if (hist.All(m => m.Role != AuthorRole.User))
         {
             var cwd = fileSystem.Directory.GetCurrentDirectory();
             var info = fileSystem.DirectoryInfo.New(cwd);
-            
+
             var cooked = await prompts.BuildPromptAsync(info, user);
 
             hist.AddUserMessage(cooked);
         }
-
 
         hist.AddUserMessage(user);
         return hist;

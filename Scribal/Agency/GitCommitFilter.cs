@@ -1,10 +1,11 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
+using Scribal.AI;
 using Scribal.Cli;
 
 namespace Scribal.Agency;
 
-public sealed class GitCommitFilter(IGitService git, ILogger<GitCommitFilter> logger) : IFunctionInvocationFilter
+public sealed class GitCommitFilter(IGitService git, IAiChatService aiChatService, ILogger<GitCommitFilter> logger) : IFunctionInvocationFilter
 {
     public async Task OnFunctionInvocationAsync(FunctionInvocationContext ctx,
         Func<FunctionInvocationContext, Task> next)
@@ -18,7 +19,7 @@ public sealed class GitCommitFilter(IGitService git, ILogger<GitCommitFilter> lo
         }
 
         // Was it the edit-file tool?
-        if (ctx.Function is {PluginName: nameof(DiffEditor), Name: "apply_diff"})
+        if (ctx.Function is {PluginName: nameof(DiffEditor), Name: DiffEditor.DiffEditorToolName})
         {
             logger.LogInformation("Creating commit after diff editor tool invocation");
             
@@ -29,9 +30,18 @@ public sealed class GitCommitFilter(IGitService git, ILogger<GitCommitFilter> lo
                 logger.LogWarning("No valid filepath could be provided to the Git service; exiting");
                 return;
             }
+
+            var diff = ctx.Result.GetValue<string>();
+
+            if (string.IsNullOrEmpty(diff))
+            {
+                logger.LogWarning("No valid diff returned from the tool call; exiting");
+                return;
+            }
             
-            // TODO: generate an actual message here.
-            await git.CreateCommit(file, "test message");
+            var message = await aiChatService.GetCommitMessage([diff]);
+            
+            await git.CreateCommit(file, message);
         }
     }
 }

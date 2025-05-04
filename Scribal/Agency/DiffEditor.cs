@@ -7,13 +7,15 @@ namespace Scribal.Cli;
 
 public partial class DiffEditor(IFileSystem fileSystem)
 {
+    public const string DiffEditorToolName = "apply_diff";
+    
     /// <summary>
     /// Applies a unified diff to a file
     /// </summary>
     /// <param name="file">The file path to apply the diff to</param>
     /// <param name="diff">The unified diff content as a string</param>
     /// <returns>The unified diff, for further inspection.</returns>
-    [KernelFunction("apply_diff"), Description("Applies an edit to a file. Returns the provided diff.")]
+    [KernelFunction(DiffEditorToolName), Description("Applies an edit to a file. Returns the provided diff.")]
     public async Task<string> ApplyUnifiedDiffAsync(
         [Description("The path to the file to edit.")] string file, 
         [Description("The edit to apply, in unified diff format.")] string diff)

@@ -4,7 +4,7 @@ using Microsoft.SemanticKernel;
 
 namespace Scribal.Cli
 {
-    public class DiffService
+    public class DiffEditor
     {
         /// <summary>
         /// Applies a unified diff to a file

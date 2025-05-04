@@ -57,8 +57,8 @@ public static class ScribalServiceCollectionExtensions
                     serviceId: "deepseek");
             }
 
-            kb.Plugins.AddFromType<FileReader>("FileReader");
-            kb.Plugins.AddFromType<DiffService>("DiffEditor");
+            kb.Plugins.AddFromType<FileReader>(nameof(FileReader));
+            kb.Plugins.AddFromType<DiffEditor>(nameof(DiffEditor));
 
             return kb.Build();
         });

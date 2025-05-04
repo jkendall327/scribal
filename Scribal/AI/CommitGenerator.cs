@@ -14,7 +14,9 @@ public class CommitGenerator
         var chat = kernel.GetRequiredService<IChatCompletionService>(serviceId + "-weak");
 
         var sb = new StringBuilder("Provide a concise Git commit summary for the following diff(s).");
-
+        sb.AppendLine();
+        sb.AppendLine("Assume the content of the file is already known; focus on *what* has been added, removed or changed.");
+        sb.AppendLine();
         sb.AppendLine("---");
         
         foreach (var diff in diffs)

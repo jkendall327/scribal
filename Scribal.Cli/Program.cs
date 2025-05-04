@@ -12,12 +12,16 @@ var builder = Host.CreateApplicationBuilder(args);
 
 builder.Configuration.AddUserSecrets<Program>();
 
-builder.Services.AddSingleton<Kernel>(sp =>
+var cfg = new ConfigurationBuilder()
+    .AddJsonFile("appsettings.json")
+    .AddEnvironmentVariables()
+    .AddUserSecrets<Program>()
+    .Build();
+
+builder.Services.AddSingleton<Kernel>(_ =>
 {
     var kb = Kernel.CreateBuilder();
-
-    var cfg = builder.Configuration;
-
+    
     var oaiKey = cfg["OpenAI:ApiKey"];
     var geminiKey = cfg["Gemini:ApiKey"];
     var deepseekKey = cfg["DeepSeek:ApiKey"];

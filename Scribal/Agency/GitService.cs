@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using LibGit2Sharp;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace Scribal.Cli;
@@ -16,7 +17,7 @@ public interface IGitService
     Task<bool> CreateCommit(string filepath, string message);
 }
 
-public sealed class GitService(TimeProvider time, ILogger<GitService> logger) : IGitService, IDisposable
+public sealed class GitService(TimeProvider time, IConfiguration configuration, ILogger<GitService> logger) : IGitService, IDisposable
 {
     private Repository? _repo;
     private string? _name;
@@ -93,8 +94,13 @@ public sealed class GitService(TimeProvider time, ILogger<GitService> logger) : 
         Commands.Stage(_repo, filepath);
         
         var sig = new Signature($"{_name} (scribal)", _email, time.GetLocalNow());
-        
-        _repo.Commit(message, sig, sig);
+
+        var dry = configuration.GetValue<bool>("DryRun");
+
+        if (!dry)
+        {
+            _repo.Commit(message, sig, sig);
+        }
         
         return Task.FromResult(true);
     }

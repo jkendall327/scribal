@@ -1,26 +1,35 @@
 ﻿using System.IO.Abstractions;
+using System.Reflection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.SemanticKernel;
 using Scribal;
-using Scribal.Agency;
 using Scribal.AI;
 using Scribal.Cli;
 
-var builder = Host.CreateApplicationBuilder(args);
+// .NET looks for appsettings.json in the content root path,
+// which Host.CreateApplicationBuilder sets as the current working directory.
+// But our current working directory will almost always be somewhere different.
+var contentRoot = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+
+var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
+{
+    Args = args,
+    ContentRootPath = contentRoot
+});
 
 builder.Logging.ClearProviders();
 
+// Without the appsettings.json for priority reasons...
 var modelConfiguration = new ConfigurationBuilder()
     .AddEnvironmentVariables()
     .AddUserSecrets<Program>()
     .Build();
 
-var filesystem = new FileSystem();
-
 builder.Services.AddScribalAi(modelConfiguration);
+
+var filesystem = new FileSystem();
 
 builder.Services.AddSingleton<IFileSystem>(filesystem);
 builder.Services.AddSingleton<RepoMapStore>();

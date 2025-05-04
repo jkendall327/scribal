@@ -89,17 +89,38 @@ public class InterfaceManager(
             userInput,
             "openai",
             CancellationToken.None);
-        
+
         await foreach (var update in enumerable)
         {
             switch (update)
             {
                 case ChatStreamItem.TokenChunk tc: AnsiConsole.Write(tc.Content); break;
-                case ChatStreamItem.Metadata md: AnsiConsole.Write(md.PromptTokens); break;
+                case ChatStreamItem.Metadata md:
+                {
+                    AnsiConsole.WriteLine();
+
+                    AnsiConsole.Decoration = Decoration.Italic;
+
+                    var time = FormatTimeSpan(md.Elapsed);
+                    
+                    AnsiConsole.Write($"{md.ServiceId}. Total time: {time}, {md.CompletionTokens} output tokens.");
+                    
+                    AnsiConsole.ResetDecoration();
+                    break;
+                }
             }
         }
 
         AnsiConsole.WriteLine();
         AnsiConsole.Write(rule);
+    }
+
+    private static string FormatTimeSpan(TimeSpan timeSpan)
+    {
+        return timeSpan.TotalSeconds < 60 ?
+            // Less than a minute, just display seconds
+            $"{timeSpan.Seconds}s" :
+            // Display minutes and seconds
+            $"{(int)timeSpan.TotalMinutes}m{timeSpan.Seconds}s";
     }
 }

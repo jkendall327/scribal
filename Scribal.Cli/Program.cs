@@ -56,15 +56,15 @@ builder.Services.AddSingleton<InterfaceManager>();
 builder.Services.AddSingleton<DiffService>();
 builder.Services.AddSingleton<IConversationStore, ConversationStore>();
 builder.Services.AddSingleton<IModelClient, ModelClient>();
+builder.Services.AddSingleton<IAiChatService, AiChatService>();
 builder.Services.AddSingleton<IGitService, GitService>(s => new(Directory.GetCurrentDirectory()));
 builder.Services.AddSingleton(modelConfig);
 
-// builder.Services.AddSingleton(new OpenAIClient(Environment.GetEnvironmentVariable("OPENAI_API_KEY")));
-// builder.Services.AddChatClient(services => services.GetRequiredService<OpenAIClient>().AsChatClient("gpt-4o-mini"))
-//     .UseLogging()
-//     .UseFunctionInvocation();
-
 var app = builder.Build();
+
+var service = app.Services.GetService<IAiChatService>();
+
+var u = await service.AskAsync("hello!", "gemini");
 
 var manager = app.Services.GetRequiredService<InterfaceManager>();
 

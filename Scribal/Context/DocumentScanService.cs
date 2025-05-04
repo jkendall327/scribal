@@ -44,21 +44,15 @@ public interface IDocumentScanService
     Task<DirectoryNode> ScanDirectoryForMarkdownAsync(IDirectoryInfo rootDirectory);
 }
 
-public class DocumentScanService : IDocumentScanService
+public class DocumentScanService(IFileSystem fileSystem) : IDocumentScanService
 {
     private readonly string[] _markdownExtensions = { ".md", ".markdown" };
-    private readonly IFileSystem _fileSystem;
-
-    public DocumentScanService(IFileSystem fileSystem)
-    {
-        _fileSystem = fileSystem;
-    }
 
     public async Task<DirectoryNode> ScanDirectoryForMarkdownAsync(IDirectoryInfo rootDirectory)
     {
         if (!rootDirectory.Exists)
         {
-            return new(rootDirectory.FullName, _fileSystem);
+            return new(rootDirectory.FullName, fileSystem);
         }
 
         return await BuildDirectoryTreeAsync(rootDirectory, rootDirectory);
@@ -66,7 +60,7 @@ public class DocumentScanService : IDocumentScanService
 
     private async Task<DirectoryNode> BuildDirectoryTreeAsync(IDirectoryInfo currentDirectory, IDirectoryInfo rootDirectory)
     {
-        var directoryNode = new DirectoryNode(currentDirectory.FullName, _fileSystem);
+        var directoryNode = new DirectoryNode(currentDirectory.FullName, fileSystem);
         
         // Process all markdown files in the current directory
         var markdownFiles = currentDirectory.GetFiles()
@@ -78,7 +72,7 @@ public class DocumentScanService : IDocumentScanService
                     return false;
                 }
                 
-                var extension = _fileSystem.Path.GetExtension(file.FullName).ToLowerInvariant();
+                var extension = fileSystem.Path.GetExtension(file.FullName).ToLowerInvariant();
                 
                 return _markdownExtensions.Contains(extension);
             })
@@ -106,10 +100,10 @@ public class DocumentScanService : IDocumentScanService
 
     private async Task<DocumentInfo> ProcessMarkdownFileAsync(IFileInfo file, IDirectoryInfo rootDirectory)
     {
-        var content = await _fileSystem.File.ReadAllTextAsync(file.FullName);
+        var content = await fileSystem.File.ReadAllTextAsync(file.FullName);
         var headers = MarkdownMapExtractor.ExtractHeaders(content);
         
-        var relativePath = _fileSystem.Path.GetRelativePath(rootDirectory.FullName, file.FullName);
+        var relativePath = fileSystem.Path.GetRelativePath(rootDirectory.FullName, file.FullName);
         
         return new DocumentInfo
         {

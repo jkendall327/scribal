@@ -1,0 +1,158 @@
+﻿{
+  Name: project,
+  Path: /project,
+  Subdirectories: [
+    {
+      Name: characters,
+      Path: /project/characters,
+      Documents: [
+        {
+          FilePath: /project/characters/protagonist.md,
+          FileName: protagonist.md,
+          RelativePath: characters/protagonist.md,
+          Headers: [
+            {
+              Level: 1,
+              Text: Main Character
+            }
+          ]
+        },
+        {
+          FilePath: /project/characters/antagonist.md,
+          FileName: antagonist.md,
+          RelativePath: characters/antagonist.md,
+          Headers: [
+            {
+              Level: 1,
+              Text: Villain
+            }
+          ]
+        }
+      ]
+    },
+    {
+      Name: chapters,
+      Path: /project/chapters,
+      Subdirectories: [
+        {
+          Name: drafts,
+          Path: /project/chapters/drafts,
+          Documents: [
+            {
+              FilePath: /project/chapters/drafts/chapter3-draft.md,
+              FileName: chapter3-draft.md,
+              RelativePath: chapters/drafts/chapter3-draft.md,
+              Headers: [
+                {
+                  Level: 1,
+                  Text: Chapter 3 (Draft)
+                }
+              ]
+            },
+            {
+              FilePath: /project/chapters/drafts/chapter4-draft.md,
+              FileName: chapter4-draft.md,
+              RelativePath: chapters/drafts/chapter4-draft.md,
+              Headers: [
+                {
+                  Level: 1,
+                  Text: Chapter 4 (Draft)
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      Documents: [
+        {
+          FilePath: /project/chapters/chapter1.md,
+          FileName: chapter1.md,
+          RelativePath: chapters/chapter1.md,
+          Headers: [
+            {
+              Level: 1,
+              Text: Chapter 1
+            }
+          ]
+        },
+        {
+          FilePath: /project/chapters/chapter2.md,
+          FileName: chapter2.md,
+          RelativePath: chapters/chapter2.md,
+          Headers: [
+            {
+              Level: 1,
+              Text: Chapter 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      Name: empty,
+      Path: /project/empty
+    },
+    {
+      Name: resources,
+      Path: /project/resources,
+      Subdirectories: [
+        {
+          Name: images,
+          Path: /project/resources/images
+        }
+      ],
+      Documents: [
+        {
+          FilePath: /project/resources/references.md,
+          FileName: references.md,
+          RelativePath: resources/references.md,
+          Headers: [
+            {
+              Level: 1,
+              Text: References
+            }
+          ]
+        },
+        {
+          FilePath: /project/resources/outline.md,
+          FileName: outline.md,
+          RelativePath: resources/outline.md,
+          Headers: [
+            {
+              Level: 1,
+              Text: Story Outline
+            }
+          ]
+        }
+      ]
+    },
+    {
+      Name: assets,
+      Path: /project/assets
+    }
+  ],
+  Documents: [
+    {
+      FilePath: /project/README.md,
+      FileName: README.md,
+      RelativePath: README.md,
+      Headers: [
+        {
+          Level: 1,
+          Text: Project Documentation
+        }
+      ]
+    },
+    {
+      FilePath: /project/CONTRIBUTING.md,
+      FileName: CONTRIBUTING.md,
+      RelativePath: CONTRIBUTING.md,
+      Headers: [
+        {
+          Level: 1,
+          Text: How to Contribute
+        }
+      ]
+    }
+  ]
+}

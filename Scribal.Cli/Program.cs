@@ -1,6 +1,5 @@
 ﻿using System.IO.Abstractions;
 using System.Reflection;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -16,18 +15,13 @@ var contentRoot = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location
 var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
 {
     Args = args,
-    ContentRootPath = contentRoot
+    ContentRootPath = contentRoot,
+    EnvironmentName = "Development"
 });
 
 builder.Logging.ClearProviders();
 
-// Without the appsettings.json for priority reasons...
-var modelConfiguration = new ConfigurationBuilder()
-    .AddEnvironmentVariables()
-    .AddUserSecrets<Program>()
-    .Build();
-
-builder.Services.AddScribalAi(modelConfiguration);
+builder.Services.AddScribalAi(builder.Configuration);
 
 var filesystem = new FileSystem();
 

@@ -26,8 +26,8 @@ public static class ScribalServiceCollectionExtensions
 
     private static void AddModels(IConfiguration cfg, IKernelBuilder kb)
     {
-        var oaiKey = cfg["OPENAI_API_KEY"];
-        var geminiKey = cfg["GEMINI_API_KEY"];
+        var oaiKey = cfg["OpenAI:ApiKey"];
+        var geminiKey = cfg["Gemini:ApiKey"];
         var deepseekKey = cfg["DeepSeek:ApiKey"];
 
         if (string.IsNullOrEmpty(oaiKey) && string.IsNullOrEmpty(geminiKey) && string.IsNullOrEmpty(deepseekKey))

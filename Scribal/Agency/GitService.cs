@@ -89,18 +89,20 @@ public sealed class GitService(TimeProvider time, IConfiguration configuration, 
 
     public Task<bool> CreateCommit(string filepath, string message)
     {
+        var dry = configuration.GetValue<bool>("DryRun");
+
+        if (dry)
+        {
+            return Task.FromResult(true);
+        }
+        
         EnsureValidRepository();
         
         Commands.Stage(_repo, filepath);
-        
+
         var sig = new Signature($"{_name} (scribal)", _email, time.GetLocalNow());
 
-        var dry = configuration.GetValue<bool>("DryRun");
-
-        if (!dry)
-        {
-            _repo.Commit(message, sig, sig);
-        }
+        _repo.Commit(message, sig, sig);
         
         return Task.FromResult(true);
     }

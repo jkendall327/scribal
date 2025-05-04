@@ -1,11 +1,15 @@
+using System.IO.Abstractions;
 using System.Text;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
+using Microsoft.SemanticKernel.PromptTemplates.Handlebars;
 
 namespace Scribal.AI;
 
-public class CommitGenerator
+public class CommitGenerator(IFileSystem fileSystem)
 {
+    private readonly HandlebarsPromptTemplateFactory _templateFactory = new();
+    
     public async Task<string> GetCommitMessage(Kernel kernel,
         List<string> diffs,
         string? serviceId = null,
@@ -13,19 +17,37 @@ public class CommitGenerator
     {
         var chat = kernel.GetRequiredService<IChatCompletionService>(serviceId + "-weak");
 
-        var sb = new StringBuilder("Provide a concise Git commit summary for the following diff(s).");
-        sb.AppendLine();
-        sb.AppendLine("Assume the content of the file is already known; focus on *what* has been added, removed or changed.");
-        sb.AppendLine();
-        sb.AppendLine("---");
+        var prompt = await RenderCommitPromptTemplateAsync(kernel, diffs);
         
-        foreach (var diff in diffs)
-        {
-            sb.AppendLine(diff);
-        }
-        
-        var response = await chat.GetChatMessageContentAsync(sb.ToString(), kernel: kernel, cancellationToken: ct);
+        var response = await chat.GetChatMessageContentAsync(prompt, kernel: kernel, cancellationToken: ct);
         
         return response.Content ?? throw new InvalidOperationException("Assistant failed to return a commit message.");
+    }
+    
+    private async Task<string> RenderCommitPromptTemplateAsync(Kernel kernel, List<string> diffs)
+    {
+        // Define the Handlebars template
+        var template = await fileSystem.File.ReadAllTextAsync("Prompts/Commits.md");
+
+        // Create prompt template configuration
+        var promptConfig = new PromptTemplateConfig
+        {
+            Template = template,
+            TemplateFormat = "handlebars",
+            Name = "GitCommitSummaryTemplate",
+            Description = "Template for generating Git commit messages from diffs"
+        };
+
+        // Create the prompt template
+        var promptTemplate = _templateFactory.Create(promptConfig);
+
+        // Render the template with the provided diffs
+        return await promptTemplate.RenderAsync(
+            kernel,
+            new()
+            {
+                ["diffs"] = diffs
+            }
+        );
     }
 }

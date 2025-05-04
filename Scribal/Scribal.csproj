@@ -15,6 +15,13 @@
         <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.0-preview.3.25171.5" />
         <PackageReference Include="Microsoft.SemanticKernel.Connectors.Google" Version="1.47.0-alpha" />
         <PackageReference Include="Microsoft.SemanticKernel.Connectors.OpenAI" Version="1.48.0" />
+        <PackageReference Include="Microsoft.SemanticKernel.PromptTemplates.Handlebars" Version="1.38.0" />
         <PackageReference Include="System.IO.Abstractions" Version="22.0.14" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Update="Prompts\Commits.md">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
     </ItemGroup>
 </Project>

@@ -1,0 +1,8 @@
+Provide a concise Git commit summary for the following diff(s).
+
+Assume the content of the file is already known; focus on *what* has been added, removed or changed.
+
+---
+{{#each diffs}}
+{{this}}
+{{/each}}

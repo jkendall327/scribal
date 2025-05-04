@@ -1,5 +1,6 @@
 using System.IO.Abstractions;
 using Microsoft.Extensions.AI;
+using Scribal.AI;
 using Spectre.Console;
 
 namespace Scribal.Cli;

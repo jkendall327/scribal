@@ -6,6 +6,9 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Scribal;
 
+#pragma warning disable SKEXP0070 // experimental attribute until GA
+#pragma warning disable SKEXP0010 // “other OpenAI-style” endpoint
+
 public static class ScribalServiceCollectionExtensions
 {
     public static IServiceCollection AddScribalAi(this IServiceCollection services, IConfiguration cfg)
@@ -30,28 +33,28 @@ public static class ScribalServiceCollectionExtensions
                 throw new InvalidOperationException("No API key has been supplied for any provider.");
             }
 
+            var oaiModel = cfg["OpenAI:Model"] ?? "gpt-4o-mini";
+            var geminiModel = cfg["Gemini:Model"] ?? "gemini-1.5-pro";
+            var deepseekModel = cfg["DeepSeek:Model"] ?? "deepseek-chat";
+
             if (!string.IsNullOrEmpty(oaiKey))
             {
-                kb.AddOpenAIChatCompletion(modelId: cfg["OpenAI:Model"] ?? "gpt-4o-mini", apiKey: oaiKey, serviceId: "openai");
+                kb.AddOpenAIChatCompletion(modelId: oaiModel, apiKey: oaiKey, serviceId: "openai");
             }
 
             if (!string.IsNullOrEmpty(geminiKey))
             {
-#pragma warning disable SKEXP0070 // experimental attribute until GA
-                kb.AddGoogleAIGeminiChatCompletion(modelId: cfg["Gemini:Model"] ?? "gemini-1.5-pro",
+                kb.AddGoogleAIGeminiChatCompletion(geminiModel,
                     apiKey: geminiKey,
                     serviceId: "gemini");
-#pragma warning restore SKEXP0070
             }
 
             if (!string.IsNullOrEmpty(deepseekKey))
             {
-#pragma warning disable SKEXP0010 // “other OpenAI-style” endpoint
-                kb.AddOpenAIChatCompletion(modelId: cfg["DeepSeek:Model"] ?? "deepseek-chat",
+                kb.AddOpenAIChatCompletion(modelId: deepseekModel,
                     apiKey: deepseekKey,
-                    endpoint: new Uri("https://api.deepseek.com"),
+                    endpoint: new("https://api.deepseek.com"),
                     serviceId: "deepseek");
-#pragma warning restore SKEXP0010
             }
 
             kb.Plugins.AddFromType<FileReader>("FileReader");

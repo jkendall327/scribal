@@ -3,20 +3,19 @@ using System.Runtime.CompilerServices;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
+using Scribal.Cli;
 
 #pragma warning disable SKEXP0070
 
-namespace Scribal.Cli;
+namespace Scribal.AI;
 
 public interface IAiChatService
 {
-    /// Single-shot (non-streaming) convenience.
     Task<string> AskAsync(string conversationId,
         string userMessage,
         string? serviceId = null,
         CancellationToken ct = default);
 
-    /// Low-latency streaming: yields partial tokens as soon as they arrive.
     IAsyncEnumerable<string> StreamAsync(string conversationId,
         string userMessage,
         string? serviceId = null,

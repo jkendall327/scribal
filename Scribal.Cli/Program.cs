@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Scribal;
+using Scribal.AI;
 using Scribal.Cli;
 
 var builder = Host.CreateApplicationBuilder(args);

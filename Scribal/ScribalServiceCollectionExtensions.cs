@@ -1,4 +1,3 @@
-using System.IO.Abstractions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
@@ -14,23 +13,14 @@ public static class ScribalServiceCollectionExtensions
 {
     public static IServiceCollection AddScribalAi(this IServiceCollection services, IConfiguration cfg)
     {
-        services.AddSingleton<Kernel>(sp =>
-        {
-            var kb = Kernel.CreateBuilder();
-            
-            kb.Services.AddSingleton(sp.GetRequiredService<IFileSystem>());
-            kb.Services.AddSingleton(sp.GetRequiredService<IConfiguration>());
-            kb.Services.AddSingleton(sp.GetRequiredService<IGitService>());
+        var kb = services.AddKernel();
+        
+        AddModels(cfg, kb);
 
-            AddModels(cfg, kb);
+        AddPlugins(kb);
 
-            AddPlugins(kb);
-
-            //AddFilters(kb);
-            
-            return kb.Build();
-        });
-
+        AddFilters(kb);
+        
         return services;
     }
 

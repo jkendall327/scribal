@@ -1,5 +1,4 @@
 using System.IO.Abstractions;
-using System.Reflection;
 using System.Text;
 using HandlebarsDotNet;
 using Microsoft.Extensions.Configuration;
@@ -53,24 +52,7 @@ public class PromptBuilder(
         return _prefixedSystemPrompt;
     }
 
-    private string? _mainPromptTemplate;
-
-    private async Task<string> LoadTemplateAsync(string templateName)
-    {
-        var location = Assembly.GetExecutingAssembly().Location;
-
-        var contentRoot = fileSystem.Path.GetDirectoryName(location);
-
-        var templatePath = fileSystem.Path.Combine(contentRoot, "Prompts", $"{templateName}.hbs");
-        if (!fileSystem.File.Exists(templatePath))
-        {
-            throw new FileNotFoundException($"Template file not found: {templatePath}");
-        }
-
-        return await fileSystem.File.ReadAllTextAsync(templatePath);
-    }
-
-    public async Task<string> BuildPromptAsync(Kernel kernel, IDirectoryInfo directory, string userInput)
+    public async Task<string> BuildContextPrimerAsync(Kernel kernel, IDirectoryInfo directory, string userInput)
     {
         try
         {
@@ -96,7 +78,7 @@ public class PromptBuilder(
             {
                 var content = await fileSystem.File.ReadAllTextAsync(path);
                 var filename = fileSystem.Path.GetFileName(path);
-                selectedFiles.Add(new FileContent
+                selectedFiles.Add(new()
                 {
                     FileName = filename,
                     Content = content
@@ -108,75 +90,31 @@ public class PromptBuilder(
 
             // Get character files
             var characterFiles = await GetCharacterFilesAsync(directory);
-
-            // Define the main prompt template
-            const string promptTemplate =
-                @"You are about to be asked a question or given a command by the user. Here is some information to help you.
-
-# Project Structure
-The following is a map of markdown documents in this project:
-
-{{{DirectoryMap}}}
-
-{{#if ReadmeContent}}
-# Project README
-
-{{ReadmeContent}}
-{{/if}}
-
-{{#if SelectedFiles}}
----
-# Selected Files
-The user has selected to provide these files to you in full:
-
-{{#each SelectedFiles}}
----
-{{FileName}}
-{{Content}}
----
-{{/each}}
-{{/if}}
-
-{{#if SpecialFiles}}
-{{#each SpecialFiles}}
-{{Title}}
-
-{{Content}}
-{{/each}}
-{{/if}}
-
-{{#if CharacterFiles}}
-# Character Files
-
-{{#each CharacterFiles}}
-## {{FileName}}
-{{Content}}
-
-{{/each}}
-{{/if}}
-
-You have received all the necessary context to respond to the user. Here is their message:
-{{UserInput}}";
-
-            // Create prompt template configuration
-            var promptConfig = new PromptTemplateConfig
+            
+            var kernelArgs = new KernelArguments
             {
-                Template = promptTemplate,
-                TemplateFormat = "handlebars"
+                {
+                    "DirectoryMap", directoryMap
+                },
+                {
+                    "ReadmeContent", readmeContent
+                },
+                {
+                    "SelectedFiles", selectedFiles
+                },
+                {
+                    "SpecialFiles", specialFileContents
+                },
+                {
+                    "CharacterFiles", characterFiles
+                },
+                {
+                    "UserInput", userInput
+                },
             };
 
-            var template = _templateFactory.Create(promptConfig);
-            
-            // Render the template with the data model
-            return await template.RenderAsync(kernel, new()
-            {
-                { "DirectoryMap", directoryMap },
-                { "ReadmeContent", readmeContent },
-                { "SelectedFiles", selectedFiles },
-                { "SpecialFiles", specialFileContents },
-                { "CharacterFiles", characterFiles },
-                { "UserInput", userInput },
-            });
+            var request = new RenderRequest("Primer", "Primer", "Main priming prompt", kernelArgs);
+            return await renderer.RenderPromptTemplateFromFileAsync(kernel, request);
         }
         catch (Exception e)
         {
@@ -184,8 +122,6 @@ You have received all the necessary context to respond to the user. Here is thei
             throw;
         }
     }
-    
-    private readonly HandlebarsPromptTemplateFactory _templateFactory = new();
 
     private void FormatDirectoryMap(StringBuilder sb, DirectoryNode node, int depth)
     {
@@ -203,7 +139,10 @@ You have received all the necessary context to respond to the user. Here is thei
             sb.AppendLine($"{indent}  📄 {doc.FileName}");
 
             // Add headers for each document, with proper indentation based on header level
-            if (doc.Headers.Count <= 0) continue;
+            if (doc.Headers.Count <= 0)
+            {
+                continue;
+            }
 
             foreach (var header in doc.Headers.OrderBy(h => h.Line))
             {
@@ -251,15 +190,19 @@ You have received all the necessary context to respond to the user. Here is thei
         foreach (var specialFile in _specialFiles)
         {
             var filePath = fileSystem.Path.Combine(directory.FullName, specialFile.Key);
-            if (fileSystem.File.Exists(filePath))
+            
+            if (!fileSystem.File.Exists(filePath))
             {
-                var fileContent = await fileSystem.File.ReadAllTextAsync(filePath);
-                result.Add(new SpecialFileContent
-                {
-                    Title = specialFile.Value,
-                    Content = fileContent
-                });
+                continue;
             }
+
+            var fileContent = await fileSystem.File.ReadAllTextAsync(filePath);
+            
+            result.Add(new()
+            {
+                Title = specialFile.Value,
+                Content = fileContent
+            });
         }
 
         return result;
@@ -271,6 +214,7 @@ You have received all the necessary context to respond to the user. Here is thei
 
         // Check for Characters directory
         var charactersDirectoryPath = fileSystem.Path.Combine(directory.FullName, "Characters");
+        
         if (!fileSystem.Directory.Exists(charactersDirectoryPath))
         {
             return result;
@@ -287,7 +231,7 @@ You have received all the necessary context to respond to the user. Here is thei
         foreach (var characterFile in characterFiles)
         {
             var characterContent = await fileSystem.File.ReadAllTextAsync(characterFile.FullName);
-            result.Add(new FileContent
+            result.Add(new()
             {
                 FileName = fileSystem.Path.GetFileNameWithoutExtension(characterFile.Name),
                 Content = characterContent

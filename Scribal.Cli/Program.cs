@@ -18,9 +18,13 @@ var cfg = new ConfigurationBuilder()
     .AddUserSecrets<Program>()
     .Build();
 
-builder.Services.AddSingleton<Kernel>(_ =>
+builder.Services.AddSingleton<Kernel>(sp =>
 {
     var kb = Kernel.CreateBuilder();
+
+    var existingServices = sp.GetRequiredService<IServiceCollection>();
+
+    kb.Services.Add(existingServices);
 
     var oaiKey = cfg["OPENAI_API_KEY"];
     var geminiKey = cfg["GEMINI_API_KEY"];
@@ -66,6 +70,7 @@ builder.Configuration.GetSection(ModelConfiguration.SectionName).Bind(modelConfi
 
 var filesystem = new FileSystem();
 
+builder.Services.AddSingleton<IServiceCollection>(builder.Services);
 builder.Services.AddSingleton<IFileSystem>(filesystem);
 builder.Services.AddSingleton<RepoMapStore>();
 builder.Services.AddSingleton<CommandService>();
@@ -83,16 +88,16 @@ builder.Services.AddSingleton<IChatSessionStore, InMemoryChatSessionStore>();
 
 var app = builder.Build();
 
-var service = app.Services.GetService<IAiChatService>();
-
-var u = await service.AskAsync("hello!", "gemini");
+var service = app.Services.GetRequiredService<IAiChatService>();
 
 var id = Guid.NewGuid().ToString();
 
-await foreach (var foo in service.StreamAsync(id, "hello!", "gemini"))
+await foreach (var foo in service.StreamAsync(id, "hello! what are some fun sci-fi story ideas", "gemini"))
 {
     Console.Write(foo);
 }
+
+return;
 
 var manager = app.Services.GetRequiredService<InterfaceManager>();
 

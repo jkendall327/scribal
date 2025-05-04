@@ -1,3 +1,4 @@
+using System.IO.Abstractions;
 using System.Runtime.CompilerServices;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
@@ -22,18 +23,9 @@ public interface IAiChatService
         CancellationToken ct = default);
 }
 
-public sealed class AiChatService : IAiChatService
+public sealed class AiChatService(Kernel kernel, IChatSessionStore store, PromptBuilder prompts, IFileSystem fileSystem)
+    : IAiChatService
 {
-    private readonly Kernel _kernel;
-    private readonly IChatSessionStore _store;
-    private readonly PromptBuilder _prompts;
-
-    public AiChatService(Kernel kernel, IChatSessionStore store, PromptBuilder prompts)
-    {
-        _kernel = kernel;
-        _store = store;
-        _prompts = prompts;
-    }
 
     private static OpenAIPromptExecutionSettings Settings =>
         new()
@@ -43,13 +35,13 @@ public sealed class AiChatService : IAiChatService
 
     public async Task<string> AskAsync(string cid, string user, string? sid, CancellationToken ct)
     {
-        var chat = _kernel.GetRequiredService<IChatCompletionService>(sid);
+        var chat = kernel.GetRequiredService<IChatCompletionService>(sid);
         var hist = await PrepareHistoryAsync(cid, user, ct);
 
-        var reply = await chat.GetChatMessageContentAsync(hist, Settings, _kernel, ct);
+        var reply = await chat.GetChatMessageContentAsync(hist, Settings, kernel, ct);
         hist.AddAssistantMessage(reply.Content);
 
-        await _store.SaveAsync(cid, hist, ct);
+        await store.SaveAsync(cid, hist, ct);
         return reply.Content;
     }
 
@@ -58,10 +50,10 @@ public sealed class AiChatService : IAiChatService
         string? sid,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
-        var chat = _kernel.GetRequiredService<IChatCompletionService>(sid);
+        var chat = kernel.GetRequiredService<IChatCompletionService>(sid);
         var hist = await PrepareHistoryAsync(cid, user, ct);
 
-        await foreach (var chunk in chat.GetStreamingChatMessageContentsAsync(hist, Settings, _kernel, ct))
+        await foreach (var chunk in chat.GetStreamingChatMessageContentsAsync(hist, Settings, kernel, ct))
         {
             if (chunk.Content is {Length: > 0} text)
             {
@@ -71,20 +63,31 @@ public sealed class AiChatService : IAiChatService
         }
 
         // collect the full assistant message from streamed chunks
-        var assistant = string.Concat(await chat.GetChatMessageContentAsync(hist, Settings, _kernel, ct)).Trim();
+        var assistant = string.Concat(await chat.GetChatMessageContentAsync(hist, Settings, kernel, ct)).Trim();
 
         hist.AddAssistantMessage(assistant);
-        await _store.SaveAsync(cid, hist, ct);
+        await store.SaveAsync(cid, hist, ct);
     }
 
     private async Task<ChatHistory> PrepareHistoryAsync(string cid, string user, CancellationToken ct)
     {
-        var hist = await _store.LoadAsync(cid, ct);
+        var hist = await store.LoadAsync(cid, ct);
 
         if (hist.All(m => m.Role != AuthorRole.System))
         {
             hist.AddSystemMessage(PromptBuilder.SystemPrompt);
         }
+        
+        if (hist.All(m => m.Role != AuthorRole.User))
+        {
+            var cwd = fileSystem.Directory.GetCurrentDirectory();
+            var info = fileSystem.DirectoryInfo.New(cwd);
+            
+            var cooked = await prompts.BuildPromptAsync(info, user);
+
+            hist.AddUserMessage(cooked);
+        }
+
 
         hist.AddUserMessage(user);
         return hist;

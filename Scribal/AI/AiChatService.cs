@@ -44,18 +44,27 @@ public sealed class AiChatService(
     IFileSystem fileSystem,
     TimeProvider time) : IAiChatService
 {
-    private static OpenAIPromptExecutionSettings Settings =>
-        new()
+    private PromptExecutionSettings GetSettings(string? sid)
+    {
+        return sid switch
         {
-            ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions
+            "gemini" => new GeminiPromptExecutionSettings
+            {
+                ToolCallBehavior = GeminiToolCallBehavior.AutoInvokeKernelFunctions
+            },
+            var _ => new OpenAIPromptExecutionSettings
+            {
+                ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions
+            },
         };
+    }
 
     public async Task<string> AskAsync(string cid, string user, string? sid, CancellationToken ct)
     {
         var chat = kernel.GetRequiredService<IChatCompletionService>(sid);
         var hist = await PrepareHistoryAsync(cid, user, ct);
 
-        var reply = await chat.GetChatMessageContentAsync(hist, Settings, kernel, ct);
+        var reply = await chat.GetChatMessageContentAsync(hist, GetSettings(sid), kernel, ct);
         hist.AddAssistantMessage(reply.Content);
 
         await store.SaveAsync(cid, hist, ct);
@@ -72,7 +81,7 @@ public sealed class AiChatService(
         var chat = kernel.GetRequiredService<IChatCompletionService>(sid);
         var history = await PrepareHistoryAsync(cid, user, ct);
 
-        var stream = chat.GetStreamingChatMessageContentsAsync(history, Settings, kernel, ct);
+        var stream = chat.GetStreamingChatMessageContentsAsync(history, GetSettings(sid), kernel, ct);
 
         await foreach (var chunk in stream)
         {
@@ -84,7 +93,7 @@ public sealed class AiChatService(
         }
 
         // collect the full assistant message from streamed chunks
-        var final = await chat.GetChatMessageContentAsync(history, Settings, kernel, ct);
+        var final = await chat.GetChatMessageContentAsync(history, GetSettings(sid), kernel, ct);
         var assistant = string.Concat(final).Trim();
 
         history.AddAssistantMessage(assistant);

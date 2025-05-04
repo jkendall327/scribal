@@ -1,76 +1,21 @@
 ﻿using System.IO.Abstractions;
-using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
-using Microsoft.SemanticKernel;
-using OpenAI;
+using Scribal;
 using Scribal.Cli;
 
 var builder = Host.CreateApplicationBuilder(args);
 
-builder.Configuration.AddUserSecrets<Program>();
-
-var cfg = new ConfigurationBuilder()
-    //.AddJsonFile("appsettings.json")
+var modelConfiguration = new ConfigurationBuilder()
     .AddEnvironmentVariables()
     .AddUserSecrets<Program>()
     .Build();
 
-builder.Services.AddSingleton<Kernel>(sp =>
-{
-    var kb = Kernel.CreateBuilder();
-
-    var existingServices = sp.GetRequiredService<IServiceCollection>();
-
-    kb.Services.Add(existingServices);
-
-    var oaiKey = cfg["OPENAI_API_KEY"];
-    var geminiKey = cfg["GEMINI_API_KEY"];
-    var deepseekKey = cfg["DeepSeek:ApiKey"];
-
-    if (string.IsNullOrEmpty(oaiKey) && string.IsNullOrEmpty(geminiKey) && string.IsNullOrEmpty(deepseekKey))
-    {
-        throw new InvalidOperationException("No API key has been supplied for any provider.");
-    }
-
-    if (!string.IsNullOrEmpty(oaiKey))
-    {
-        kb.AddOpenAIChatCompletion(modelId: cfg["OpenAI:Model"] ?? "gpt-4o-mini", apiKey: oaiKey, serviceId: "openai");
-    }
-
-    if (!string.IsNullOrEmpty(geminiKey))
-    {
-#pragma warning disable SKEXP0070 // experimental attribute until GA
-        kb.AddGoogleAIGeminiChatCompletion(modelId: cfg["Gemini:Model"] ?? "gemini-1.5-pro",
-            apiKey: geminiKey,
-            serviceId: "gemini");
-#pragma warning restore SKEXP0070
-    }
-
-    if (!string.IsNullOrEmpty(deepseekKey))
-    {
-#pragma warning disable SKEXP0010 // “other OpenAI-style” endpoint
-        kb.AddOpenAIChatCompletion(modelId: cfg["DeepSeek:Model"] ?? "deepseek-chat",
-            apiKey: deepseekKey,
-            endpoint: new Uri("https://api.deepseek.com"),
-            serviceId: "deepseek");
-#pragma warning restore SKEXP0010
-    }
-
-    kb.Plugins.AddFromType<FileReader>("FileReader");
-    kb.Plugins.AddFromType<DiffService>("DiffEditor");
-
-    return kb.Build();
-});
-
-var modelConfig = new ModelConfiguration();
-builder.Configuration.GetSection(ModelConfiguration.SectionName).Bind(modelConfig);
+builder.Services.AddScribalAi(modelConfiguration);
 
 var filesystem = new FileSystem();
 
-builder.Services.AddSingleton<IServiceCollection>(builder.Services);
 builder.Services.AddSingleton<IFileSystem>(filesystem);
 builder.Services.AddSingleton<RepoMapStore>();
 builder.Services.AddSingleton<CommandService>();
@@ -83,7 +28,6 @@ builder.Services.AddSingleton<IConversationStore, ConversationStore>();
 builder.Services.AddSingleton<IModelClient, ModelClient>();
 builder.Services.AddSingleton<IAiChatService, AiChatService>();
 builder.Services.AddSingleton<IGitService, GitService>(s => new(Directory.GetCurrentDirectory()));
-builder.Services.AddSingleton(modelConfig);
 builder.Services.AddSingleton<IChatSessionStore, InMemoryChatSessionStore>();
 
 var app = builder.Build();

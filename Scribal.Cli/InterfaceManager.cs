@@ -26,12 +26,12 @@ public class InterfaceManager(
 
         var cwd = fileSystem.Directory.GetCurrentDirectory();
 
-        AnsiConsole.MarkupLine($"[bold]Current working directory: {cwd}[/]");
+        AnsiConsole.MarkupLine($"[yellow]Current working directory: {cwd}[/]");
         
         if (gitService.Enabled)
         {
             var currentBranch = await gitService.GetCurrentBranch();
-            AnsiConsole.MarkupLine($"[bold]Current branch: {currentBranch}[/]");
+            AnsiConsole.MarkupLine($"[yellow]Current branch: {currentBranch}[/]");
         }
         else
         {

@@ -18,22 +18,40 @@ builder.Services.AddSingleton<Kernel>(sp =>
 
     var cfg = builder.Configuration;
 
-    kb.AddOpenAIChatCompletion(modelId: cfg["OpenAI:Model"] ?? "gpt-4o-mini",
-        apiKey: cfg["OpenAI:ApiKey"],
-        serviceId: "openai");
+    var oaiKey = cfg["OpenAI:ApiKey"];
+    var geminiKey = cfg["Gemini:ApiKey"];
+    var deepseekKey = cfg["DeepSeek:ApiKey"];
 
+    if (string.IsNullOrEmpty(oaiKey) && string.IsNullOrEmpty(geminiKey) && string.IsNullOrEmpty(deepseekKey))
+    {
+        throw new InvalidOperationException("No API key has been supplied for any provider.");
+    }
+    
+    if (!string.IsNullOrEmpty(oaiKey))
+    {
+        kb.AddOpenAIChatCompletion(modelId: cfg["OpenAI:Model"] ?? "gpt-4o-mini",
+            apiKey: oaiKey,
+            serviceId: "openai");
+    }
+    
+    if (!string.IsNullOrEmpty(geminiKey))
+    {
 #pragma warning disable SKEXP0070 // experimental attribute until GA
-    kb.AddGoogleAIGeminiChatCompletion(modelId: cfg["Gemini:Model"] ?? "gemini-1.5-pro",
-        apiKey: cfg["Gemini:ApiKey"],
-        serviceId: "gemini");
+        kb.AddGoogleAIGeminiChatCompletion(modelId: cfg["Gemini:Model"] ?? "gemini-1.5-pro",
+            apiKey: geminiKey,
+            serviceId: "gemini");
 #pragma warning restore SKEXP0070
-
+    }
+    
+    if (!string.IsNullOrEmpty(deepseekKey))
+    {
 #pragma warning disable SKEXP0010 // “other OpenAI-style” endpoint
-    kb.AddOpenAIChatCompletion(modelId: cfg["DeepSeek:Model"] ?? "deepseek-chat",
-        apiKey: cfg["DeepSeek:ApiKey"],
-        endpoint: new Uri("https://api.deepseek.com"),
-        serviceId: "deepseek");
+        kb.AddOpenAIChatCompletion(modelId: cfg["DeepSeek:Model"] ?? "deepseek-chat",
+            apiKey: deepseekKey,
+            endpoint: new Uri("https://api.deepseek.com"),
+            serviceId: "deepseek");
 #pragma warning restore SKEXP0010
+    }
 
     kb.Plugins.AddFromType<FileReader>("FileReader");
     kb.Plugins.AddFromType<DiffService>("DiffEditor");

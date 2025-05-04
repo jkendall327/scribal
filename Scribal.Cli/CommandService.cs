@@ -35,9 +35,9 @@ public class CommandService
 
     private readonly IFileSystem _fileSystem;
     private readonly RepoMapStore _repoStore;
-    private readonly IConversationStore _conversationStore;
+    private readonly IChatSessionStore _conversationStore;
     
-    public CommandService(IFileSystem fileSystem, RepoMapStore repoStore, IConversationStore conversationStore)
+    public CommandService(IFileSystem fileSystem, RepoMapStore repoStore, IChatSessionStore conversationStore)
     {
         _fileSystem = fileSystem;
         _repoStore = repoStore;
@@ -47,9 +47,9 @@ public class CommandService
         _commands.Add("/clear", ClearCommand);
     }
 
-    private Task<bool> ClearCommand(string arg)
+    private Task<bool> ClearCommand(string key)
     {
-        _conversationStore.ClearConversation();
+        _ = _conversationStore.TryClearConversation(key);
         
         return Task.FromResult(true);
     }

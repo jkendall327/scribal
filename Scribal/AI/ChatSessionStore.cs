@@ -7,6 +7,7 @@ public interface IChatSessionStore
 {
     Task<ChatHistory> LoadAsync(string conversationId, CancellationToken ct = default);
     Task SaveAsync(string conversationId, ChatHistory history, CancellationToken ct = default);
+    bool TryClearConversation(string key);
 }
 
 public sealed class InMemoryChatSessionStore : IChatSessionStore
@@ -23,5 +24,10 @@ public sealed class InMemoryChatSessionStore : IChatSessionStore
     {
         _store[id] = h;
         return Task.CompletedTask;
+    }
+    
+    public bool TryClearConversation(string key)
+    {
+        return _store.TryRemove(key, out var _);
     }
 }

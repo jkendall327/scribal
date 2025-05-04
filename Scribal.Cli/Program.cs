@@ -2,10 +2,13 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Scribal;
 using Scribal.Cli;
 
 var builder = Host.CreateApplicationBuilder(args);
+
+builder.Logging.ClearProviders();
 
 var modelConfiguration = new ConfigurationBuilder()
     .AddEnvironmentVariables()
@@ -15,6 +18,7 @@ var modelConfiguration = new ConfigurationBuilder()
 builder.Services.AddScribalAi(modelConfiguration);
 
 var filesystem = new FileSystem();
+var cwd = filesystem.Directory.GetCurrentDirectory();
 
 builder.Services.AddSingleton<IFileSystem>(filesystem);
 builder.Services.AddSingleton<RepoMapStore>();
@@ -24,10 +28,8 @@ builder.Services.AddSingleton<PromptBuilder>();
 builder.Services.AddSingleton<IDocumentScanService, DocumentScanService>();
 builder.Services.AddSingleton<InterfaceManager>();
 builder.Services.AddSingleton<DiffService>();
-builder.Services.AddSingleton<IConversationStore, ConversationStore>();
-builder.Services.AddSingleton<IModelClient, ModelClient>();
 builder.Services.AddSingleton<IAiChatService, AiChatService>();
-builder.Services.AddSingleton<IGitService, GitService>(s => new(Directory.GetCurrentDirectory()));
+builder.Services.AddSingleton<IGitService, GitService>(s => new(cwd));
 builder.Services.AddSingleton<IChatSessionStore, InMemoryChatSessionStore>();
 
 var app = builder.Build();

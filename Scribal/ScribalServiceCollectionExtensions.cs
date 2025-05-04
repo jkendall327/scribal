@@ -30,9 +30,23 @@ public static class ScribalServiceCollectionExtensions
         var geminiKey = cfg["Gemini:ApiKey"];
         var deepseekKey = cfg["DeepSeek:ApiKey"];
 
-        if (string.IsNullOrEmpty(oaiKey) && string.IsNullOrEmpty(geminiKey) && string.IsNullOrEmpty(deepseekKey))
+        string?[] all = [oaiKey, geminiKey, deepseekKey];
+        
+        var present = all.Count(s => !string.IsNullOrEmpty(s));
+        
+        if (present is 0)
         {
             throw new InvalidOperationException("No API key has been supplied for any provider.");
+        }
+
+        if (present > 1)
+        {
+            var preference = cfg["Provider"];
+
+            if (string.IsNullOrEmpty(preference))
+            {
+                throw new InvalidOperationException("You have multiple active API keys. Please set the 'Provider' flag to set who you will actually use.");
+            }
         }
 
         var oaiModel = cfg["OpenAI:Model"] ?? "gpt-4o-mini";

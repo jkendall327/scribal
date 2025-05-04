@@ -96,14 +96,6 @@ public class InterfaceManager(
             AnsiConsole.MarkupLine($"[yellow]{file}[/]");
         }
 
-        await CallAssistant(userInput);
-
-        AnsiConsole.WriteLine();
-        AnsiConsole.Write(rule);
-    }
-
-    private async Task CallAssistant(string userInput)
-    {
         try
         {
             var enumerable = aiChatService.StreamAsync(_conversationId.ToString(),
@@ -111,31 +103,77 @@ public class InterfaceManager(
                 "gemini",
                 cancellationService.Source.Token);
 
-            await foreach (var update in enumerable)
-            {
-                switch (update)
-                {
-                    case ChatStreamItem.TokenChunk tc: AnsiConsole.Write(tc.Content); break;
-                    case ChatStreamItem.Metadata md:
-                    {
-                        AnsiConsole.WriteLine();
-
-                        AnsiConsole.Decoration = Decoration.Italic;
-
-                        var time = FormatTimeSpan(md.Elapsed);
-                    
-                        AnsiConsole.Write($"{md.ServiceId}. Total time: {time}, {md.CompletionTokens} output tokens.");
-                    
-                        AnsiConsole.ResetDecoration();
-                        break;
-                    }
-                }
-            }
+            await StreamWithSpinnerAsync(enumerable, cancellationService.Source.Token);
         }
         catch (OperationCanceledException)
         {
             AnsiConsole.WriteLine();
             AnsiConsole.WriteLine("(cancelled)");
+        }
+        
+        AnsiConsole.WriteLine();
+        AnsiConsole.Write(rule);
+    }
+
+    /// <summary>
+    /// Streams an LLM response to the console, showing a spinner
+    /// until the first token is available.
+    /// </summary>
+    private static async Task StreamWithSpinnerAsync(
+        IAsyncEnumerable<ChatStreamItem> stream,
+        CancellationToken ct = default)
+    {
+        // 1. Get an enumerator we can advance manually.
+        await using var e = stream.GetAsyncEnumerator(ct);
+
+        // 2. Show the spinner while we wait for MoveNextAsync to succeed.
+        var gotFirst = await AnsiConsole.Status()
+            .Spinner(Spinner.Known.Dots)
+            .SpinnerStyle(Style.Parse("green"))
+            .StartAsync("Thinking …", async _ =>
+            {
+                // If MoveNextAsync returns false the stream ended before we got any data.
+                return await e.MoveNextAsync();
+            });
+
+        // 3. The status panel is gone now.  If we received a first chunk, write it:
+        if (!gotFirst)
+        {
+            AnsiConsole.MarkupLine("[red]The model produced no output.[/]");
+            return;
+        }
+
+        // Write the first chunk immediately…
+        ProcessChatStreamItem(e.Current);
+        
+        // …and continue to stream the rest.
+        while (await e.MoveNextAsync())
+        {
+            ProcessChatStreamItem(e.Current);
+        }
+
+        // Add a final newline so the prompt doesn’t start on the same line
+        AnsiConsole.WriteLine();
+    }
+
+    private static void ProcessChatStreamItem(ChatStreamItem e)
+    {
+        switch (e)
+        {
+            case ChatStreamItem.TokenChunk tc: AnsiConsole.Write(tc.Content); break;
+            case ChatStreamItem.Metadata md:
+            {
+                AnsiConsole.WriteLine();
+
+                AnsiConsole.Decoration = Decoration.Italic;
+
+                var time = FormatTimeSpan(md.Elapsed);
+                    
+                AnsiConsole.Write($"{md.ServiceId}. Total time: {time}, {md.CompletionTokens} output tokens.");
+                    
+                AnsiConsole.ResetDecoration();
+                break;
+            }
         }
     }
 

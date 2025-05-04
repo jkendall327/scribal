@@ -9,6 +9,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{6432B1B3-0
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Scribal", "Scribal\Scribal.csproj", "{56F24F88-8033-47FB-B1AF-9C2900F7497C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Scribal.Tests", "Scribal.Tests\Scribal.Tests.csproj", "{83A3DE6C-E57B-416E-9440-147B07F7AC30}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -23,5 +25,9 @@ Global
 		{56F24F88-8033-47FB-B1AF-9C2900F7497C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{56F24F88-8033-47FB-B1AF-9C2900F7497C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{56F24F88-8033-47FB-B1AF-9C2900F7497C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{83A3DE6C-E57B-416E-9440-147B07F7AC30}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{83A3DE6C-E57B-416E-9440-147B07F7AC30}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{83A3DE6C-E57B-416E-9440-147B07F7AC30}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{83A3DE6C-E57B-416E-9440-147B07F7AC30}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

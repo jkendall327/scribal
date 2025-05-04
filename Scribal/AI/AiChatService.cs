@@ -1,5 +1,6 @@
 using System.IO.Abstractions;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Text.Json;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
@@ -17,6 +18,10 @@ public interface IAiChatService
 {
     IAsyncEnumerable<ChatStreamItem> StreamAsync(string conversationId,
         string userMessage,
+        string? serviceId = null,
+        CancellationToken ct = default);
+    
+    Task<string> GetCommitMessage(List<string> diffs,
         string? serviceId = null,
         CancellationToken ct = default);
 }
@@ -58,6 +63,25 @@ public sealed class AiChatService(
             },
         };
     }
+    
+    public async Task<string> GetCommitMessage(List<string> diffs, string? serviceId = null, CancellationToken ct = default)
+    {
+        var chat = kernel.GetRequiredService<IChatCompletionService>(serviceId + "-weak");
+
+        var sb = new StringBuilder("Provide a concise Git commit summary for the following diff(s).");
+
+        sb.AppendLine("---");
+        
+        foreach (var diff in diffs)
+        {
+            sb.AppendLine(diff);
+        }
+        
+        var response = await chat.GetChatMessageContentAsync(sb.ToString(), kernel: kernel, cancellationToken: ct);
+        
+        return response.Content ?? throw new InvalidOperationException("Assistant failed to return a commit message.");
+    }
+
 
     public async IAsyncEnumerable<ChatStreamItem> StreamAsync(string cid,
         string user,
@@ -91,7 +115,7 @@ public sealed class AiChatService(
 
         yield return metadata;
     }
-
+    
     private async Task UpdateChatHistoryWithAssistantMessage(string cid,
         ChatMessageContent final,
         ChatHistory history,

@@ -87,7 +87,7 @@ public class InterfaceManager(
 
         var enumerable = aiChatService.StreamAsync(_conversationId.ToString(),
             userInput,
-            "openai",
+            "gemini",
             CancellationToken.None);
 
         await foreach (var update in enumerable)

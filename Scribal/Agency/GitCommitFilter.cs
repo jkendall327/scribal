@@ -18,7 +18,7 @@ public sealed class GitCommitFilter(IGitService git, ILogger<GitCommitFilter> lo
         }
 
         // Was it the edit-file tool?
-        if (ctx.Function is {PluginName: nameof(DiffEditor), Name: nameof(DiffEditor.ApplyUnifiedDiffAsync)})
+        if (ctx.Function is {PluginName: nameof(DiffEditor), Name: "apply_diff"})
         {
             logger.LogInformation("Creating commit after diff editor tool invocation");
             

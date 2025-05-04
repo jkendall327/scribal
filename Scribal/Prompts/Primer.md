@@ -1,0 +1,46 @@
+You are about to be asked a question or given a command by the user. Here is some information to help you.
+
+# Project Structure
+The following is a map of markdown documents in this project:
+
+{{{DirectoryMap}}}
+
+{{#if ReadmeContent}}
+# Project README
+
+{{ReadmeContent}}
+{{/if}}
+
+{{#if SelectedFiles}}
+---
+# Selected Files
+The user has selected to provide these files to you in full:
+
+{{#each SelectedFiles}}
+---
+{{FileName}}
+{{Content}}
+---
+{{/each}}
+{{/if}}
+
+{{#if SpecialFiles}}
+{{#each SpecialFiles}}
+{{Title}}
+
+{{Content}}
+{{/each}}
+{{/if}}
+
+{{#if CharacterFiles}}
+# Character Files
+
+{{#each CharacterFiles}}
+## {{FileName}}
+{{Content}}
+
+{{/each}}
+{{/if}}
+
+You have received all the necessary context to respond to the user. Here is their message:
+{{UserInput}}

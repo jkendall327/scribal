@@ -12,8 +12,7 @@ var builder = Host.CreateApplicationBuilder(args);
 
 builder.Configuration.AddUserSecrets<Program>();
 
-var cfg = new ConfigurationBuilder()
-    .AddJsonFile("appsettings.json")
+var cfg = new ConfigurationBuilder().AddJsonFile("appsettings.json")
     .AddEnvironmentVariables()
     .AddUserSecrets<Program>()
     .Build();
@@ -21,7 +20,7 @@ var cfg = new ConfigurationBuilder()
 builder.Services.AddSingleton<Kernel>(_ =>
 {
     var kb = Kernel.CreateBuilder();
-    
+
     var oaiKey = cfg["OpenAI:ApiKey"];
     var geminiKey = cfg["Gemini:ApiKey"];
     var deepseekKey = cfg["DeepSeek:ApiKey"];
@@ -30,14 +29,12 @@ builder.Services.AddSingleton<Kernel>(_ =>
     {
         throw new InvalidOperationException("No API key has been supplied for any provider.");
     }
-    
+
     if (!string.IsNullOrEmpty(oaiKey))
     {
-        kb.AddOpenAIChatCompletion(modelId: cfg["OpenAI:Model"] ?? "gpt-4o-mini",
-            apiKey: oaiKey,
-            serviceId: "openai");
+        kb.AddOpenAIChatCompletion(modelId: cfg["OpenAI:Model"] ?? "gpt-4o-mini", apiKey: oaiKey, serviceId: "openai");
     }
-    
+
     if (!string.IsNullOrEmpty(geminiKey))
     {
 #pragma warning disable SKEXP0070 // experimental attribute until GA
@@ -46,7 +43,7 @@ builder.Services.AddSingleton<Kernel>(_ =>
             serviceId: "gemini");
 #pragma warning restore SKEXP0070
     }
-    
+
     if (!string.IsNullOrEmpty(deepseekKey))
     {
 #pragma warning disable SKEXP0010 // “other OpenAI-style” endpoint
@@ -81,12 +78,20 @@ builder.Services.AddSingleton<IModelClient, ModelClient>();
 builder.Services.AddSingleton<IAiChatService, AiChatService>();
 builder.Services.AddSingleton<IGitService, GitService>(s => new(Directory.GetCurrentDirectory()));
 builder.Services.AddSingleton(modelConfig);
+builder.Services.AddSingleton<IChatSessionStore, InMemoryChatSessionStore>();
 
 var app = builder.Build();
 
 var service = app.Services.GetService<IAiChatService>();
 
 var u = await service.AskAsync("hello!", "gemini");
+
+var id = Guid.NewGuid().ToString();
+
+await foreach (var foo in service.StreamAsync(id, "hello!", "gemini"))
+{
+    Console.Write(foo);
+}
 
 var manager = app.Services.GetRequiredService<InterfaceManager>();
 

@@ -2,6 +2,7 @@ using System.IO.Abstractions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
+using Scribal.Agency;
 using Scribal.Cli;
 
 namespace Scribal;
@@ -19,56 +20,74 @@ public static class ScribalServiceCollectionExtensions
             
             kb.Services.AddSingleton(sp.GetRequiredService<IFileSystem>());
             kb.Services.AddSingleton(sp.GetRequiredService<IConfiguration>());
+            kb.Services.AddSingleton(sp.GetRequiredService<IGitService>());
 
-            var oaiKey = cfg["OPENAI_API_KEY"];
-            var geminiKey = cfg["GEMINI_API_KEY"];
-            var deepseekKey = cfg["DeepSeek:ApiKey"];
+            AddModels(cfg, kb);
 
-            if (string.IsNullOrEmpty(oaiKey) && string.IsNullOrEmpty(geminiKey) && string.IsNullOrEmpty(deepseekKey))
-            {
-                throw new InvalidOperationException("No API key has been supplied for any provider.");
-            }
+            AddPlugins(kb);
 
-            var oaiModel = cfg["OpenAI:Model"] ?? "gpt-4o-mini";
-            var geminiModel = cfg["Gemini:Model"] ?? "gemini-1.5-pro";
-            var deepseekModel = cfg["DeepSeek:Model"] ?? "deepseek-chat";
-
-            if (!string.IsNullOrEmpty(oaiKey))
-            {
-                kb.AddOpenAIChatCompletion(modelId: oaiModel, apiKey: oaiKey, serviceId: "openai");
-                kb.AddOpenAIChatCompletion(modelId: "gpt-4o-mini", apiKey: oaiKey, serviceId: "openai-weak");
-            }
-
-            if (!string.IsNullOrEmpty(geminiKey))
-            {
-                kb.AddGoogleAIGeminiChatCompletion(geminiModel,
-                    apiKey: geminiKey,
-                    serviceId: "gemini");
-                
-                kb.AddGoogleAIGeminiChatCompletion("gemini-1.5-pro",
-                    apiKey: geminiKey,
-                    serviceId: "gemini-weak");
-            }
-
-            if (!string.IsNullOrEmpty(deepseekKey))
-            {
-                kb.AddOpenAIChatCompletion(modelId: deepseekModel,
-                    apiKey: deepseekKey,
-                    endpoint: new("https://api.deepseek.com"),
-                    serviceId: "deepseek");
-                
-                kb.AddOpenAIChatCompletion(modelId: "deepseek-chat",
-                    apiKey: deepseekKey,
-                    endpoint: new("https://api.deepseek.com"),
-                    serviceId: "deepseek-weak");
-            }
-
-            kb.Plugins.AddFromType<FileReader>(nameof(FileReader));
-            kb.Plugins.AddFromType<DiffEditor>(nameof(DiffEditor));
-
+            //AddFilters(kb);
+            
             return kb.Build();
         });
 
         return services;
+    }
+
+    private static void AddModels(IConfiguration cfg, IKernelBuilder kb)
+    {
+        var oaiKey = cfg["OPENAI_API_KEY"];
+        var geminiKey = cfg["GEMINI_API_KEY"];
+        var deepseekKey = cfg["DeepSeek:ApiKey"];
+
+        if (string.IsNullOrEmpty(oaiKey) && string.IsNullOrEmpty(geminiKey) && string.IsNullOrEmpty(deepseekKey))
+        {
+            throw new InvalidOperationException("No API key has been supplied for any provider.");
+        }
+
+        var oaiModel = cfg["OpenAI:Model"] ?? "gpt-4o-mini";
+        var geminiModel = cfg["Gemini:Model"] ?? "gemini-1.5-pro";
+        var deepseekModel = cfg["DeepSeek:Model"] ?? "deepseek-chat";
+
+        if (!string.IsNullOrEmpty(oaiKey))
+        {
+            kb.AddOpenAIChatCompletion(modelId: oaiModel, apiKey: oaiKey, serviceId: "openai");
+            kb.AddOpenAIChatCompletion(modelId: "gpt-4o-mini", apiKey: oaiKey, serviceId: "openai-weak");
+        }
+
+        if (!string.IsNullOrEmpty(geminiKey))
+        {
+            kb.AddGoogleAIGeminiChatCompletion(geminiModel,
+                apiKey: geminiKey,
+                serviceId: "gemini");
+                
+            kb.AddGoogleAIGeminiChatCompletion("gemini-1.5-pro",
+                apiKey: geminiKey,
+                serviceId: "gemini-weak");
+        }
+
+        if (!string.IsNullOrEmpty(deepseekKey))
+        {
+            kb.AddOpenAIChatCompletion(modelId: deepseekModel,
+                apiKey: deepseekKey,
+                endpoint: new("https://api.deepseek.com"),
+                serviceId: "deepseek");
+                
+            kb.AddOpenAIChatCompletion(modelId: "deepseek-chat",
+                apiKey: deepseekKey,
+                endpoint: new("https://api.deepseek.com"),
+                serviceId: "deepseek-weak");
+        }
+    }
+
+    private static void AddPlugins(IKernelBuilder kb)
+    {
+        kb.Plugins.AddFromType<FileReader>(nameof(FileReader));
+        kb.Plugins.AddFromType<DiffEditor>(nameof(DiffEditor));
+    }
+    
+    private static void AddFilters(IKernelBuilder kb)
+    {
+        kb.Services.AddSingleton<IFunctionInvocationFilter, GitCommitFilter>();
     }
 }

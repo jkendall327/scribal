@@ -36,7 +36,9 @@ public partial class DiffEditor(IFileSystem fileSystem, IConfiguration configura
         }
             
         // Write the modified content back to the file
-        if (!configuration.GetValue<bool>("DryRun"))
+        var dry = configuration.GetValue<bool>("DryRun");
+        
+        if (!dry)
         {
             await fileSystem.File.WriteAllLinesAsync(file, newFileContent);
         }

@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.RegularExpressions;
+using Microsoft.SemanticKernel;
 
 namespace Scribal.Cli
 {
@@ -11,7 +12,7 @@ namespace Scribal.Cli
         /// <param name="file">The file path to apply the diff to</param>
         /// <param name="diff">The unified diff content as a string</param>
         /// <returns>A task representing the asynchronous operation</returns>
-        [Description("Applies an edit to a file. Provide the file name and the changes in unified diff format.")]
+        [KernelFunction, Description("Applies an edit to a file. Provide the file name and the changes in unified diff format.")]
         public async Task ApplyUnifiedDiffAsync(string file, string diff)
         {
             // Read the original file content

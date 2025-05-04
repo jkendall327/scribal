@@ -1,11 +1,12 @@
 using System.ComponentModel;
 using System.IO.Abstractions;
+using Microsoft.SemanticKernel;
 
 namespace Scribal.Cli;
 
 public class FileReader(IFileSystem fileSystem)
 {
-    [Description("Fetches the full content of the file specified by the filepath.")]
+    [KernelFunction, Description("Fetches the full content of the file specified by the filepath.")]
     public async Task<string> ReadFileContentAsync(string filepath)
     {
         if (!fileSystem.File.Exists(filepath))

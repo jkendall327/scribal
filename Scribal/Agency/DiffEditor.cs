@@ -23,6 +23,20 @@ public partial class DiffEditor(IFileSystem fileSystem, IConfiguration configura
     {
         // Read the original file content
         var originalLines = await fileSystem.File.ReadAllLinesAsync(file);
+        
+        var newFileContent = ApplyUnifiedDiffInner(originalLines, diff);
+            
+        // Write the modified content back to the file
+        var dry = configuration.GetValue<bool>("DryRun");
+        
+        if (!dry)
+        {
+            await fileSystem.File.WriteAllLinesAsync(file, newFileContent);
+        }
+    }
+
+    public List<string> ApplyUnifiedDiffInner(IEnumerable<string> originalLines, string diff)
+    {
         var newFileContent = new List<string>(originalLines);
             
         // Parse the diff
@@ -34,14 +48,8 @@ public partial class DiffEditor(IFileSystem fileSystem, IConfiguration configura
             var hunk = hunks[i];
             ApplyHunk(newFileContent, hunk);
         }
-            
-        // Write the modified content back to the file
-        var dry = configuration.GetValue<bool>("DryRun");
-        
-        if (!dry)
-        {
-            await fileSystem.File.WriteAllLinesAsync(file, newFileContent);
-        }
+
+        return newFileContent;
     }
         
     private class DiffHunk

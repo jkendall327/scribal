@@ -1,11 +1,12 @@
 using System.IO.Abstractions;
 using System.Text;
+using Microsoft.Extensions.Configuration;
 
 namespace Scribal.Cli;
 
-public class PromptBuilder(IDocumentScanService scanService, IFileSystem fileSystem, RepoMapStore store)
+public class PromptBuilder(IDocumentScanService scanService, IFileSystem fileSystem, RepoMapStore store, IConfiguration config)
 {
-    public const string SystemPrompt = """
+    private const string SystemPrompt = """
                                         # Scribal - Fiction Writing Assistant
 
                                         You are an expert fiction writer, editor, and creative consultant. Your purpose is to help the user with their fiction writing project.
@@ -41,6 +42,24 @@ public class PromptBuilder(IDocumentScanService scanService, IFileSystem fileSys
         }
     };
 
+    private string? _prefixedSystemPrompt;
+    
+    public Task<string> BuildSystemPrompt()
+    {
+        if (!string.IsNullOrEmpty(_prefixedSystemPrompt))
+        {
+            return Task.FromResult(_prefixedSystemPrompt);
+        }
+        
+        var prefix = config.GetValue<string>("SystemPromptPrefix");
+
+        var sb = new StringBuilder(prefix).AppendLine(SystemPrompt).ToString();
+        
+        _prefixedSystemPrompt = string.IsNullOrEmpty(prefix) ? SystemPrompt : sb;
+        
+        return Task.FromResult(_prefixedSystemPrompt);
+    }
+    
     public async Task<string> BuildPromptAsync(IDirectoryInfo directory, string userInput)
     {
         try

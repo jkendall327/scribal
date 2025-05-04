@@ -113,24 +113,25 @@ public sealed class AiChatService(
 
     private async Task<ChatHistory> PrepareHistoryAsync(string cid, string user, CancellationToken ct)
     {
-        var hist = await store.LoadAsync(cid, ct);
+        var history = await store.LoadAsync(cid, ct);
 
-        if (hist.All(m => m.Role != AuthorRole.System))
+        if (history.All(m => m.Role != AuthorRole.System))
         {
-            hist.AddSystemMessage(PromptBuilder.SystemPrompt);
+            var system = await prompts.BuildSystemPrompt();
+            history.AddSystemMessage(system);
         }
 
-        if (hist.All(m => m.Role != AuthorRole.User))
+        if (history.All(m => m.Role != AuthorRole.User))
         {
             var cwd = fileSystem.Directory.GetCurrentDirectory();
             var info = fileSystem.DirectoryInfo.New(cwd);
 
             var cooked = await prompts.BuildPromptAsync(info, user);
 
-            hist.AddUserMessage(cooked);
+            history.AddUserMessage(cooked);
         }
 
-        hist.AddUserMessage(user);
-        return hist;
+        history.AddUserMessage(user);
+        return history;
     }
 }

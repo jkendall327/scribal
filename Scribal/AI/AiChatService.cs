@@ -148,7 +148,7 @@ public sealed class AiChatService(
             var cwd = fileSystem.Directory.GetCurrentDirectory();
             var info = fileSystem.DirectoryInfo.New(cwd);
 
-            var cooked = await prompts.BuildPromptAsync(info, user);
+            var cooked = await prompts.BuildPromptAsync(kernel, info, user);
 
             history.AddUserMessage(cooked);
         }

@@ -11,6 +11,8 @@ public class InterfaceManager(
     PromptBuilder builder,
     RepoMapStore repoMapStore)
 {
+    private Guid _conversationId = Guid.NewGuid();
+    
     public Task DisplayWelcome()
     {
         AnsiConsole.Clear();
@@ -82,11 +84,7 @@ public class InterfaceManager(
             AnsiConsole.MarkupLine($"[yellow]{file}[/]");
         }
         
-        var cwd = fileSystem.Directory.GetCurrentDirectory();
-        var cwdDir = fileSystem.DirectoryInfo.New(cwd);
-        var prompt = await builder.BuildPromptAsync(cwdDir, userInput);
-
-        await foreach (var update in aiChatService.StreamAsync(string.Empty, userInput, null, CancellationToken.None))
+        await foreach (var update in aiChatService.StreamAsync(_conversationId.ToString(), userInput, null, CancellationToken.None))
         {
             AnsiConsole.Write(update);
         }

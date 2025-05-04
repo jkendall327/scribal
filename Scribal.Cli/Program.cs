@@ -32,17 +32,6 @@ builder.Services.AddSingleton<IChatSessionStore, InMemoryChatSessionStore>();
 
 var app = builder.Build();
 
-var service = app.Services.GetRequiredService<IAiChatService>();
-
-var id = Guid.NewGuid().ToString();
-
-await foreach (var foo in service.StreamAsync(id, "hello! what are some fun sci-fi story ideas", "gemini"))
-{
-    Console.Write(foo);
-}
-
-return;
-
 var manager = app.Services.GetRequiredService<InterfaceManager>();
 
 await manager.DisplayWelcome();

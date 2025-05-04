@@ -58,7 +58,7 @@ public class DocumentScanService : IDocumentScanService
     {
         if (!rootDirectory.Exists)
         {
-            return new DirectoryNode(rootDirectory.FullName, _fileSystem);
+            return new(rootDirectory.FullName, _fileSystem);
         }
 
         return await BuildDirectoryTreeAsync(rootDirectory, rootDirectory);
@@ -70,7 +70,18 @@ public class DocumentScanService : IDocumentScanService
         
         // Process all markdown files in the current directory
         var markdownFiles = currentDirectory.GetFiles()
-            .Where(file => _markdownExtensions.Contains(_fileSystem.Path.GetExtension(file.FullName).ToLowerInvariant()))
+            .Where(file =>
+            {
+                // Ignore hidden files.
+                if (file.Name.StartsWith('.'))
+                {
+                    return false;
+                }
+                
+                var extension = _fileSystem.Path.GetExtension(file.FullName).ToLowerInvariant();
+                
+                return _markdownExtensions.Contains(extension);
+            })
             .ToList();
 
         foreach (var file in markdownFiles)
@@ -79,8 +90,11 @@ public class DocumentScanService : IDocumentScanService
             directoryNode.Documents.Add(documentInfo);
         }
 
-        // Process all subdirectories
-        var subdirectories = currentDirectory.GetDirectories();
+        // Process all non-hidden subdirectories
+        var subdirectories = currentDirectory
+            .GetDirectories()
+            .Where(d => !d.Name.StartsWith('.'));
+        
         foreach (var subdirectory in subdirectories)
         {
             var subdirectoryNode = await BuildDirectoryTreeAsync(subdirectory, rootDirectory);

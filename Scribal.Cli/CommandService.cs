@@ -30,6 +30,9 @@ public class CommandService
         },
         {
             "/plot", ViewPlotCommand
+        },
+        {
+            "/model", SetModelCommand
         }
     };
 
@@ -191,6 +194,18 @@ public class CommandService
 
         AnsiConsole.Write(tree);
 
+        return Task.FromResult(true);
+    }
+    
+    private static Task<bool> SetModelCommand(string arg)
+    {
+        var choices = ModelSelector.BeginConfiguration();
+        
+        AnsiConsole.WriteLine("Settings saved.");
+        AnsiConsole.WriteLine("Your API key will not be persisted; use environment variables or config to avoid setting it each time.");
+        
+        AnsiConsole.Write(new Rule());
+        
         return Task.FromResult(true);
     }
 }

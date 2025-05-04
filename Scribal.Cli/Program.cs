@@ -23,23 +23,33 @@ builder.Logging.ClearProviders();
 
 builder.Services.AddScribalAi(builder.Configuration);
 
+// Infrastructure
 var filesystem = new FileSystem();
-
 builder.Services.AddSingleton<IFileSystem>(filesystem);
-builder.Services.AddSingleton<RepoMapStore>();
-builder.Services.AddSingleton<CommitGenerator>();
-builder.Services.AddSingleton<CancellationService>();
-builder.Services.AddSingleton<CommandService>();
-builder.Services.AddSingleton<PromptRenderer>();
-builder.Services.AddSingleton<FileReader>();
 builder.Services.AddSingleton(TimeProvider.System);
+
+// Tools
+builder.Services.AddSingleton<FileReader>();
+builder.Services.AddSingleton<DiffEditor>();
+
+// LLM interfacing
+builder.Services.AddSingleton<IChatSessionStore, InMemoryChatSessionStore>();
+builder.Services.AddSingleton<CancellationService>();
+builder.Services.AddSingleton<IAiChatService, AiChatService>();
+
+// UI
+builder.Services.AddSingleton<CommandService>();
+builder.Services.AddSingleton<InterfaceManager>();
+
+// Context gathering
+builder.Services.AddSingleton<RepoMapStore>();
+builder.Services.AddSingleton<PromptRenderer>();
 builder.Services.AddSingleton<PromptBuilder>();
 builder.Services.AddSingleton<IDocumentScanService, DocumentScanService>();
-builder.Services.AddSingleton<InterfaceManager>();
-builder.Services.AddSingleton<DiffEditor>();
-builder.Services.AddSingleton<IAiChatService, AiChatService>();
+
+// Other
+builder.Services.AddSingleton<CommitGenerator>();
 builder.Services.AddSingleton<IGitService, GitService>();
-builder.Services.AddSingleton<IChatSessionStore, InMemoryChatSessionStore>();
 
 var app = builder.Build();
 

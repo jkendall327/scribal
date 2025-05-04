@@ -38,7 +38,7 @@ public sealed class GitCommitFilter(IGitService git, CommitGenerator generator, 
                 return;
             }
             
-            var message = await generator.GetCommitMessage(ctx.Kernel, [diff]);
+            var message = await generator.GetCommitMessage(ctx.Kernel, [diff], "openai");
             
             await git.CreateCommit(file, message);
         }

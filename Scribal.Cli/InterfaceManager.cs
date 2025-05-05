@@ -119,7 +119,6 @@ public class InterfaceManager(
         }
 
         AnsiConsole.WriteLine();
-        AnsiConsole.Write(rule);
     }
 
     /// <summary>

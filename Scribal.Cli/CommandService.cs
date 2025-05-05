@@ -76,9 +76,7 @@ public class CommandService(IFileSystem fileSystem, RepoMapStore repoStore, ICha
         AnsiConsole.WriteLine("Settings saved.");
         AnsiConsole.WriteLine(
             "Your API key will not be persisted; use environment variables or config to avoid setting it each time.");
-
-        AnsiConsole.Write(new Rule());
-
+        
         return Task.CompletedTask;
     }
 }

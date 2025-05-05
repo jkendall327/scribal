@@ -57,7 +57,12 @@ public class InterfaceManager(
 
             if (repoMapStore.Paths.Any())
             {
-                var paths = string.Join(" | ", repoMapStore.Paths);
+                var filenames = repoMapStore.Paths
+                    .Select(s => fileSystem.Path.GetFileName(s).ToLowerInvariant())
+                    .ToList();
+                
+                var paths = string.Join(" | ", filenames);
+                
                 AnsiConsole.MarkupLine($"[yellow]{paths}[/]");
             }
             

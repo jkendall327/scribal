@@ -47,11 +47,10 @@ public class InterfaceManager(
     [DoesNotReturn]
     public async Task RunMainLoop()
     {
-        ReadLine.HistoryEnabled = true;
-        ReadLine.AutoCompletionHandler = new CommandAutoCompletionHandler(commands);
-
         var parser = commands.Build();
-
+        
+        ReadLine.HistoryEnabled = true;
+        
         while (true)
         {
             AnsiConsole.Markup("[green]> [/]");

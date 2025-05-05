@@ -1,16 +1,14 @@
 ﻿using System.IO.Abstractions;
-using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Scribal;
-using Scribal.AI;
 using Scribal.Cli;
 
 // .NET looks for appsettings.json in the content root path,
 // which Host.CreateApplicationBuilder sets as the current working directory.
 // But our current working directory will almost always be somewhere different.
-var contentRoot = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+var contentRoot = Path.GetDirectoryName(AppContext.BaseDirectory);
 
 var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
 {

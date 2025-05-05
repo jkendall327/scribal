@@ -36,13 +36,13 @@ public class PromptRenderer(IFileSystem fileSystem)
 
     private string GetPromptsFolder()
     {
-        var location = Assembly.GetExecutingAssembly().Location;
+        var location = AppContext.BaseDirectory;
         
         var contentRoot = fileSystem.Path.GetDirectoryName(location);
 
         if (string.IsNullOrEmpty(contentRoot))
         {
-            throw new InvalidOperationException("Somehow, Assembly.GetExecutingAssembly failed to return a valid path");
+            throw new InvalidOperationException("Somehow, AppContext.BaseDirectory failed to return a valid path");
         }
         
         var path = fileSystem.Path.Combine(contentRoot, "Prompts");

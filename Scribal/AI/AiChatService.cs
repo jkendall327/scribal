@@ -4,9 +4,11 @@ using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.Google;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
+using Microsoft.SemanticKernel.Data;
 using OpenAI.Chat;
 using Scribal.Context;
 using ChatMessageContent = Microsoft.SemanticKernel.ChatMessageContent;
+#pragma warning disable SKEXP0001
 
 #pragma warning disable SKEXP0070
 
@@ -38,6 +40,7 @@ public record ChatStreamItem
 public sealed class AiChatService(
     Kernel kernel,
     IChatSessionStore store,
+    VectorStoreTextSearch<TextSnippet<string>> vectorStoreTextSearch,
     PromptBuilder prompts,
     IFileSystem fileSystem,
     TimeProvider time) : IAiChatService
@@ -64,8 +67,9 @@ public sealed class AiChatService(
         string? sid,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
+        kernel.Plugins.Add(vectorStoreTextSearch.CreateWithGetTextSearchResults("SearchPlugin"));
+        
         var start = time.GetTimestamp();
-
         var chat = kernel.GetRequiredService<IChatCompletionService>(sid);
         var history = await PrepareHistoryAsync(cid, user, ct);
 

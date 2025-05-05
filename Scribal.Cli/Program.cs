@@ -6,6 +6,7 @@ using Microsoft.SemanticKernel;
 using Scribal;
 using Scribal.Agency;
 using Scribal.Cli;
+using Scribal.Context;
 
 // .NET looks for appsettings.json in the content root path,
 // which Host.CreateApplicationBuilder sets as the current working directory.
@@ -30,6 +31,17 @@ builder.Services.AddSingleton<CommandService>();
 builder.Services.AddSingleton<InterfaceManager>();
 
 var app = builder.Build();
+
+var ingestor = app.Services.GetRequiredService<MarkdownIngestor>();
+
+await ingestor.Ingest([
+    """
+    # My file
+    This is a test file.
+    ## Subheading
+    Asuka is best girl
+    """
+]);
 
 var git = app.Services.GetRequiredService<IGitService>();
 var filesystem = app.Services.GetRequiredService<IFileSystem>();

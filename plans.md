@@ -2,6 +2,8 @@
 - proper RAG (`/.scribal/vectors/` ?)
   Plan: Define what gets indexed: chapters (latest? final?), character files, plot outline, premise, maybe user notes? How is retrieval triggered? Automatically during drafting/editing based on the current task? Via explicit user query? The /.scribal/vectors/ location seems sensible.
 - allow users to specify other folders that get sucked into RAG?
+- explicit 'scribal ingest' command to avoid complexity of a background service? just for now?
+- https://github.com/microsoft/semantic-kernel/blob/main/dotnet/samples/Demos/VectorStoreRAG/DataLoader.cs
 
 ## Initialisation
 - 'scribal init'

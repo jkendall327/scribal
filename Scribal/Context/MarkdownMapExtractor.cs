@@ -17,17 +17,16 @@ public class MarkdownMapExtractor
         // Traverse the document and find all heading blocks
         foreach (var block in document.Descendants())
         {
-            if (block is HeadingBlock headingBlock)
-            {
-                string headerText = ExtractTextFromHeading(headingBlock);
+            if (block is not HeadingBlock headingBlock) continue;
+            
+            var headerText = ExtractTextFromHeading(headingBlock);
 
-                headers.Add(new HeaderInfo
-                {
-                    Level = headingBlock.Level,
-                    Text = headerText,
-                    Line = headingBlock.Line
-                });
-            }
+            headers.Add(new()
+            {
+                Level = headingBlock.Level,
+                Text = headerText,
+                Line = headingBlock.Line
+            });
         }
 
         return headers;
@@ -37,6 +36,11 @@ public class MarkdownMapExtractor
     {
         // Extract the text content from the heading
         var text = "";
+
+        if (headingBlock.Inline is null)
+        {
+            return text.Trim();
+        }
 
         foreach (var inline in headingBlock.Inline)
         {
@@ -54,7 +58,7 @@ public class MarkdownMapExtractor
 public class HeaderInfo
 {
     public int Level { get; set; } // H1, H2, etc. (1, 2, etc.)
-    public string Text { get; set; } // The header text
+    public required string Text { get; set; } // The header text
     public int Line { get; set; } // Line number in the document
 
     public override string ToString()

@@ -55,6 +55,11 @@ public sealed class GitService(TimeProvider time, IConfiguration configuration, 
         {
             throw new InvalidOperationException("Not in a valid Git repository.");
         }
+
+        if (_name is null || _email is null)
+        {
+            throw new InvalidOperationException("No username or email set in git config.");
+        }
     }
     
     public Task<string> GetRepoName()

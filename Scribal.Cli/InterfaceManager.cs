@@ -1,6 +1,6 @@
 using System.CommandLine.Parsing;
+using System.Diagnostics.CodeAnalysis;
 using System.IO.Abstractions;
-using Microsoft.Extensions.AI;
 using Scribal.AI;
 using Spectre.Console;
 
@@ -44,54 +44,34 @@ public class InterfaceManager(
         AnsiConsole.WriteLine();
     }
 
+    [DoesNotReturn]
     public async Task RunMainLoop()
     {
-        var isRunning = true;
-
         ReadLine.HistoryEnabled = true;
         ReadLine.AutoCompletionHandler = new CommandAutoCompletionHandler(commands);
-        
-        var parser = CommandTree.Build();
-        
-        while (isRunning)
+
+        var parser = commands.Build();
+
+        while (true)
         {
             AnsiConsole.Markup("[green]> [/]");
-            var input = ReadLine.Read() ?? string.Empty;
-            if (string.IsNullOrWhiteSpace(input)) continue;
-            if (input.StartsWith('/'))
-                await parser.InvokeAsync(input[1..]);   // e.g. "new MyNovel"
-            else
-                await ProcessConversation(input);       // your existing AI path
-            
-            continue;
-            
-            // Process the input
-            if (input.StartsWith('/'))
-            {
-                // Extract command and arguments
-                var commandText = input.Split(' ')[0].ToLower();
-                var arguments = input.Length > commandText.Length
-                    ? input[(commandText.Length + 1)..].Trim()
-                    : string.Empty;
 
-                // Execute command if it exists
-                if (commands.TryGetCommand(commandText, out var command))
-                {
-                    isRunning = await command(arguments);
-                }
-                else
-                {
-                    AnsiConsole.MarkupLine("[red]Unknown command. Type [blue]/help[/] for available commands.[/]");
-                }
-            }
-            else if (!string.IsNullOrWhiteSpace(input))
+            var input = ReadLine.Read();
+
+            if (string.IsNullOrWhiteSpace(input))
             {
-                // Handle as conversation with AI
+                continue;
+            }
+
+            if (input.StartsWith('/'))
+            {
+                await parser.InvokeAsync(input[1..]);
+            }
+            else
+            {
                 await ProcessConversation(input);
             }
         }
-
-        AnsiConsole.MarkupLine("[yellow]Thank you for using Scribal. Goodbye![/]");
     }
 
     private async Task ProcessConversation(string userInput)
@@ -137,15 +117,11 @@ public class InterfaceManager(
         await using var e = stream.GetAsyncEnumerator(ct);
 
         // 2. Show the spinner while we wait for MoveNextAsync to succeed.
+        // If MoveNextAsync returns false the stream ended before we got any data.
         var gotFirst = await AnsiConsole.Status()
             .Spinner(Spinner.Known.Dots)
             .SpinnerStyle(Style.Parse("green"))
-            .StartAsync("Thinking …",
-                async _ =>
-                {
-                    // If MoveNextAsync returns false the stream ended before we got any data.
-                    return await e.MoveNextAsync();
-                });
+            .StartAsync("Thinking …", async _ => await e.MoveNextAsync());
 
         // 3. The status panel is gone now.  If we received a first chunk, write it:
         if (!gotFirst)

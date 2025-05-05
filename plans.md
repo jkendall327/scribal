@@ -1,16 +1,19 @@
 ## TODO
 - proper RAG (`/.scribal/vectors/` ?)
+  Plan: Define what gets indexed: chapters (latest? final?), character files, plot outline, premise, maybe user notes? How is retrieval triggered? Automatically during drafting/editing based on the current task? Via explicit user query? The /.scribal/vectors/ location seems sensible.
+- allow users to specify other folders that get sucked into RAG?
 
 ## Initialisation
 - 'scribal init'
 - Creates the .scribal/ directory, config.json (with defaults/prompts), an empty project_state.json, an empty plot_outline.md template, and the characters/ and chapters/ directories. Sets project state to "Initialized".
+- The state.json tracks chapters and their individual state (unstarted, drafted, locked off...)
 
 ## Pitch
 - The core seed idea supplied by the user
 - Transformed by the AI into a more substantial premise via a back-and-forth
 - Premise gets stored as its own file
 - Can be updated ('scribal premise revise')
-- Used to generate the initial plot overview, not really used afterwards unless you want to start over
+- Used to generate the initial plot overview, not really used afterward unless you want to start over
 
 ## Outline
 - High-level breakdown of the chapters
@@ -19,6 +22,12 @@
 - Can manually check if a chapter matches the draft ('scribal check'), which lets you decide which is 'right' and auto-adjust the other
 - Each chapter has both a two-sentence summary and a more detailed bulletpoint breakdown of beats
 - And a desired wordcount?
+- And a list of appearing characters, so RAG can be used to pull in their details.
+
+## User choice
+- Whenever the AI makes an edit, before it's reified into the filesystem...
+- The user can choose from a yes/no/refine prompt
+- Where 'refine' enters into a back-and-forth chat with the model iterating on its work
 
 ## Chapter mode
 - Tree view menu where you select chapters

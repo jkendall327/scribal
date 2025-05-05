@@ -47,6 +47,8 @@ public class WorkspaceManager(IFileSystem fileSystem)
         var stateJson = JsonSerializer.Serialize(state);
         await fileSystem.File.WriteAllTextAsync(statePath, stateJson);
         
+        // TODO: init a git repo if user consents. create a gitignore for them?
+        
         _workspace = workspace;
     }
 

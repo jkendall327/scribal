@@ -1,3 +1,4 @@
+using System.CommandLine.Parsing;
 using System.IO.Abstractions;
 using Microsoft.Extensions.AI;
 using Scribal.AI;
@@ -49,12 +50,21 @@ public class InterfaceManager(
 
         ReadLine.HistoryEnabled = true;
         ReadLine.AutoCompletionHandler = new CommandAutoCompletionHandler(commands);
-
+        
+        var parser = CommandTree.Build();
+        
         while (isRunning)
         {
             AnsiConsole.Markup("[green]> [/]");
             var input = ReadLine.Read() ?? string.Empty;
-
+            if (string.IsNullOrWhiteSpace(input)) continue;
+            if (input.StartsWith('/'))
+                await parser.InvokeAsync(input[1..]);   // e.g. "new MyNovel"
+            else
+                await ProcessConversation(input);       // your existing AI path
+            
+            continue;
+            
             // Process the input
             if (input.StartsWith('/'))
             {

@@ -61,14 +61,17 @@ public class InterfaceManager(
             {
                 continue;
             }
+            
+            var parsed = parser.Parse(input);
 
-            if (input.StartsWith('/'))
+            // If it fails to parse as a command, assume it's a message for the assistant.
+            if (parsed.Errors.Any())
             {
-                await parser.InvokeAsync(input[1..]);
+                await ProcessConversation(input);
             }
             else
             {
-                await ProcessConversation(input);
+                await parsed.InvokeAsync();
             }
         }
     }

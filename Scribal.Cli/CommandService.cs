@@ -11,17 +11,17 @@ public class CommandService(IFileSystem fileSystem, RepoMapStore repoStore, ICha
 {
     public Parser Build()
     {
-        var quit = new Command("quit", "Exit Scribal");
+        var quit = new Command("/quit", "Exit Scribal");
         quit.AddAlias("exit");
         quit.SetHandler(QuitCommand);
 
-        var model = new Command("model", "Set model details and API key");
+        var model = new Command("/model", "Set model details and API key");
         model.SetHandler(SetModelCommand);
 
-        var clear = new Command("clear", "Clear conversation history");
+        var clear = new Command("/clear", "Clear conversation history");
         clear.SetHandler(ClearCommand);
 
-        var tree = new Command("tree", "Set files to be included in context");
+        var tree = new Command("/tree", "Set files to be included in context");
         tree.SetHandler(TreeCommand);
 
         var root = new RootCommand("Scribal interactive shell")

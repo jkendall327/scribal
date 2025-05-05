@@ -1,9 +1,8 @@
 using System.IO.Abstractions;
-using System.Reflection;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.PromptTemplates.Handlebars;
 
-namespace Scribal.AI;
+namespace Scribal.Context;
 
 public record RenderRequest(string Filename, string LogicalName, string Description, KernelArguments Arguments);
 

@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Scribal;
+using Scribal.Agency;
 using Scribal.Cli;
 
 // .NET looks for appsettings.json in the content root path,

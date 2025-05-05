@@ -2,7 +2,7 @@ using Markdig;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
 
-namespace Scribal.Cli;
+namespace Scribal.Context;
 
 public class MarkdownMapExtractor
 {

@@ -1,3 +1,5 @@
+using Scribal.Context;
+
 namespace Scribal.Cli;
 
 using Spectre.Console;

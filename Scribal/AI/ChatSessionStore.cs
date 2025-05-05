@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using Microsoft.SemanticKernel.ChatCompletion;
 
-namespace Scribal.Cli;
+namespace Scribal.AI;
 
 public interface IChatSessionStore
 {

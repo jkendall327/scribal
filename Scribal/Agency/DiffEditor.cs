@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.SemanticKernel;
 
-namespace Scribal.Cli;
+namespace Scribal.Agency;
 
 public partial class DiffEditor(IFileSystem fileSystem, IConfiguration configuration)
 {

@@ -1,6 +1,6 @@
 using System.IO.Abstractions.TestingHelpers;
 using Microsoft.SemanticKernel;
-using Scribal.AI;
+using Scribal.Context;
 
 namespace Scribal.Tests;
 

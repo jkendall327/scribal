@@ -3,6 +3,8 @@ using System.CommandLine.Builder;
 using System.CommandLine.Invocation;
 using System.CommandLine.Parsing;
 using System.IO.Abstractions;
+using Scribal.AI;
+using Scribal.Context;
 using Spectre.Console;
 
 namespace Scribal.Cli;

@@ -1,7 +1,7 @@
 using System.IO.Abstractions;
 using System.Text.Json;
 
-namespace Scribal;
+namespace Scribal.Workspace;
 
 public class WorkspaceManager(IFileSystem fileSystem)
 {

@@ -1,7 +1,9 @@
 using System.CommandLine.Parsing;
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Abstractions;
+using Scribal.Agency;
 using Scribal.AI;
+using Scribal.Context;
 using Spectre.Console;
 
 namespace Scribal.Cli;

@@ -1,6 +1,6 @@
 using System.IO.Abstractions;
 
-namespace Scribal.Cli;
+namespace Scribal.Context;
 
 public class DocumentInfo
 {

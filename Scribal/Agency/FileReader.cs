@@ -2,7 +2,7 @@ using System.ComponentModel;
 using System.IO.Abstractions;
 using Microsoft.SemanticKernel;
 
-namespace Scribal.Cli;
+namespace Scribal.Agency;
 
 public class FileReader(IFileSystem fileSystem)
 {

@@ -1,13 +1,11 @@
 using System.IO.Abstractions;
 using System.Runtime.CompilerServices;
-using System.Text;
-using System.Text.Json;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.Google;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
 using OpenAI.Chat;
-using Scribal.Cli;
+using Scribal.Context;
 using ChatMessageContent = Microsoft.SemanticKernel.ChatMessageContent;
 
 #pragma warning disable SKEXP0070

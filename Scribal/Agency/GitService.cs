@@ -3,7 +3,7 @@ using LibGit2Sharp;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
-namespace Scribal.Cli;
+namespace Scribal.Agency;
 
 public interface IGitService
 {

@@ -1,5 +1,5 @@
 using System.IO.Abstractions.TestingHelpers;
-using Scribal.Cli;
+using Scribal.Context;
 
 namespace Scribal.Tests;
 

@@ -1,12 +1,9 @@
 using System.IO.Abstractions;
 using System.Text;
-using HandlebarsDotNet;
 using Microsoft.Extensions.Configuration;
 using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.PromptTemplates.Handlebars;
-using Scribal.AI;
 
-namespace Scribal.Cli;
+namespace Scribal.Context;
 
 public class PromptBuilder(
     IDocumentScanService scanService,

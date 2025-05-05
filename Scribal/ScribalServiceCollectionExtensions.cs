@@ -1,7 +1,9 @@
 using System.IO.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
+using Scribal.Agency;
 using Scribal.AI;
-using Scribal.Cli;
+using Scribal.Context;
+using DiffEditor = Scribal.Agency.DiffEditor;
 
 namespace Scribal;
 

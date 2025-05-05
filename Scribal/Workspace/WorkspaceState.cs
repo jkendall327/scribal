@@ -1,4 +1,4 @@
-namespace Scribal;
+namespace Scribal.Workspace;
 
 public class WorkspaceState
 {

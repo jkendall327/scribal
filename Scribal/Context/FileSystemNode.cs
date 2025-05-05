@@ -1,4 +1,4 @@
-namespace Scribal.Cli;
+namespace Scribal.Context;
 
 public class FileSystemNode
 {

@@ -2,7 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
 using Scribal.Agency;
-using Scribal.Cli;
+using DiffEditor = Scribal.Agency.DiffEditor;
 
 namespace Scribal;
 

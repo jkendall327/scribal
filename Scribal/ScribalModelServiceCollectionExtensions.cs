@@ -20,6 +20,8 @@ public static class ScribalModelServiceCollectionExtensions
         AddModels(cfg, kb);
 
         AddPlugins(kb);
+        
+        AddRag(cfg, kb);
 
         AddFilters(kb);
 
@@ -85,7 +87,7 @@ public static class ScribalModelServiceCollectionExtensions
 
     private static void AddRag(IConfiguration cfg, IKernelBuilder kb)
     {
-        kb.AddOpenAITextEmbeddingGeneration("embeddings-small", cfg["OpenAI:ApiKey"]);
+        kb.AddOpenAITextEmbeddingGeneration("text-embedding-3-small", cfg["OpenAI:ApiKey"]);
 
         kb.AddInMemoryVectorStoreRecordCollection<string, TextSnippet<string>>("collection-name");
 

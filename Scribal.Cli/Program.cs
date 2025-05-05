@@ -30,6 +30,8 @@ builder.Services.AddSingleton<CancellationService>();
 builder.Services.AddSingleton<CommandService>();
 builder.Services.AddSingleton<InterfaceManager>();
 
+builder.Services.AddSingleton<MarkdownIngestor>();
+
 var app = builder.Build();
 
 var ingestor = app.Services.GetRequiredService<MarkdownIngestor>();

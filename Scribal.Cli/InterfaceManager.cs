@@ -27,7 +27,7 @@ public class InterfaceManager(
         var cwd = fileSystem.Directory.GetCurrentDirectory();
 
         AnsiConsole.MarkupLine($"[yellow]Current working directory: {cwd}[/]");
-        
+
         if (gitService.Enabled)
         {
             var currentBranch = await gitService.GetCurrentBranch();
@@ -35,9 +35,10 @@ public class InterfaceManager(
         }
         else
         {
-            AnsiConsole.MarkupLine("[red rapidblink]You are not in a valid Git repository! AI edits will be destructive![/]");
+            AnsiConsole.MarkupLine(
+                "[red rapidblink]You are not in a valid Git repository! AI edits will be destructive![/]");
         }
-        
+
         AnsiConsole.MarkupLine("Type [blue]/help[/] for available commands or just start typing to talk.");
         AnsiConsole.WriteLine();
     }
@@ -46,13 +47,13 @@ public class InterfaceManager(
     {
         var isRunning = true;
 
+        ReadLine.HistoryEnabled = true;
+        ReadLine.AutoCompletionHandler = new CommandAutoCompletionHandler(commands);
+
         while (isRunning)
         {
-            // Display prompt
             AnsiConsole.Markup("[green]> [/]");
-
-            // Get user input
-            var input = Console.ReadLine() ?? string.Empty;
+            var input = ReadLine.Read() ?? string.Empty;
 
             // Process the input
             if (input.StartsWith('/'))
@@ -110,7 +111,7 @@ public class InterfaceManager(
             AnsiConsole.WriteLine();
             AnsiConsole.WriteLine("(cancelled)");
         }
-        
+
         AnsiConsole.WriteLine();
         AnsiConsole.Write(rule);
     }
@@ -119,8 +120,7 @@ public class InterfaceManager(
     /// Streams an LLM response to the console, showing a spinner
     /// until the first token is available.
     /// </summary>
-    private static async Task StreamWithSpinnerAsync(
-        IAsyncEnumerable<ChatStreamItem> stream,
+    private static async Task StreamWithSpinnerAsync(IAsyncEnumerable<ChatStreamItem> stream,
         CancellationToken ct = default)
     {
         // 1. Get an enumerator we can advance manually.
@@ -130,11 +130,12 @@ public class InterfaceManager(
         var gotFirst = await AnsiConsole.Status()
             .Spinner(Spinner.Known.Dots)
             .SpinnerStyle(Style.Parse("green"))
-            .StartAsync("Thinking …", async _ =>
-            {
-                // If MoveNextAsync returns false the stream ended before we got any data.
-                return await e.MoveNextAsync();
-            });
+            .StartAsync("Thinking …",
+                async _ =>
+                {
+                    // If MoveNextAsync returns false the stream ended before we got any data.
+                    return await e.MoveNextAsync();
+                });
 
         // 3. The status panel is gone now.  If we received a first chunk, write it:
         if (!gotFirst)
@@ -145,7 +146,7 @@ public class InterfaceManager(
 
         // Write the first chunk immediately…
         ProcessChatStreamItem(e.Current);
-        
+
         // …and continue to stream the rest.
         while (await e.MoveNextAsync())
         {
@@ -168,9 +169,9 @@ public class InterfaceManager(
                 AnsiConsole.Decoration = Decoration.Italic;
 
                 var time = FormatTimeSpan(md.Elapsed);
-                    
+
                 AnsiConsole.Write($"{md.ServiceId}. Total time: {time}, {md.CompletionTokens} output tokens.");
-                    
+
                 AnsiConsole.ResetDecoration();
                 break;
             }
@@ -179,10 +180,12 @@ public class InterfaceManager(
 
     private static string FormatTimeSpan(TimeSpan timeSpan)
     {
-        return timeSpan.TotalSeconds < 60 ?
+        return timeSpan.TotalSeconds < 60
+            ?
             // Less than a minute, just display seconds
-            $"{timeSpan.Seconds}s" :
+            $"{timeSpan.Seconds}s"
+            :
             // Display minutes and seconds
-            $"{(int)timeSpan.TotalMinutes}m{timeSpan.Seconds}s";
+            $"{(int) timeSpan.TotalMinutes}m{timeSpan.Seconds}s";
     }
 }

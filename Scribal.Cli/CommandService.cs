@@ -50,6 +50,8 @@ public class CommandService
         _commands.Add("/clear", ClearCommand);
     }
 
+    public List<string> GetCommandNames() => _commands.Keys.ToList();
+    
     private Task<bool> ClearCommand(string key)
     {
         _ = _conversationStore.TryClearConversation(key);

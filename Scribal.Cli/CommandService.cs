@@ -12,7 +12,7 @@ public class CommandService(IFileSystem fileSystem, RepoMapStore repoStore, ICha
     public Parser Build()
     {
         var quit = new Command("/quit", "Exit Scribal");
-        quit.AddAlias("exit");
+        quit.AddAlias("/exit");
         quit.SetHandler(QuitCommand);
 
         var model = new Command("/model", "Set model details and API key");
@@ -32,10 +32,11 @@ public class CommandService(IFileSystem fileSystem, RepoMapStore repoStore, ICha
             quit,
         };
 
-        return new CommandLineBuilder(root).UseDefaults().Build();
+        return new CommandLineBuilder(root)
+            .UseDefaults()
+            .UseHelp("/help")
+            .Build();
     }
-
-    public List<string> GetCommandNames() => [];
 
     private Task ClearCommand(InvocationContext ctx)
     {
@@ -61,10 +62,10 @@ public class CommandService(IFileSystem fileSystem, RepoMapStore repoStore, ICha
         {
             AnsiConsole.MarkupLine("[yellow]Thank you for using Scribal. Goodbye![/]");
             Environment.Exit(0);
-            
+
             return Task.CompletedTask;
         }
-        
+
         return Task.CompletedTask;
     }
 
@@ -77,7 +78,7 @@ public class CommandService(IFileSystem fileSystem, RepoMapStore repoStore, ICha
             "Your API key will not be persisted; use environment variables or config to avoid setting it each time.");
 
         AnsiConsole.Write(new Rule());
-        
+
         return Task.CompletedTask;
     }
 }

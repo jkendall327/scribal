@@ -40,7 +40,7 @@ public class InterfaceManager(
                 "[red rapidblink]You are not in a valid Git repository! AI edits will be destructive![/]");
         }
 
-        AnsiConsole.MarkupLine("Type [blue]/help[/] for available commands or just start typing to talk.");
+        AnsiConsole.MarkupLine("Type [blue]--help[/] for available commands or just start typing to talk.");
         AnsiConsole.WriteLine();
     }
 
@@ -53,6 +53,15 @@ public class InterfaceManager(
         
         while (true)
         {
+            AnsiConsole.Write(new Rule());
+
+            if (repoMapStore.Paths.Any())
+            {
+                var paths = string.Join(" | ", repoMapStore.Paths);
+                AnsiConsole.MarkupLine($"[yellow]{paths}[/]");
+            }
+            
+            AnsiConsole.WriteLine();
             AnsiConsole.Markup("[green]> [/]");
 
             var input = ReadLine.Read();

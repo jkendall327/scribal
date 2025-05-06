@@ -21,14 +21,19 @@ var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
 {
     Args = args,
     ContentRootPath = contentRoot,
-    EnvironmentName = "Development"
 });
 
 IncorporateConfigFromScribalWorkspace(builder);
 
 builder.Logging.ClearProviders();
 
-var modelState = new ModelState();
+var modelState = new ModelState
+{
+    ModelServiceId = "gemini",
+    EmbeddingModelServiceId = "openai",
+    WeakModelServiceId = "openai"
+};
+
 builder.Services.AddSingleton(modelState);
 
 var modelConfiguration = new ModelConfiguration(builder.Configuration);

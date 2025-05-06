@@ -18,9 +18,21 @@ public class CommandService(
 {
     public Parser Build()
     {
-        var quit = new Command("/quit", "Exit Scribal");
-        quit.AddAlias("/exit");
-        quit.SetHandler(QuitCommand);
+        Command Create(string name, string description, Func<InvocationContext, Task> action, params string[] aliases)
+        {
+            var cmd = new Command(name, description);
+            
+            foreach (var alias in aliases)
+            {
+                cmd.AddAlias(alias);
+            }
+            
+            cmd.SetHandler(action);
+
+            return cmd;
+        }
+
+        var quit = Create("/quit", "Exit Scribal", QuitCommand, "/exit");
 
         var clear = new Command("/clear", "Clear conversation history");
         clear.SetHandler(ClearCommand);

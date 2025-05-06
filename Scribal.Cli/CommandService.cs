@@ -16,10 +16,7 @@ public class CommandService(IFileSystem fileSystem, RepoMapStore repoStore, ICha
         var quit = new Command("/quit", "Exit Scribal");
         quit.AddAlias("/exit");
         quit.SetHandler(QuitCommand);
-
-        var model = new Command("/model", "Set model details and API key");
-        model.SetHandler(SetModelCommand);
-
+        
         var clear = new Command("/clear", "Clear conversation history");
         clear.SetHandler(ClearCommand);
 
@@ -28,7 +25,6 @@ public class CommandService(IFileSystem fileSystem, RepoMapStore repoStore, ICha
 
         var root = new RootCommand("Scribal interactive shell")
         {
-            model,
             clear,
             tree,
             quit,
@@ -68,17 +64,6 @@ public class CommandService(IFileSystem fileSystem, RepoMapStore repoStore, ICha
             return Task.CompletedTask;
         }
 
-        return Task.CompletedTask;
-    }
-
-    private static Task SetModelCommand(InvocationContext ctx)
-    {
-        var choices = ModelSelector.BeginConfiguration();
-
-        AnsiConsole.WriteLine("Settings saved.");
-        AnsiConsole.WriteLine(
-            "Your API key will not be persisted; use environment variables or config to avoid setting it each time.");
-        
         return Task.CompletedTask;
     }
 }

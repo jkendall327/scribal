@@ -5,35 +5,57 @@ using System.CommandLine.Parsing;
 using System.IO.Abstractions;
 using Scribal.AI;
 using Scribal.Context;
+using Scribal.Workspace;
 using Spectre.Console;
 
 namespace Scribal.Cli;
 
-public class CommandService(IFileSystem fileSystem, RepoMapStore repoStore, IChatSessionStore conversationStore)
+public class CommandService(
+    IFileSystem fileSystem,
+    RepoMapStore repoStore,
+    IChatSessionStore conversationStore,
+    WorkspaceManager workspaceManager)
 {
     public Parser Build()
     {
         var quit = new Command("/quit", "Exit Scribal");
         quit.AddAlias("/exit");
         quit.SetHandler(QuitCommand);
-        
+
         var clear = new Command("/clear", "Clear conversation history");
         clear.SetHandler(ClearCommand);
 
         var tree = new Command("/tree", "Set files to be included in context");
         tree.SetHandler(TreeCommand);
+        
+        var init = new Command("/init", "Creates a new Scribal workspace in the current folder");
+        init.SetHandler(InitCommand);
 
         var root = new RootCommand("Scribal interactive shell")
         {
+            init,
             clear,
             tree,
             quit,
         };
 
-        return new CommandLineBuilder(root)
-            .UseDefaults()
-            .UseHelp("/help")
-            .Build();
+        return new CommandLineBuilder(root).UseDefaults().UseHelp("/help").Build();
+    }
+
+    private async Task InitCommand(InvocationContext arg)
+    {
+        try
+        {
+            var created = await workspaceManager.InitialiseWorkspace();
+
+            var message = created ? "Workspace initialised." : "You are already in a Scribal workspace.";
+            
+            AnsiConsole.WriteLine(message);
+        }
+        catch (Exception e)
+        {
+            AnsiConsole.WriteException(e);
+        }
     }
 
     private Task ClearCommand(InvocationContext ctx)

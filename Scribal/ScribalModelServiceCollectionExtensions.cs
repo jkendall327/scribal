@@ -19,16 +19,24 @@ public static class ScribalModelServiceCollectionExtensions
 {
     public static IServiceCollection AddScribalAi(this IServiceCollection services, IConfiguration cfg)
     {
-        services.AddSingleton<IModelProvider, OpenAIModelProvider>();
-        services.AddSingleton<IModelProvider, GeminiModelProvider>();
-        services.AddSingleton<IModelProvider, DeepSeekModelProvider>();
+        // Register everything that implements IModelProvider.
+        var providerTypes = typeof(IModelProvider).Assembly.GetTypes()
+            .Where(t => typeof(IModelProvider).IsAssignableFrom(t))
+            .Where(t => t is {IsClass: true, IsAbstract: false});
 
+        foreach (var providerType in providerTypes)
+        {
+            services.AddSingleton(typeof(IModelProvider), providerType);
+        }
+
+        // Register services in the main DI container that the kernel will pull back later.
         services.AddSingleton<FileReader>();
         services.AddSingleton<DiffEditor>();
         services.AddSingleton<GitCommitFilter>();
 
         AddRag(services);
-        
+
+        // Set up IOptions.
         var err = string.Empty;
 
         services.AddOptions<AiSettings>()
@@ -48,12 +56,13 @@ public static class ScribalModelServiceCollectionExtensions
             var providers = sp.GetServices<IModelProvider>().ToList();
 
             var kb = Kernel.CreateBuilder();
-            
+
+            // See if we have a model provider who can fill each slot; if so, let them do it.
             if (settings.Primary is not null)
             {
                 Register(kb, settings.Primary, string.Empty, providers);
             }
-            
+
             if (settings.Weak is not null)
             {
                 Register(kb, settings.Weak, "-weak", providers);
@@ -64,6 +73,7 @@ public static class ScribalModelServiceCollectionExtensions
                 Register(kb, settings.Embeddings, "-embed", providers);
             }
 
+            // Pull back those services we registered in the main DI container and put them into the kernel.
             kb.Plugins.AddFromObject(sp.GetRequiredService<FileReader>(), nameof(FileReader));
             kb.Plugins.AddFromObject(sp.GetRequiredService<DiffEditor>(), nameof(DiffEditor));
 
@@ -73,7 +83,7 @@ public static class ScribalModelServiceCollectionExtensions
             {
                 kb.Plugins.AddFromObject(sp.GetRequiredService<VectorSearch>(), nameof(VectorSearch));
             }
-
+            
             kb.Services.AddSingleton<IFunctionInvocationFilter>(sp.GetRequiredService<GitCommitFilter>());
 
             return kb.Build();
@@ -103,7 +113,7 @@ public static class ScribalModelServiceCollectionExtensions
             {
                 throw new NotImplementedException("Figure out how to make RAG optional again...?");
             }
-            
+
             var store = appConfig.DryRun ? new VolatileMemoryStore() : new VolatileMemoryStore();
 
             var memory = new MemoryBuilder().WithMemoryStore(store)

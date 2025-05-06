@@ -1,4 +1,9 @@
+using Anthropic.SDK;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.ChatCompletion;
+#pragma warning disable SKEXP0001
+
 #pragma warning disable SKEXP0070
 
 namespace Scribal;
@@ -39,5 +44,19 @@ public class DeepSeekModelProvider : IModelProvider
             apiKey: slot.ApiKey,
             endpoint: new("https://api.deepseek.com"),
             serviceId: slot.Provider + serviceSuffix);
+    }
+}
+
+public class AnthropicModelProvider : IModelProvider
+{
+    public string Name => "Anthropic";
+
+    public void RegisterServices(IKernelBuilder kb, ModelSlot slot, string serviceSuffix)
+    {
+        kb.Services.AddTransient<IChatCompletionService>((sp) =>
+        {
+            var anthropicClient = new AnthropicClient(apiKeys: new(slot.ApiKey));
+            return anthropicClient.Messages.AsChatCompletionService();
+        });
     }
 }

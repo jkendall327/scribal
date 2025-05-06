@@ -7,6 +7,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="Anthropic.SDK" Version="5.2.0" />
         <PackageReference Include="LibGit2Sharp" Version="0.31.0" />
         <PackageReference Include="Markdig" Version="0.41.1" />
         <PackageReference Include="Microsoft.Extensions.AI" Version="9.4.3-preview.1.25230.7" />

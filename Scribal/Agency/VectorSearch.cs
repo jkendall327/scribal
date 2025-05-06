@@ -20,16 +20,18 @@ public sealed class VectorSearch(ISemanticTextMemory memory)
         var name = await memory.GetCollectionsAsync(cancellationToken: cancellationToken);
 
         var enumerable = memory.SearchAsync(name.Single(),
-            "eiyren",
-            limit: 54,
-            minRelevanceScore: 0.1,
+            query,
+            limit: 1,
+            minRelevanceScore: 0.7,
             cancellationToken: cancellationToken);
 
         var sb = new StringBuilder();
 
         await foreach (var item in enumerable)
         {
+            sb.AppendLine("---");
             sb.AppendLine(item.Metadata.Text);
+            sb.AppendLine("---");
         }
 
         return sb.ToString();

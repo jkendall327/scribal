@@ -37,18 +37,8 @@ builder.Services.AddSingleton<MarkdownIngestor>();
 var app = builder.Build();
 
 var ingestor = app.Services.GetRequiredService<MarkdownIngestor>();
-#pragma warning disable SKEXP0001
-var d = app.Services.GetRequiredService<ITextEmbeddingGenerationService>();
-#pragma warning restore SKEXP0001
-//IEmbeddingGenerator<TInput, Embedding<float>>
-await ingestor.Ingest([
-    """
-    # My file
-    This is a test file.
-    ## Subheading
-    Asuka is best girl
-    """
-]);
+
+// await ingestor.IngestAllMarkdown(d);
 
 var git = app.Services.GetRequiredService<IGitService>();
 var filesystem = app.Services.GetRequiredService<IFileSystem>();

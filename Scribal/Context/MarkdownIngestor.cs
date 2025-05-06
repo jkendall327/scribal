@@ -10,33 +10,12 @@ namespace Scribal.Context;
 public class MarkdownIngestor(ISemanticTextMemory memoryStore, IFileSystem fileSystem)
 {
     public const string CollectionName = "markdown";
-    
-    public static IEnumerable<string> FindMarkdownFiles(string rootDirectory)
-    {
-        try
-        {
-            // Validate directory exists
-            if (!Directory.Exists(rootDirectory))
-            {
-                throw new DirectoryNotFoundException($"Directory not found: {rootDirectory}");
-            }
 
-            // Search for all files with .md or .markdown extensions
-            return Directory.EnumerateFiles(rootDirectory, "*.*", SearchOption.AllDirectories)
-                .Where(f => !f.StartsWith("."))
-                .Where(file => file.EndsWith(".md", StringComparison.OrdinalIgnoreCase) ||
-                               file.EndsWith(".markdown", StringComparison.OrdinalIgnoreCase));
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error while searching for markdown files: {ex.Message}");
-            return Enumerable.Empty<string>();
-        }
-    }
-
-    public async Task Ingest(List<string> markdownFiles, CancellationToken cancellationToken = default)
+    public async Task IngestAllMarkdown(IDirectoryInfo root,
+        SearchOption searchOption,
+        CancellationToken cancellationToken = default)
     {
-        var files = FindMarkdownFiles("/home/jackkendall/Documents/writing/eskar/plans/eiyren");
+        var files = FindMarkdownFiles(root.FullName);
 
         var content = files.Take(1).Select(s => fileSystem.File.ReadAllLinesAsync(s, cancellationToken)).ToList();
 
@@ -54,5 +33,19 @@ public class MarkdownIngestor(ISemanticTextMemory memoryStore, IFileSystem fileS
                     cancellationToken: cancellationToken);
             }
         }
+    }
+
+    private IEnumerable<string> FindMarkdownFiles(string rootDirectory)
+    {
+        // Validate directory exists
+        if (!fileSystem.Directory.Exists(rootDirectory))
+        {
+            throw new DirectoryNotFoundException($"Directory not found: {rootDirectory}");
+        }
+
+        // Search for all files with .md or .markdown extensions
+        return fileSystem.Directory
+            .EnumerateFiles(rootDirectory, "*.md", SearchOption.AllDirectories)
+            .Where(f => !f.StartsWith('.'));
     }
 }

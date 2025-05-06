@@ -6,6 +6,8 @@ public class ModelConfiguration
 {
     public ModelConfiguration(IConfiguration configurationManager)
     {
+        Provider = configurationManager.GetValue<string?>("AIServices:Provider");
+        
         configurationManager
             .GetRequiredSection($"AIServices:{OpenAIConfig.ConfigSectionName}")
             .Bind(OpenAIConfig);
@@ -19,6 +21,8 @@ public class ModelConfiguration
             .Bind(DeepSeekConfig);
 
     }
+
+    public string? Provider { get; set; }
 
     public OpenAIConfig OpenAIConfig { get; private set; } = new();
     public GeminiConfig GeminiConfig { get; private set; } = new();

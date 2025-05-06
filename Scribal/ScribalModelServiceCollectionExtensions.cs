@@ -55,15 +55,10 @@ public static class ScribalModelServiceCollectionExtensions
             throw new InvalidOperationException("No API key has been supplied for any provider.");
         }
 
-        if (present > 1)
+        if (present > 1 && modelConfiguration.Provider is null)
         {
-            var preference = cfg["Provider"];
-
-            if (string.IsNullOrEmpty(preference))
-            {
-                throw new InvalidOperationException(
-                    "You have multiple active API keys. Please set the 'Provider' flag to set who you will actually use.");
-            }
+            throw new InvalidOperationException(
+                "You have multiple active API keys. Please set the 'Provider' flag to set who you will actually use.");
         }
 
         var oaiModel = modelConfiguration.OpenAIConfig.ModelId;

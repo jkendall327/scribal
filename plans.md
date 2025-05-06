@@ -5,6 +5,17 @@
 - explicit 'scribal ingest' command to avoid complexity of a background service? just for now?
 - https://github.com/microsoft/semantic-kernel/blob/main/dotnet/samples/Demos/VectorStoreRAG/DataLoader.cs
 
+should report plugged-in tools on startup?
+should report workspace status?
+
+background service to handle ingestion concerns
+
+model provider class which is the source of truth on what to use
+for weak models and embeddings also
+
+users changing stuff in the gui takes precedence
+and should also save the workspace settings
+
 ## Initialisation
 - 'scribal init'
 - Creates the .scribal/ directory, config.json (with defaults/prompts), an empty project_state.json, an empty plot_outline.md template, and the characters/ and chapters/ directories. Sets project state to "Initialized".

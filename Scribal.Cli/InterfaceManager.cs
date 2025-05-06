@@ -104,6 +104,8 @@ public class InterfaceManager(
             return;
         }
         
+        AnsiConsole.MarkupLine($"[yellow]{aiSettings.Value.Primary.ModelId}[/]");
+        
         var files = repoMapStore.Paths.ToList();
 
         foreach (var file in files)
@@ -115,7 +117,7 @@ public class InterfaceManager(
         {
             var enumerable = aiChatService.StreamAsync(_conversationId.ToString(),
                 userInput,
-                aiSettings.Value.Primary.ModelId,
+                aiSettings.Value.Primary.Provider,
                 cancellationService.Source.Token);
 
             await StreamWithSpinnerAsync(enumerable, cancellationService.Source.Token);

@@ -20,19 +20,6 @@ namespace Scribal;
 #pragma warning disable SKEXP0070 // experimental attribute until GA
 #pragma warning disable SKEXP0010 // “other OpenAI-style” endpoint
 
-public class foo : IEmbeddingGenerator
-{
-    public void Dispose()
-    {
-        throw new NotImplementedException();
-    }
-
-    public object? GetService(Type serviceType, object? serviceKey = null)
-    {
-        throw new NotImplementedException();
-    }
-}
-
 public static class ScribalModelServiceCollectionExtensions
 {
     public static IServiceCollection AddScribalAi(this IServiceCollection services, IConfiguration cfg)

@@ -64,9 +64,11 @@ public class CommandService(
     {
         var idea = arg.ParseResult.GetValueForArgument(_ideaArgument);
 
+        var token = arg.GetCancellationToken();
+        
         try
         {
-            await pitchService.CreatePremiseFromPitch(idea);
+            await pitchService.CreatePremiseFromPitch(idea, token);
         }
         catch (Exception e)
         {

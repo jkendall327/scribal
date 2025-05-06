@@ -70,7 +70,9 @@ public sealed class AiChatService(
         string? sid,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
-        var enumerable = memory.SearchAsync("test", "asuka", cancellationToken: ct);
+        var name= await memory.GetCollectionsAsync(cancellationToken: ct);
+        
+        var enumerable = memory.SearchAsync(name.Single(), "eiyren", limit: 54, minRelevanceScore: 0.1, cancellationToken: ct);
 
         var sb = new StringBuilder();
         
@@ -80,29 +82,6 @@ public sealed class AiChatService(
         }
 
         var result = sb.ToString();
-        
-        // this breaks because the inmemory thing is broken
-        // try sqlite?
-        
-        /*var withGetTextSearchResults = vectorStoreTextSearch.CreateWithGetTextSearchResults("SearchPlugin");
-
-        var kernelFunction = withGetTextSearchResults.First();
-        var result = await kernel.InvokeAsync(kernelFunction, new KernelArguments()
-        {
-            { "query", "asuka" },
-            { "count", 4},
-            { "skip", "0" }
-        });
-        
-        var u = await vectorStoreTextSearch.SearchAsync("asuka");
-
-        await foreach (var e in u.Results)
-        {
-            ;
-        }
-        
-        
-        kernel.Plugins.Add(withGetTextSearchResults);*/
         
         var start = time.GetTimestamp();
         var chat = kernel.GetRequiredService<IChatCompletionService>(sid);

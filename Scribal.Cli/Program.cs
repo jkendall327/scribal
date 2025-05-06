@@ -24,22 +24,30 @@ var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
     EnvironmentName = "Development"
 });
 
-var current = Directory.GetCurrentDirectory();
-var workspace = Path.Join(current, ".scribal", "scribal.config");
-builder.Configuration.AddJsonFile(workspace, optional: true, reloadOnChange: true);
+IncorporateConfigFromScribalWorkspace(builder);
 
 builder.Logging.ClearProviders();
+
+var modelState = new ModelState();
+builder.Services.AddSingleton(modelState);
 
 var modelConfiguration = new ModelConfiguration(builder.Configuration);
 
 builder.Services.AddScribalAi(builder.Configuration, modelConfiguration);
 builder.Services.AddScribal(builder.Configuration, new FileSystem(), TimeProvider.System);
-
-// UI services
-builder.Services.AddSingleton<CancellationService>();
-builder.Services.AddSingleton<CommandService>();
-builder.Services.AddSingleton<InterfaceManager>();
+builder.Services.AddScribalInterface();
 
 var app = builder.Build();
 
 await App.RunScribal(app);
+
+return;
+
+void IncorporateConfigFromScribalWorkspace(HostApplicationBuilder host)
+{
+    var current = Directory.GetCurrentDirectory();
+    
+    var workspace = Path.Join(current, ".scribal", "scribal.config");
+    
+    host.Configuration.AddJsonFile(workspace, optional: true, reloadOnChange: true);
+}

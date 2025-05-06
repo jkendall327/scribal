@@ -16,8 +16,6 @@ public static class ScribalServiceCollectionExtensions
         TimeProvider time)
     {
         services.Configure<AppConfig>(config.GetSection("AppConfig"));
-
-        services.AddSingleton<ModelState>();
         
         // Infrastructure
         services.AddSingleton(fileSystem);

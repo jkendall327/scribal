@@ -36,6 +36,7 @@ public static class ScribalServiceCollectionExtensions
         services.AddSingleton<PromptRenderer>();
         services.AddSingleton<PromptBuilder>();
         services.AddSingleton<IDocumentScanService, DocumentScanService>();
+        services.AddSingleton<MarkdownIngestor>();
 
         // Other
         services.AddSingleton<CommitGenerator>();

@@ -40,29 +40,6 @@ builder.Services.AddSingleton<CancellationService>();
 builder.Services.AddSingleton<CommandService>();
 builder.Services.AddSingleton<InterfaceManager>();
 
-builder.Services.AddSingleton<MarkdownIngestor>();
-
 var app = builder.Build();
 
-var filesystem = app.Services.GetRequiredService<IFileSystem>();
-var config = app.Services.GetRequiredService<IOptions<AppConfig>>();
-
-var ingestor = app.Services.GetRequiredService<MarkdownIngestor>();
-var cwd = filesystem.DirectoryInfo.New(filesystem.Directory.GetCurrentDirectory());
-
-if (config.Value.IngestContent)
-{
-    await ingestor.IngestAllMarkdown(cwd, SearchOption.AllDirectories);
-}
-
-var git = app.Services.GetRequiredService<IGitService>();
-
-git.Initialise(filesystem.Directory.GetCurrentDirectory());
-
-var cancellation = app.Services.GetRequiredService<CancellationService>();
-cancellation.Initialise();
-
-var manager = app.Services.GetRequiredService<InterfaceManager>();
-
-await manager.DisplayWelcome();
-await manager.RunMainLoop();
+await App.RunScribal(app);

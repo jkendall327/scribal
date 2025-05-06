@@ -2,11 +2,12 @@ using System.ComponentModel;
 using System.IO.Abstractions;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel;
 
 namespace Scribal.Agency;
 
-public partial class DiffEditor(IFileSystem fileSystem, IConfiguration configuration)
+public partial class DiffEditor(IFileSystem fileSystem, IOptions<AppConfig> options)
 {
     public const string DiffEditorToolName = "apply_diff";
     
@@ -27,9 +28,7 @@ public partial class DiffEditor(IFileSystem fileSystem, IConfiguration configura
         var newFileContent = ApplyUnifiedDiffInner(originalLines, diff);
             
         // Write the modified content back to the file
-        var dry = configuration.GetValue<bool>("DryRun");
-        
-        if (!dry)
+        if (!options.Value.DryRun)
         {
             await fileSystem.File.WriteAllLinesAsync(file, newFileContent);
         }

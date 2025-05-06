@@ -1,5 +1,6 @@
 ﻿using System.IO.Abstractions;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -36,12 +37,18 @@ builder.Services.AddSingleton<MarkdownIngestor>();
 
 var app = builder.Build();
 
-var ingestor = app.Services.GetRequiredService<MarkdownIngestor>();
+var filesystem = app.Services.GetRequiredService<IFileSystem>();
+var config = app.Services.GetRequiredService<IConfiguration>();
 
-// await ingestor.IngestAllMarkdown(d);
+var ingestor = app.Services.GetRequiredService<MarkdownIngestor>();
+var cwd = filesystem.DirectoryInfo.New(filesystem.Directory.GetCurrentDirectory());
+
+if (config.GetValue<bool>("IngestContent"))
+{
+    await ingestor.IngestAllMarkdown(cwd, SearchOption.AllDirectories);
+}
 
 var git = app.Services.GetRequiredService<IGitService>();
-var filesystem = app.Services.GetRequiredService<IFileSystem>();
 
 git.Initialise(filesystem.Directory.GetCurrentDirectory());
 

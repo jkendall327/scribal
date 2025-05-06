@@ -28,7 +28,7 @@ public static class ScribalModelServiceCollectionExtensions
 
         AddModels(cfg, kb);
 
-        AddPlugins(kb);
+        AddPlugins(cfg, kb);
         
         AddRag(cfg, kb);
 
@@ -109,11 +109,17 @@ public static class ScribalModelServiceCollectionExtensions
         kb.Services.AddSingleton(memory);
     }
 
-    private static void AddPlugins(IKernelBuilder kb)
+    private static void AddPlugins(IConfiguration cfg, IKernelBuilder kb)
     {
         kb.Plugins.AddFromType<FileReader>(nameof(FileReader));
         kb.Plugins.AddFromType<DiffEditor>(nameof(DiffEditor));
-        kb.Plugins.AddFromType<VectorSearch>(nameof(VectorSearch));
+        
+        var ingest = cfg.GetValue<bool>("IngestContent");
+
+        if (ingest)
+        {
+            kb.Plugins.AddFromType<VectorSearch>(nameof(VectorSearch));
+        }
     }
 
     private static void AddFilters(IKernelBuilder kb)

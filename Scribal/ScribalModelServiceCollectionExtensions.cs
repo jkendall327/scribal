@@ -3,12 +3,16 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Connectors.InMemory;
+using Microsoft.SemanticKernel.Connectors.OpenAI;
 using Microsoft.SemanticKernel.Connectors.Qdrant;
 using Microsoft.SemanticKernel.Data;
+using Microsoft.SemanticKernel.Memory;
 using Qdrant.Client;
 using Scribal.Agency;
 using Scribal.Context;
 using DiffEditor = Scribal.Agency.DiffEditor;
+#pragma warning disable SKEXP0050
+#pragma warning disable SKEXP0001
 #pragma warning disable SKEXP0020
 
 namespace Scribal;
@@ -105,6 +109,13 @@ public static class ScribalModelServiceCollectionExtensions
 
     private static void AddRag(IConfiguration cfg, IKernelBuilder kb)
     {
+        var memory = new MemoryBuilder()
+            .WithMemoryStore(new VolatileMemoryStore())
+            .WithOpenAITextEmbeddingGeneration("text-embedding-3-small", cfg["OpenAI:ApiKey"])
+            .Build();
+
+        kb.Services.AddSingleton(memory);
+        
         kb.AddOpenAITextEmbeddingGeneration("text-embedding-3-small", cfg["OpenAI:ApiKey"]);
 
         kb.Services.AddSingleton<IEmbeddingGenerator, foo>();

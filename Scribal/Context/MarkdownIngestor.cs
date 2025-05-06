@@ -2,6 +2,7 @@ using System.Net;
 using Microsoft.Extensions.VectorData;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Embeddings;
+using Microsoft.SemanticKernel.Memory;
 
 #pragma warning disable SKEXP0001
 
@@ -9,10 +10,19 @@ namespace Scribal.Context;
 
 public class MarkdownIngestor(
     IVectorStoreRecordCollection<Guid, TextSnippet<Guid>> store,
+    ISemanticTextMemory memoryStore,
     ITextEmbeddingGenerationService embedder)
 {
     public async Task Ingest(List<string> markdownFiles, CancellationToken cancellationToken = default)
     {
+        string collectionName = "test";
+        await memoryStore.SaveInformationAsync(collectionName,
+            markdownFiles.Single(),
+            Guid.NewGuid().ToString(),
+            cancellationToken: cancellationToken);
+
+        return;
+
         await store.CreateCollectionIfNotExistsAsync(cancellationToken);
 
         var recordTasks = markdownFiles.Select(async content => new TextSnippet<Guid>

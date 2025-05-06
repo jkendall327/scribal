@@ -1,10 +1,12 @@
 using System.IO.Abstractions;
 using System.Runtime.CompilerServices;
+using System.Text;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.Google;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
 using Microsoft.SemanticKernel.Data;
+using Microsoft.SemanticKernel.Memory;
 using OpenAI.Chat;
 using Scribal.Context;
 using ChatMessageContent = Microsoft.SemanticKernel.ChatMessageContent;
@@ -41,6 +43,7 @@ public sealed class AiChatService(
     Kernel kernel,
     IChatSessionStore store,
     VectorStoreTextSearch<TextSnippet<Guid>> vectorStoreTextSearch,
+    ISemanticTextMemory memory,
     PromptBuilder prompts,
     IFileSystem fileSystem,
     TimeProvider time) : IAiChatService
@@ -67,10 +70,21 @@ public sealed class AiChatService(
         string? sid,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
+        var enumerable = memory.SearchAsync("test", "asuka", cancellationToken: ct);
+
+        var sb = new StringBuilder();
+        
+        await foreach (var item in enumerable)
+        {
+            sb.AppendLine(item.Metadata.Text);
+        }
+
+        var result = sb.ToString();
+        
         // this breaks because the inmemory thing is broken
         // try sqlite?
         
-        var withGetTextSearchResults = vectorStoreTextSearch.CreateWithGetTextSearchResults("SearchPlugin");
+        /*var withGetTextSearchResults = vectorStoreTextSearch.CreateWithGetTextSearchResults("SearchPlugin");
 
         var kernelFunction = withGetTextSearchResults.First();
         var result = await kernel.InvokeAsync(kernelFunction, new KernelArguments()
@@ -88,7 +102,7 @@ public sealed class AiChatService(
         }
         
         
-        kernel.Plugins.Add(withGetTextSearchResults);
+        kernel.Plugins.Add(withGetTextSearchResults);*/
         
         var start = time.GetTimestamp();
         var chat = kernel.GetRequiredService<IChatCompletionService>(sid);

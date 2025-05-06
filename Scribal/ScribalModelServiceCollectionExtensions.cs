@@ -121,6 +121,7 @@ public static class ScribalModelServiceCollectionExtensions
     {
         kb.Plugins.AddFromType<FileReader>(nameof(FileReader));
         kb.Plugins.AddFromType<DiffEditor>(nameof(DiffEditor));
+        kb.Plugins.AddFromType<VectorSearch>(nameof(VectorSearch));
     }
 
     private static void AddFilters(IKernelBuilder kb)

@@ -15,9 +15,9 @@ public class MarkdownIngestor(ISemanticTextMemory memoryStore, IFileSystem fileS
         SearchOption searchOption,
         CancellationToken cancellationToken = default)
     {
-        var files = FindMarkdownFiles(root.FullName);
+        var files = FindMarkdownFiles(root.FullName, searchOption);
 
-        var content = files.Take(1).Select(s => fileSystem.File.ReadAllLinesAsync(s, cancellationToken)).ToList();
+        var content = files.Select(s => fileSystem.File.ReadAllLinesAsync(s, cancellationToken)).ToList();
 
         await Task.WhenAll(content);
 
@@ -25,7 +25,7 @@ public class MarkdownIngestor(ISemanticTextMemory memoryStore, IFileSystem fileS
         {
             var chunk = TextChunker.SplitMarkdownParagraphs(task.Result, 1024);
 
-            foreach (var se in chunk.Take(5))
+            foreach (var se in chunk)
             {
                 await memoryStore.SaveInformationAsync(CollectionName,
                     se,
@@ -35,7 +35,7 @@ public class MarkdownIngestor(ISemanticTextMemory memoryStore, IFileSystem fileS
         }
     }
 
-    private IEnumerable<string> FindMarkdownFiles(string rootDirectory)
+    private IEnumerable<string> FindMarkdownFiles(string rootDirectory, SearchOption searchOption)
     {
         // Validate directory exists
         if (!fileSystem.Directory.Exists(rootDirectory))
@@ -45,7 +45,7 @@ public class MarkdownIngestor(ISemanticTextMemory memoryStore, IFileSystem fileS
 
         // Search for all files with .md or .markdown extensions
         return fileSystem.Directory
-            .EnumerateFiles(rootDirectory, "*.md", SearchOption.AllDirectories)
+            .EnumerateFiles(rootDirectory, "*.md", searchOption)
             .Where(f => !f.StartsWith('.'));
     }
 }

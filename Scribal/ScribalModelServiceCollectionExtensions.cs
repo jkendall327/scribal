@@ -109,9 +109,14 @@ public static class ScribalModelServiceCollectionExtensions
 
     private static void AddRag(IConfiguration cfg, IKernelBuilder kb)
     {
+        var apiKey = cfg["OpenAI:ApiKey"];
+        var dry = cfg.GetValue<bool>("DryRun");
+        
+        var store = dry ? new VolatileMemoryStore() : new VolatileMemoryStore();
+
         var memory = new MemoryBuilder()
-            .WithMemoryStore(new VolatileMemoryStore())
-            .WithOpenAITextEmbeddingGeneration("text-embedding-3-small", cfg["OpenAI:ApiKey"])
+            .WithMemoryStore(store)
+            .WithOpenAITextEmbeddingGeneration("text-embedding-3-small", apiKey)
             .Build();
 
         kb.Services.AddSingleton(memory);

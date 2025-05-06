@@ -33,15 +33,9 @@ public class CommandService(
         }
 
         var quit = Create("/quit", "Exit Scribal", QuitCommand, "/exit");
-
-        var clear = new Command("/clear", "Clear conversation history");
-        clear.SetHandler(ClearCommand);
-
-        var tree = new Command("/tree", "Set files to be included in context");
-        tree.SetHandler(TreeCommand);
-        
-        var init = new Command("/init", "Creates a new Scribal workspace in the current folder");
-        init.SetHandler(InitCommand);
+        var clear = Create("/clear", "Clear conversation history", ClearCommand);
+        var tree = Create("/tree", "Set files to be included in context", TreeCommand);
+        var init = Create("/init", "Creates a new Scribal workspace in the current folder", InitCommand);
 
         var root = new RootCommand("Scribal interactive shell")
         {

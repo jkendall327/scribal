@@ -4,7 +4,7 @@ namespace Scribal.Cli;
 
 public record Choices(string? Provider, string? Model, string? ApiKey, string? WeakModel);
 
-public class ModelSelector
+public static class ModelSelector
 {
     private static string? _provider;
     private static string? _model;

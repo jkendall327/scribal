@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.IO.Abstractions;
 using LibGit2Sharp;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -11,30 +12,31 @@ public interface IGitService
     public bool Enabled { get; }
     void Initialise(string path);
     void CreateRepository(string path);
-    Task<string> GetRepoName();
-    Task<List<string>> GetBranches();
     Task<string> GetCurrentBranch();
-    Task<string> GetCurrentCommit();
-    Task<bool> StageChange();
     Task<bool> CreateCommit(string filepath, string message);
+    Task CreateGitIgnore(string gitignore);
 }
 
-public sealed class GitService(TimeProvider time, IOptions<AppConfig> config, ILogger<GitService> logger) : IGitService, IDisposable
+public sealed class GitService(
+    TimeProvider time,
+    IFileSystem fileSystem,
+    IOptions<AppConfig> config,
+    ILogger<GitService> logger) : IGitService, IDisposable
 {
     private Repository? _repo;
     private string? _name;
     private string? _email;
-    
+
     public bool Enabled => _repo is not null;
-    
+
     public void Initialise(string path)
     {
         // TODO: use Repository.IsValid instead of throwing?
-        
+
         try
         {
             _repo = new(path);
-            
+
             _name = _repo.Config.GetValueOrDefault<string>("user.name");
             _email = _repo.Config.GetValueOrDefault<string>("user.email");
 
@@ -54,7 +56,7 @@ public sealed class GitService(TimeProvider time, IOptions<AppConfig> config, IL
     {
         Repository.Init(path);
     }
-    
+
     [MemberNotNull(nameof(_repo))]
     [MemberNotNull(nameof(_name))]
     [MemberNotNull(nameof(_email))]
@@ -70,16 +72,6 @@ public sealed class GitService(TimeProvider time, IOptions<AppConfig> config, IL
             throw new InvalidOperationException("No username or email set in git config.");
         }
     }
-    
-    public Task<string> GetRepoName()
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<List<string>> GetBranches()
-    {
-        throw new NotImplementedException();
-    }
 
     public Task<string> GetCurrentBranch()
     {
@@ -92,7 +84,7 @@ public sealed class GitService(TimeProvider time, IOptions<AppConfig> config, IL
     public Task<string> GetCurrentCommit()
     {
         EnsureValidRepository();
-        
+
         return Task.FromResult(_repo.Head.Tip.MessageShort);
     }
 
@@ -107,20 +99,38 @@ public sealed class GitService(TimeProvider time, IOptions<AppConfig> config, IL
         {
             return Task.FromResult(true);
         }
-        
+
         EnsureValidRepository();
-        
+
         Commands.Stage(_repo, filepath);
 
         var sig = new Signature($"{_name} (scribal)", _email, time.GetLocalNow());
 
         _repo.Commit(message, sig, sig);
-        
+
         return Task.FromResult(true);
     }
 
-    public void Dispose()
+    public async Task CreateGitIgnore(string gitignore)
     {
-        _repo?.Dispose();
+        EnsureValidRepository();
+
+        var folder = _repo.Info.Path;
+
+        var root = fileSystem.DirectoryInfo.New(folder).Parent;
+
+        if (root is null)
+        {
+            throw new InvalidOperationException("Couldn't find parent directory to the .git folder.");
+        }
+        
+        var path = fileSystem.Path.Combine(root.FullName, ".gitignore");
+
+        if (!config.Value.DryRun)
+        {
+            await fileSystem.File.WriteAllTextAsync(path, gitignore); 
+        }
     }
+
+    public void Dispose() => _repo?.Dispose();
 }

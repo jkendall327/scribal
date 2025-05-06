@@ -1,4 +1,5 @@
 using System.IO.Abstractions;
+using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
 using Scribal.Agency;
@@ -80,12 +81,21 @@ public class WorkspaceManager(IFileSystem fileSystem, IGitService git, IUserInte
 
         var ok = await interaction.ConfirmAsync("Would you like to create a Git repo?");
 
-        if (!ok || dry)
+        if (!ok)
         {
             return false;
         }
 
-        git.CreateRepository(cwd);
+        if (!dry)
+        {
+            git.CreateRepository(cwd);
+        }
+
+        // Might want to add more stuff to this later.
+        var gitignore = ConfigFileName;
+
+        await git.CreateGitIgnore(gitignore);
+        
         return true;
     }
 

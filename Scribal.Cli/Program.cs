@@ -11,6 +11,7 @@ using Scribal;
 using Scribal.Agency;
 using Scribal.Cli;
 using Scribal.Context;
+using Scribal.Workspace;
 
 // .NET looks for appsettings.json in the content root path,
 // which Host.CreateApplicationBuilder sets as the current working directory.
@@ -39,7 +40,9 @@ return;
 
 void IncorporateConfigFromScribalWorkspace(HostApplicationBuilder host)
 {
-    var config = TryFindWorkspaceFile();
+    var workspace = new WorkspaceManager(new FileSystem());
+    
+    var config = workspace.TryFindWorkspaceConfig();
 
     if (config == null)
     {
@@ -47,23 +50,4 @@ void IncorporateConfigFromScribalWorkspace(HostApplicationBuilder host)
     }
 
     host.Configuration.AddJsonFile(config, optional: true, reloadOnChange: true);
-}
-
-string? TryFindWorkspaceFile()
-{
-    var dir = Directory.GetCurrentDirectory();
-
-    while (dir is not null)
-    {
-        var path = Path.Combine(dir, ".scribal", "scribal.config");
-        
-        if (File.Exists(path))
-        {
-            return path;
-        }
-
-        dir = Directory.GetParent(dir)?.FullName;
-    }
-
-    return null;
 }

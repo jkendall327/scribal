@@ -12,7 +12,7 @@ public class WorkspaceManager(IFileSystem fileSystem)
     
     public async Task CheckForWorkspace()
     {
-        var workspace = GetWorkspaceFolder();
+        var workspace = TryFindWorkspaceFolder();
 
         if (workspace is null)
         {
@@ -52,14 +52,36 @@ public class WorkspaceManager(IFileSystem fileSystem)
         _workspace = workspace;
     }
 
-    public string? GetWorkspaceFolder()
+    public string? TryFindWorkspaceFolder()
     {
-        var cwd = fileSystem.Directory.GetCurrentDirectory();
+        var dir = fileSystem.Directory.GetCurrentDirectory();
 
-        var workspace = fileSystem.Directory
-            .EnumerateDirectories(cwd, "*", SearchOption.TopDirectoryOnly)
-            .SingleOrDefault(s => s.Equals(".scribal", StringComparison.Ordinal));
+        while (dir is not null)
+        {
+            var path = fileSystem.Path.Combine(dir, ".scribal");
         
-        return workspace;
+            if (fileSystem.Directory.Exists(path))
+            {
+                return path;
+            }
+
+            dir = fileSystem.Directory.GetParent(dir)?.FullName;
+        }
+
+        return null;
+    }
+    
+    public string? TryFindWorkspaceConfig()
+    {
+        var dir = TryFindWorkspaceFolder();
+
+        if (dir is null)
+        {
+            return null;
+        }
+        
+        var path = fileSystem.Path.Combine(dir, "scribal.config");
+
+        return path;
     }
 }

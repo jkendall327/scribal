@@ -132,7 +132,7 @@ public class InterfaceManager(
     private async Task DrawStatusLine()
     {
         var modelId = aiSettings.Value.Primary.ModelId;
-        var workspace = workspaceManager.InWorkspace ? workspaceManager.GetWorkspaceFolder() : "not in workspace";
+        var workspace = workspaceManager.InWorkspace ? workspaceManager.TryFindWorkspaceFolder() : "not in workspace";
         var branch = gitService.Enabled ? await gitService.GetCurrentBranch() : "[not in a git repository]";
         
         AnsiConsole.MarkupLine($"[yellow]{modelId}[/] | {workspace} | {branch}");

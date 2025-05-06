@@ -1,10 +1,13 @@
 using System.IO.Abstractions;
 using System.Text.Json;
+using Microsoft.Extensions.Options;
 using Scribal.Agency;
 
 namespace Scribal.Workspace;
 
-public class WorkspaceManager(IFileSystem fileSystem, GitService git, IUserInteraction interaction)
+public record WorkspaceCreation(bool Created, bool GitRepoInitialised);
+
+public class WorkspaceManager(IFileSystem fileSystem, IGitService git, IUserInteraction interaction, IOptions<AppConfig> options)
 {
     private const string WorkspaceDirectoryName = ".scribal";
     private const string ConfigFileName = "config.json";
@@ -27,41 +30,62 @@ public class WorkspaceManager(IFileSystem fileSystem, GitService git, IUserInter
         _workspace = fileSystem.DirectoryInfo.New(workspace);
     }
 
-    public async Task<bool> InitialiseWorkspace()
+    public async Task<WorkspaceCreation> InitialiseWorkspace()
     {
         if (_workspace is not null)
         {
-            return false;
+            return new(false, false);
         }
 
+        var dry = options.Value.DryRun;
+        
         var cwd = fileSystem.Directory.GetCurrentDirectory();
 
         var dir = fileSystem.Path.Join(cwd, WorkspaceDirectoryName);
 
         var workspace = fileSystem.DirectoryInfo.New(dir);
 
-        workspace.Create();
+        if (!dry)
+        {
+            workspace.Create();
+        }
 
         var config = new WorkspaceConfig();
         var json = JsonSerializer.Serialize(config);
         var configPath = fileSystem.Path.Join(cwd, ConfigFileName);
-        await fileSystem.File.WriteAllTextAsync(configPath, json);
 
         var state = new WorkspaceState();
         var statePath = fileSystem.Path.Join(cwd, StateFileName);
         var stateJson = JsonSerializer.Serialize(state);
-        await fileSystem.File.WriteAllTextAsync(statePath, stateJson);
-
-        // TODO: init a git repo if user consents. create a gitignore for them?
-
-        var ok = await interaction.ConfirmAsync("Would you like to create a Git repo?");
-
-        if (ok)
+        
+        if (!dry)
         {
+            await fileSystem.File.WriteAllTextAsync(configPath, json);
+            await fileSystem.File.WriteAllTextAsync(statePath, stateJson);
         }
+
+        var repoInitialised = await TryInitialiseGitRepo(dry, cwd);
 
         _workspace = workspace;
 
+        return new(true, repoInitialised);
+    }
+
+    private async Task<bool> TryInitialiseGitRepo(bool dry, string cwd)
+    {
+        if (git.Enabled)
+        {
+            return false;
+        }
+
+        var ok = await interaction.ConfirmAsync("Would you like to create a Git repo?");
+
+        if (!ok || dry)
+        {
+            return false;
+        }
+
+        git.CreateRepository(cwd);
         return true;
     }
 

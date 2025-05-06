@@ -46,11 +46,16 @@ public class CommandService(
     {
         try
         {
-            var created = await workspaceManager.InitialiseWorkspace();
+            (var created, var initialised) = await workspaceManager.InitialiseWorkspace();
 
             var message = created ? "Workspace initialised." : "You are already in a Scribal workspace.";
             
             AnsiConsole.WriteLine(message);
+
+            if (initialised)
+            {
+                AnsiConsole.WriteLine("Git repo initialised.");
+            }
         }
         catch (Exception e)
         {

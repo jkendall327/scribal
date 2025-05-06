@@ -10,6 +10,7 @@ public interface IGitService
 {
     public bool Enabled { get; }
     void Initialise(string path);
+    void CreateRepository(string path);
     Task<string> GetRepoName();
     Task<List<string>> GetBranches();
     Task<string> GetCurrentBranch();
@@ -28,6 +29,8 @@ public sealed class GitService(TimeProvider time, IOptions<AppConfig> config, IL
     
     public void Initialise(string path)
     {
+        // TODO: use Repository.IsValid instead of throwing?
+        
         try
         {
             _repo = new(path);
@@ -45,6 +48,11 @@ public sealed class GitService(TimeProvider time, IOptions<AppConfig> config, IL
         {
             logger.LogError(ex, "Failed to initialise git repository");
         }
+    }
+
+    public void CreateRepository(string path)
+    {
+        Repository.Init(path);
     }
     
     [MemberNotNull(nameof(_repo))]

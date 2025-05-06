@@ -11,6 +11,7 @@ using Qdrant.Client;
 using Scribal.Agency;
 using Scribal.Context;
 using DiffEditor = Scribal.Agency.DiffEditor;
+
 #pragma warning disable SKEXP0050
 #pragma warning disable SKEXP0001
 #pragma warning disable SKEXP0020
@@ -31,7 +32,7 @@ public static class ScribalModelServiceCollectionExtensions
         AddModels(cfg, kb, modelConfiguration);
 
         AddPlugins(cfg, kb);
-        
+
         AddRag(cfg, kb, modelConfiguration);
 
         AddFilters(kb);
@@ -42,8 +43,8 @@ public static class ScribalModelServiceCollectionExtensions
     private static void AddModels(IConfiguration cfg, IKernelBuilder kb, ModelConfiguration modelConfiguration)
     {
         var oaiKey = modelConfiguration.OpenAIConfig.ApiKey;
-        var geminiKey = cfg["Gemini:ApiKey"];
-        var deepseekKey = cfg["DeepSeek:ApiKey"];
+        var geminiKey = modelConfiguration.GeminiConfig.ApiKey;
+        var deepseekKey = modelConfiguration.DeepSeekConfig.ApiKey;
 
         string?[] all = [oaiKey, geminiKey, deepseekKey];
 
@@ -66,20 +67,25 @@ public static class ScribalModelServiceCollectionExtensions
         }
 
         var oaiModel = modelConfiguration.OpenAIConfig.ModelId;
-        var geminiModel = cfg["Gemini:Model"] ?? "gemini-1.5-pro";
-        var deepseekModel = cfg["DeepSeek:Model"] ?? "deepseek-chat";
+        var geminiModel = modelConfiguration.GeminiConfig.ModelId;
+        var deepseekModel = modelConfiguration.DeepSeekConfig.ModelId;
 
         if (!string.IsNullOrEmpty(oaiKey))
         {
             kb.AddOpenAIChatCompletion(modelId: oaiModel, apiKey: oaiKey, serviceId: "openai");
-            kb.AddOpenAIChatCompletion(modelId: "gpt-4o-mini", apiKey: oaiKey, serviceId: "openai-weak");
+
+            kb.AddOpenAIChatCompletion(modelId: modelConfiguration.OpenAIConfig.WeakModelId,
+                apiKey: oaiKey,
+                serviceId: "openai-weak");
         }
 
         if (!string.IsNullOrEmpty(geminiKey))
         {
             kb.AddGoogleAIGeminiChatCompletion(geminiModel, apiKey: geminiKey, serviceId: "gemini");
 
-            kb.AddGoogleAIGeminiChatCompletion("gemini-1.5-pro", apiKey: geminiKey, serviceId: "gemini-weak");
+            kb.AddGoogleAIGeminiChatCompletion(modelConfiguration.GeminiConfig.WeakModelId,
+                apiKey: geminiKey,
+                serviceId: "gemini-weak");
         }
 
         if (!string.IsNullOrEmpty(deepseekKey))
@@ -89,7 +95,7 @@ public static class ScribalModelServiceCollectionExtensions
                 endpoint: new("https://api.deepseek.com"),
                 serviceId: "deepseek");
 
-            kb.AddOpenAIChatCompletion(modelId: "deepseek-chat",
+            kb.AddOpenAIChatCompletion(modelId: modelConfiguration.DeepSeekConfig.WeakModelId,
                 apiKey: deepseekKey,
                 endpoint: new("https://api.deepseek.com"),
                 serviceId: "deepseek-weak");
@@ -100,11 +106,10 @@ public static class ScribalModelServiceCollectionExtensions
     {
         var apiKey = modelConfiguration.OpenAIConfig.ApiKey;
         var dry = cfg.GetValue<bool>("DryRun");
-        
+
         var store = dry ? new VolatileMemoryStore() : new VolatileMemoryStore();
 
-        var memory = new MemoryBuilder()
-            .WithMemoryStore(store)
+        var memory = new MemoryBuilder().WithMemoryStore(store)
             .WithOpenAITextEmbeddingGeneration(modelConfiguration.OpenAIConfig.EmbeddingsModelId, apiKey)
             .Build();
 
@@ -115,7 +120,7 @@ public static class ScribalModelServiceCollectionExtensions
     {
         kb.Plugins.AddFromType<FileReader>(nameof(FileReader));
         kb.Plugins.AddFromType<DiffEditor>(nameof(DiffEditor));
-        
+
         var ingest = cfg.GetValue<bool>("IngestContent");
 
         if (ingest)

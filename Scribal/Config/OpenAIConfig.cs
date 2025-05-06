@@ -2,13 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Scribal;
 
-interface IModelConfig
-{
-    public string ModelId { get; }
-    public string ApiKey { get; }
-}
-
-public sealed class OpenAIConfig : IModelConfig
+public sealed class OpenAIConfig
 {
     public const string ConfigSectionName = "OpenAI";
 
@@ -16,7 +10,7 @@ public sealed class OpenAIConfig : IModelConfig
     public string ModelId { get; set; } = string.Empty;
     
     [Required]
-    public string WeakModelId { get; set; } = string.Empty;
+    public string WeakModelId { get; set; } = "gpt-4o-mini";
     
     [Required]
     public string EmbeddingsModelId { get; set; } = "text-embedding-3-small";

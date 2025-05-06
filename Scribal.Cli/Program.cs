@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Scribal;
 using Scribal.Cli;
 using Scribal.Workspace;
+using Serilog;
 
 // .NET looks for appsettings.json in the content root path,
 // which Host.CreateApplicationBuilder sets as the current working directory.
@@ -19,7 +20,7 @@ var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
 
 IncorporateConfigFromScribalWorkspace(builder);
 
-builder.Logging.ClearProviders();
+SetupLogging(builder);
 
 builder.Services.AddScribalAi(builder.Configuration);
 builder.Services.AddScribal(builder.Configuration, new FileSystem(), TimeProvider.System);
@@ -41,4 +42,19 @@ void IncorporateConfigFromScribalWorkspace(HostApplicationBuilder host)
     }
 
     host.Configuration.AddJsonFile(config, optional: true, reloadOnChange: true);
+}
+
+void SetupLogging(HostApplicationBuilder host)
+{
+    Log.Logger = new LoggerConfiguration().MinimumLevel.Debug()
+        .WriteTo.File(
+            path: "logs/log-.txt",
+            rollingInterval: RollingInterval.Day,
+            retainedFileCountLimit: 7,
+            outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
+        .Enrich.FromLogContext()
+        .CreateLogger();
+
+    host.Logging.ClearProviders();
+    host.Logging.AddSerilog();
 }

@@ -42,8 +42,6 @@ public record ChatStreamItem
 public sealed class AiChatService(
     Kernel kernel,
     IChatSessionStore store,
-    VectorStoreTextSearch<TextSnippet<Guid>> vectorStoreTextSearch,
-    ISemanticTextMemory memory,
     PromptBuilder prompts,
     IFileSystem fileSystem,
     TimeProvider time) : IAiChatService
@@ -70,19 +68,6 @@ public sealed class AiChatService(
         string? sid,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
-        var name= await memory.GetCollectionsAsync(cancellationToken: ct);
-        
-        var enumerable = memory.SearchAsync(name.Single(), "eiyren", limit: 54, minRelevanceScore: 0.1, cancellationToken: ct);
-
-        var sb = new StringBuilder();
-        
-        await foreach (var item in enumerable)
-        {
-            sb.AppendLine(item.Metadata.Text);
-        }
-
-        var result = sb.ToString();
-        
         var start = time.GetTimestamp();
         var chat = kernel.GetRequiredService<IChatCompletionService>(sid);
         var history = await PrepareHistoryAsync(cid, user, ct);

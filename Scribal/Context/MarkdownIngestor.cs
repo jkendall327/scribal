@@ -8,16 +8,16 @@ using Microsoft.SemanticKernel.Embeddings;
 namespace Scribal.Context;
 
 public class MarkdownIngestor(
-    IVectorStoreRecordCollection<string, TextSnippet<string>> store,
+    IVectorStoreRecordCollection<Guid, TextSnippet<Guid>> store,
     ITextEmbeddingGenerationService embedder)
 {
     public async Task Ingest(List<string> markdownFiles, CancellationToken cancellationToken = default)
     {
         await store.CreateCollectionIfNotExistsAsync(cancellationToken);
 
-        var recordTasks = markdownFiles.Select(async content => new TextSnippet<string>
+        var recordTasks = markdownFiles.Select(async content => new TextSnippet<Guid>
         {
-            Key = Guid.NewGuid().ToString(),
+            Key = Guid.NewGuid(),
             Text = content,
             ReferenceDescription = "whatever",
             ReferenceLink = "whatever",

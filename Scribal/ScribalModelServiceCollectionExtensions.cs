@@ -1,15 +1,33 @@
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.Connectors.InMemory;
+using Microsoft.SemanticKernel.Connectors.Qdrant;
 using Microsoft.SemanticKernel.Data;
+using Qdrant.Client;
 using Scribal.Agency;
 using Scribal.Context;
 using DiffEditor = Scribal.Agency.DiffEditor;
+#pragma warning disable SKEXP0020
 
 namespace Scribal;
 
 #pragma warning disable SKEXP0070 // experimental attribute until GA
 #pragma warning disable SKEXP0010 // “other OpenAI-style” endpoint
+
+public class foo : IEmbeddingGenerator
+{
+    public void Dispose()
+    {
+        throw new NotImplementedException();
+    }
+
+    public object? GetService(Type serviceType, object? serviceKey = null)
+    {
+        throw new NotImplementedException();
+    }
+}
 
 public static class ScribalModelServiceCollectionExtensions
 {
@@ -89,16 +107,28 @@ public static class ScribalModelServiceCollectionExtensions
     {
         kb.AddOpenAITextEmbeddingGeneration("text-embedding-3-small", cfg["OpenAI:ApiKey"]);
 
-        kb.AddInMemoryVectorStoreRecordCollection<string, TextSnippet<string>>("collection-name");
+        kb.Services.AddSingleton<IEmbeddingGenerator, foo>();
 
-        kb.AddVectorStoreTextSearch<TextSnippet<string>>(
-            new TextSearchStringMapper(result => (result as TextSnippet<string>)!.Text!),
+        // kb.AddInMemoryVectorStoreRecordCollection<string, TextSnippet<string>>("collection-name", new()
+        // {
+        //     EmbeddingGenerator = new foo()
+        // });
+        
+        kb.Services.AddSingleton<QdrantClient>(sp => new QdrantClient("localhost"));
+        kb.AddQdrantVectorStore();
+        kb.AddQdrantVectorStoreRecordCollection<Guid, TextSnippet<Guid>>("collection-name",  new QdrantVectorStoreRecordCollectionOptions<TextSnippet<Guid>>()
+        {
+            EmbeddingGenerator = new foo()
+        });
+        
+        kb.AddVectorStoreTextSearch<TextSnippet<Guid>>(
+            new TextSearchStringMapper(result => (result as TextSnippet<Guid>)!.Text!),
             new TextSearchResultMapper(result =>
             {
                 // Create a mapping from the Vector Store data type to the data type returned by the Text Search.
                 // This text search will ultimately be used in a plugin and this TextSearchResult will be returned to the prompt template
                 // when the plugin is invoked from the prompt template.
-                var castResult = result as TextSnippet<string>;
+                var castResult = result as TextSnippet<Guid>;
                 return new(value: castResult!.Text!)
                 {
                     Name = castResult.ReferenceDescription,

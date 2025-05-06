@@ -1,8 +1,10 @@
 ﻿using System.IO.Abstractions;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.Embeddings;
 using Scribal;
 using Scribal.Agency;
 using Scribal.Cli;
@@ -35,7 +37,10 @@ builder.Services.AddSingleton<MarkdownIngestor>();
 var app = builder.Build();
 
 var ingestor = app.Services.GetRequiredService<MarkdownIngestor>();
-
+#pragma warning disable SKEXP0001
+var d = app.Services.GetRequiredService<ITextEmbeddingGenerationService>();
+#pragma warning restore SKEXP0001
+//IEmbeddingGenerator<TInput, Embedding<float>>
 await ingestor.Ingest([
     """
     # My file

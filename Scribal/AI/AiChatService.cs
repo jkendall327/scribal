@@ -40,7 +40,7 @@ public record ChatStreamItem
 public sealed class AiChatService(
     Kernel kernel,
     IChatSessionStore store,
-    VectorStoreTextSearch<TextSnippet<string>> vectorStoreTextSearch,
+    VectorStoreTextSearch<TextSnippet<Guid>> vectorStoreTextSearch,
     PromptBuilder prompts,
     IFileSystem fileSystem,
     TimeProvider time) : IAiChatService
@@ -67,7 +67,28 @@ public sealed class AiChatService(
         string? sid,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
-        kernel.Plugins.Add(vectorStoreTextSearch.CreateWithGetTextSearchResults("SearchPlugin"));
+        // this breaks because the inmemory thing is broken
+        // try sqlite?
+        
+        var withGetTextSearchResults = vectorStoreTextSearch.CreateWithGetTextSearchResults("SearchPlugin");
+
+        var kernelFunction = withGetTextSearchResults.First();
+        var result = await kernel.InvokeAsync(kernelFunction, new KernelArguments()
+        {
+            { "query", "asuka" },
+            { "count", 4},
+            { "skip", "0" }
+        });
+        
+        var u = await vectorStoreTextSearch.SearchAsync("asuka");
+
+        await foreach (var e in u.Results)
+        {
+            ;
+        }
+        
+        
+        kernel.Plugins.Add(withGetTextSearchResults);
         
         var start = time.GetTimestamp();
         var chat = kernel.GetRequiredService<IChatCompletionService>(sid);

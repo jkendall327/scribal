@@ -30,6 +30,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\Scribal.Cli\Scribal.Cli.csproj" />
       <ProjectReference Include="..\Scribal\Scribal.csproj" />
     </ItemGroup>
 

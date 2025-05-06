@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
+using Scribal.Cli;
 
 namespace Scribal.Tests;
 
@@ -27,8 +28,9 @@ public class ServiceCollectionTests
         
         services.AddScribal(config, filesystem, new FakeTimeProvider());
         services.AddScribalAi(config);
+        services.AddScribalInterface();
         
-        var provider = services.BuildServiceProvider(new ServiceProviderOptions
+        _ = services.BuildServiceProvider(new ServiceProviderOptions
         {
             ValidateScopes = true,
             ValidateOnBuild = true,

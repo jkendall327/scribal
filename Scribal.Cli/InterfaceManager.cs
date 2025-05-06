@@ -13,6 +13,7 @@ public class InterfaceManager(
     IFileSystem fileSystem,
     IAiChatService aiChatService,
     IGitService gitService,
+    ModelState state,
     CancellationService cancellationService,
     RepoMapStore repoMapStore)
 {
@@ -94,10 +95,14 @@ public class InterfaceManager(
 
     private async Task ProcessConversation(string userInput)
     {
-        var rule = new Rule();
+        AnsiConsole.Write(new Rule());
 
-        AnsiConsole.Write(rule);
-
+        if (string.IsNullOrEmpty(state.ModelServiceId))
+        {
+            AnsiConsole.MarkupLine("[red]No model is set. Use /model to set your details.[/]");
+            return;
+        }
+        
         var files = repoMapStore.Paths.ToList();
 
         foreach (var file in files)
@@ -109,6 +114,7 @@ public class InterfaceManager(
         {
             var enumerable = aiChatService.StreamAsync(_conversationId.ToString(),
                 userInput,
+                state.ModelServiceId,
                 cancellationService.Source.Token);
 
             await StreamWithSpinnerAsync(enumerable, cancellationService.Source.Token);

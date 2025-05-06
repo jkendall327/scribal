@@ -4,7 +4,11 @@ using Scribal.AI;
 
 namespace Scribal.Agency;
 
-public sealed class GitCommitFilter(IGitService git, CommitGenerator generator, ILogger<GitCommitFilter> logger) : IFunctionInvocationFilter
+public sealed class GitCommitFilter(
+    IGitService git,
+    CommitGenerator generator,
+    ModelState modelState,
+    ILogger<GitCommitFilter> logger) : IFunctionInvocationFilter
 {
     public async Task OnFunctionInvocationAsync(FunctionInvocationContext ctx,
         Func<FunctionInvocationContext, Task> next)
@@ -17,11 +21,16 @@ public sealed class GitCommitFilter(IGitService git, CommitGenerator generator, 
             return;
         }
 
+        if (string.IsNullOrEmpty(modelState.WeakModelServiceId))
+        {
+            return;
+        }
+        
         // Was it the edit-file tool?
         if (ctx.Function is {PluginName: nameof(DiffEditor), Name: DiffEditor.DiffEditorToolName})
         {
             logger.LogInformation("Creating commit after diff editor tool invocation");
-            
+
             var file = ctx.Arguments["file"]?.ToString();
             var diff = ctx.Arguments["diff"]?.ToString();
 
@@ -36,9 +45,9 @@ public sealed class GitCommitFilter(IGitService git, CommitGenerator generator, 
                 logger.LogWarning("No valid diff returned from the tool call; exiting");
                 return;
             }
-            
-            var message = await generator.GetCommitMessage(ctx.Kernel, [diff]);
-            
+
+            var message = await generator.GetCommitMessage(ctx.Kernel, [diff], modelState.WeakModelServiceId);
+
             await git.CreateCommit(file, message);
         }
     }

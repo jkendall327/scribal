@@ -20,6 +20,7 @@ public interface IAiChatService
 {
     IAsyncEnumerable<ChatStreamItem> StreamAsync(string conversationId,
         string userMessage,
+        string sid,
         CancellationToken ct = default);
 }
 
@@ -42,41 +43,24 @@ public sealed class AiChatService(
     Kernel kernel,
     IChatSessionStore store,
     PromptBuilder prompts,
-    ModelState modelState,
     IFileSystem fileSystem,
     TimeProvider time) : IAiChatService
 {
-    private PromptExecutionSettings GetSettings(string? sid)
-    {
-        // Gemini requires special treatment to actually use tools.
-        return modelState.ModelServiceId switch
-        {
-            "gemini" => new GeminiPromptExecutionSettings
-            {
-                ToolCallBehavior = GeminiToolCallBehavior.AutoInvokeKernelFunctions
-            },
-            var _ => new OpenAIPromptExecutionSettings
-            {
-                ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions
-            },
-        };
-    }
-    
-
     public async IAsyncEnumerable<ChatStreamItem> StreamAsync(string cid,
         string user,
+        string sid,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
         var start = time.GetTimestamp();
 
-        var sid = modelState.ModelServiceId;
-        
         var chat = kernel.GetRequiredService<IChatCompletionService>(sid);
         var history = await PrepareHistoryAsync(cid, user, ct);
 
+        var settings = GetSettings(sid);
+        
         // Stream response back for the UI.
         var stream = chat
-            .GetStreamingChatMessageContentsAsync(history, GetSettings(sid), kernel, ct);
+            .GetStreamingChatMessageContentsAsync(history, settings, kernel, ct);
 
         await foreach (var chunk in stream)
         {
@@ -88,13 +72,29 @@ public sealed class AiChatService(
 
         // Collect the full assistant message from streamed chunks.
         var final = await chat
-            .GetChatMessageContentAsync(history, GetSettings(sid), kernel, ct);
+            .GetChatMessageContentAsync(history, settings, kernel, ct);
         
         await UpdateChatHistoryWithAssistantMessage(cid, final, history, ct);
 
         var metadata = CollectMetadata(sid, start, final);
 
         yield return metadata;
+    }
+    
+    private PromptExecutionSettings GetSettings(string sid)
+    {
+        // Gemini requires special treatment to actually use tools.
+        return sid switch
+        {
+            "gemini" => new GeminiPromptExecutionSettings
+            {
+                ToolCallBehavior = GeminiToolCallBehavior.AutoInvokeKernelFunctions
+            },
+            var _ => new OpenAIPromptExecutionSettings
+            {
+                ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions
+            },
+        };
     }
     
     private async Task UpdateChatHistoryWithAssistantMessage(string cid,

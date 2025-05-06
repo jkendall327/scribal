@@ -36,7 +36,7 @@ public record ChatStreamItem
 
     public sealed record TokenChunk(string Content) : ChatStreamItem;
 
-    public sealed record Metadata(TimeSpan Elapsed, string ServiceId, int PromptTokens, int CompletionTokens)
+    public sealed record Metadata(TimeSpan Elapsed, int PromptTokens, int CompletionTokens)
         : ChatStreamItem;
 }
 
@@ -127,7 +127,6 @@ public sealed class AiChatService(
         }
 
         var metadata = new ChatStreamItem.Metadata(Elapsed: elapsed,
-            ServiceId: sid ?? final.ModelId ?? "[unknown]",
             PromptTokens: promptTokens,
             CompletionTokens: completionTokens);
         

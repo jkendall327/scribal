@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using Scribal.Agency;
 using Scribal.AI;
 using Scribal.Context;
+using Scribal.Workspace;
 using Spectre.Console;
 
 namespace Scribal.Cli;
@@ -14,13 +15,14 @@ public class InterfaceManager(
     IFileSystem fileSystem,
     IAiChatService aiChatService,
     IGitService gitService,
+    WorkspaceManager workspaceManager,
     IOptions<AiSettings> aiSettings,
     CancellationService cancellationService,
     RepoMapStore repoMapStore)
 {
     private readonly Guid _conversationId = Guid.NewGuid();
 
-    public async Task DisplayWelcome()
+    public Task DisplayWelcome()
     {
         AnsiConsole.Clear();
 
@@ -28,17 +30,8 @@ public class InterfaceManager(
 
         AnsiConsole.Write(figlet);
         AnsiConsole.WriteLine();
-
-        var cwd = fileSystem.Directory.GetCurrentDirectory();
-
-        AnsiConsole.MarkupLine($"[yellow]Current working directory: {cwd}[/]");
-
-        if (gitService.Enabled)
-        {
-            var currentBranch = await gitService.GetCurrentBranch();
-            AnsiConsole.MarkupLine($"[yellow]Current branch: {currentBranch}[/]");
-        }
-        else
+        
+        if (!gitService.Enabled)
         {
             AnsiConsole.MarkupLine(
                 "[red rapidblink]You are not in a valid Git repository! AI edits will be destructive![/]");
@@ -46,6 +39,8 @@ public class InterfaceManager(
 
         AnsiConsole.MarkupLine("Type [blue]--help[/] for available commands or just start typing to talk.");
         AnsiConsole.WriteLine();
+        
+        return Task.CompletedTask;
     }
 
     [DoesNotReturn]
@@ -80,6 +75,8 @@ public class InterfaceManager(
                 continue;
             }
             
+            AnsiConsole.WriteLine();
+            
             var parsed = parser.Parse(input);
 
             // If it fails to parse as a command, assume it's a message for the assistant.
@@ -97,15 +94,16 @@ public class InterfaceManager(
     private async Task ProcessConversation(string userInput)
     {
         AnsiConsole.Write(new Rule());
-
+        AnsiConsole.WriteLine();
+        
         if (aiSettings.Value.Primary is null)
         {
             AnsiConsole.MarkupLine("[red]No model is set. Check '.scribal/scribal.config'.[/]");
             return;
         }
-        
-        AnsiConsole.MarkupLine($"[yellow]{aiSettings.Value.Primary.ModelId}[/]");
-        
+
+        await DrawStatusLine();
+
         var files = repoMapStore.Paths.ToList();
 
         foreach (var file in files)
@@ -128,6 +126,16 @@ public class InterfaceManager(
             AnsiConsole.WriteLine("(cancelled)");
         }
 
+        AnsiConsole.WriteLine();
+    }
+
+    private async Task DrawStatusLine()
+    {
+        var modelId = aiSettings.Value.Primary.ModelId;
+        var workspace = workspaceManager.InWorkspace ? workspaceManager.GetWorkspaceFolder() : "not in workspace";
+        var branch = gitService.Enabled ? await gitService.GetCurrentBranch() : "[not in a git repository]";
+        
+        AnsiConsole.MarkupLine($"[yellow]{modelId}[/] | {workspace} | {branch}");
         AnsiConsole.WriteLine();
     }
 
@@ -176,12 +184,13 @@ public class InterfaceManager(
             case ChatStreamItem.Metadata md:
             {
                 AnsiConsole.WriteLine();
+                AnsiConsole.WriteLine();
 
                 AnsiConsole.Decoration = Decoration.Italic;
 
                 var time = FormatTimeSpan(md.Elapsed);
 
-                AnsiConsole.Write($"{md.ServiceId}. Total time: {time}, {md.CompletionTokens} output tokens.");
+                AnsiConsole.Write($"{time}, {md.CompletionTokens} output tokens");
 
                 AnsiConsole.ResetDecoration();
                 break;

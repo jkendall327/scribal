@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Scribal.Agency;
 using Scribal.AI;
 using Scribal.Context;
+using Scribal.Workspace;
 using DiffEditor = Scribal.Agency.DiffEditor;
 
 namespace Scribal;
@@ -35,6 +36,9 @@ public static class ScribalServiceCollectionExtensions
         services.AddSingleton<PromptBuilder>();
         services.AddSingleton<IDocumentScanService, DocumentScanService>();
         services.AddSingleton<MarkdownIngestor>();
+        
+        // Workspace
+        services.AddSingleton<WorkspaceManager>();
 
         // Other
         services.AddSingleton<CommitGenerator>();

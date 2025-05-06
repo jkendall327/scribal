@@ -52,7 +52,7 @@ public class WorkspaceManager(IFileSystem fileSystem)
         _workspace = workspace;
     }
 
-    private string? GetWorkspaceFolder()
+    public string? GetWorkspaceFolder()
     {
         var cwd = fileSystem.Directory.GetCurrentDirectory();
 

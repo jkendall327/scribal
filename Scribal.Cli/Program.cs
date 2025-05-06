@@ -24,6 +24,10 @@ var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
     EnvironmentName = "Development"
 });
 
+var current = Directory.GetCurrentDirectory();
+var workspace = Path.Join(current, ".scribal", "scribal.config");
+builder.Configuration.AddJsonFile(workspace, optional: true, reloadOnChange: true);
+
 builder.Logging.ClearProviders();
 
 var modelConfiguration = new ModelConfiguration(builder.Configuration);

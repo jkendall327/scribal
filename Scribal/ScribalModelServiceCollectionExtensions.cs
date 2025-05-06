@@ -46,20 +46,19 @@ public static class ScribalModelServiceCollectionExtensions
         var geminiKey = modelConfiguration.GeminiConfig.ApiKey;
         var deepseekKey = modelConfiguration.DeepSeekConfig.ApiKey;
 
-        string?[] all = [oaiKey, geminiKey, deepseekKey];
-
-        var present = all.Count(s => !string.IsNullOrEmpty(s));
-
-        if (present is 0)
-        {
-            throw new InvalidOperationException("No API key has been supplied for any provider.");
-        }
-
-        if (present > 1 && modelConfiguration.Provider is null)
-        {
-            throw new InvalidOperationException(
-                "You have multiple active API keys. Please set the 'Provider' flag to set who you will actually use.");
-        }
+        // string?[] all = [oaiKey, geminiKey, deepseekKey];
+        //
+        // var present = all.Count(s => !string.IsNullOrEmpty(s));
+        //
+        // if (present is 0)
+        // {
+        //     throw new InvalidOperationException("No API key has been supplied for any provider.");
+        // }
+        //
+        // if (present > 1)
+        // {
+        //     throw new InvalidOperationException("You have multiple active API keys. Please set the 'Provider' flag to set who you will actually use.");
+        // }
 
         var oaiModel = modelConfiguration.OpenAIConfig.ModelId;
         var geminiModel = modelConfiguration.GeminiConfig.ModelId;

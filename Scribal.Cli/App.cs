@@ -17,9 +17,9 @@ public static class App
         var ingestor = app.Services.GetRequiredService<MarkdownIngestor>();
 
         var config = app.Services.GetRequiredService<IOptions<AppConfig>>();
-        var state = app.Services.GetRequiredService<ModelState>();
+        var state = app.Services.GetRequiredService<IOptions<AiSettings>>();
 
-        if (config.Value.IngestContent && !string.IsNullOrEmpty(state.EmbeddingModelServiceId))
+        if (config.Value.IngestContent && state.Value.Embeddings is null)
         {
             await ingestor.IngestAllMarkdown(cwd, SearchOption.AllDirectories);
         }

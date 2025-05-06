@@ -1,6 +1,7 @@
 using System.IO.Abstractions;
 using System.Runtime.CompilerServices;
 using System.Text;
+using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.Google;

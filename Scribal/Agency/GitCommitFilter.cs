@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel;
 using Scribal.AI;
 
@@ -7,7 +8,7 @@ namespace Scribal.Agency;
 public sealed class GitCommitFilter(
     IGitService git,
     CommitGenerator generator,
-    ModelState modelState,
+    IOptions<AiSettings> aiSettings,
     ILogger<GitCommitFilter> logger) : IFunctionInvocationFilter
 {
     public async Task OnFunctionInvocationAsync(FunctionInvocationContext ctx,
@@ -21,7 +22,7 @@ public sealed class GitCommitFilter(
             return;
         }
 
-        if (string.IsNullOrEmpty(modelState.WeakModelServiceId))
+        if (aiSettings.Value.Weak is null)
         {
             return;
         }
@@ -46,7 +47,7 @@ public sealed class GitCommitFilter(
                 return;
             }
 
-            var message = await generator.GetCommitMessage(ctx.Kernel, [diff], modelState.WeakModelServiceId);
+            var message = await generator.GetCommitMessage(ctx.Kernel, [diff], aiSettings.Value.Weak.Provider);
 
             await git.CreateCommit(file, message);
         }

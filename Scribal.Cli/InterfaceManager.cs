@@ -1,6 +1,7 @@
 using System.CommandLine.Parsing;
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Abstractions;
+using Microsoft.Extensions.Options;
 using Scribal.Agency;
 using Scribal.AI;
 using Scribal.Context;
@@ -13,7 +14,7 @@ public class InterfaceManager(
     IFileSystem fileSystem,
     IAiChatService aiChatService,
     IGitService gitService,
-    ModelState state,
+    IOptions<AiSettings> aiSettings,
     CancellationService cancellationService,
     RepoMapStore repoMapStore)
 {
@@ -97,9 +98,9 @@ public class InterfaceManager(
     {
         AnsiConsole.Write(new Rule());
 
-        if (string.IsNullOrEmpty(state.ModelServiceId))
+        if (aiSettings.Value.Primary is null)
         {
-            AnsiConsole.MarkupLine("[red]No model is set. Use /model to set your details.[/]");
+            AnsiConsole.MarkupLine("[red]No model is set. Check '.scribal/scribal.config'.[/]");
             return;
         }
         
@@ -114,7 +115,7 @@ public class InterfaceManager(
         {
             var enumerable = aiChatService.StreamAsync(_conversationId.ToString(),
                 userInput,
-                state.ModelServiceId,
+                aiSettings.Value.Primary.ModelId,
                 cancellationService.Source.Token);
 
             await StreamWithSpinnerAsync(enumerable, cancellationService.Source.Token);

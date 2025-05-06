@@ -27,18 +27,7 @@ IncorporateConfigFromScribalWorkspace(builder);
 
 builder.Logging.ClearProviders();
 
-var modelState = new ModelState
-{
-    ModelServiceId = "gemini",
-    EmbeddingModelServiceId = "openai",
-    WeakModelServiceId = "openai"
-};
-
-builder.Services.AddSingleton(modelState);
-
-var modelConfiguration = new ModelConfiguration(builder.Configuration);
-
-builder.Services.AddScribalAi(builder.Configuration, modelConfiguration);
+builder.Services.AddScribalAi(builder.Configuration);
 builder.Services.AddScribal(builder.Configuration, new FileSystem(), TimeProvider.System);
 builder.Services.AddScribalInterface();
 
@@ -50,9 +39,31 @@ return;
 
 void IncorporateConfigFromScribalWorkspace(HostApplicationBuilder host)
 {
-    var current = Directory.GetCurrentDirectory();
-    
-    var workspace = Path.Join(current, ".scribal", "scribal.config");
-    
-    host.Configuration.AddJsonFile(workspace, optional: true, reloadOnChange: true);
+    var config = TryFindWorkspaceFile();
+
+    if (config == null)
+    {
+        return;
+    }
+
+    host.Configuration.AddJsonFile(config, optional: true, reloadOnChange: true);
+}
+
+string? TryFindWorkspaceFile()
+{
+    var dir = Directory.GetCurrentDirectory();
+
+    while (dir is not null)
+    {
+        var path = Path.Combine(dir, ".scribal", "scribal.config");
+        
+        if (File.Exists(path))
+        {
+            return path;
+        }
+
+        dir = Directory.GetParent(dir)?.FullName;
+    }
+
+    return null;
 }

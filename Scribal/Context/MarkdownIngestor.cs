@@ -7,7 +7,9 @@ using Microsoft.SemanticKernel.Text;
 
 namespace Scribal.Context;
 
-public class MarkdownIngestor(ISemanticTextMemory memoryStore, IFileSystem fileSystem)
+public class MarkdownIngestor(
+    //ISemanticTextMemory memoryStore, 
+    IFileSystem fileSystem)
 {
     public const string CollectionName = "markdown";
 
@@ -27,10 +29,10 @@ public class MarkdownIngestor(ISemanticTextMemory memoryStore, IFileSystem fileS
 
             foreach (var se in chunk)
             {
-                await memoryStore.SaveInformationAsync(CollectionName,
-                    se,
-                    Guid.NewGuid().ToString(),
-                    cancellationToken: cancellationToken);
+                // await memoryStore.SaveInformationAsync(CollectionName,
+                //     se,
+                //     Guid.NewGuid().ToString(),
+                //     cancellationToken: cancellationToken);
             }
         }
     }

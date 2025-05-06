@@ -33,9 +33,7 @@ return;
 
 void IncorporateConfigFromScribalWorkspace(HostApplicationBuilder host)
 {
-    var workspace = new WorkspaceManager(new FileSystem());
-    
-    var config = workspace.TryFindWorkspaceConfig();
+    var config = WorkspaceManager.TryFindWorkspaceConfig(new FileSystem());
 
     if (config == null)
     {

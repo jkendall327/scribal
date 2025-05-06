@@ -30,7 +30,7 @@ public class InterfaceManager(
 
         AnsiConsole.Write(figlet);
         AnsiConsole.WriteLine();
-        
+
         if (!gitService.Enabled)
         {
             AnsiConsole.MarkupLine(
@@ -39,7 +39,7 @@ public class InterfaceManager(
 
         AnsiConsole.MarkupLine("Type [blue]--help[/] for available commands or just start typing to talk.");
         AnsiConsole.WriteLine();
-        
+
         return Task.CompletedTask;
     }
 
@@ -47,24 +47,23 @@ public class InterfaceManager(
     public async Task RunMainLoop()
     {
         var parser = commands.Build();
-        
+
         ReadLine.HistoryEnabled = true;
-        
+
         while (true)
         {
             AnsiConsole.Write(new Rule());
 
             if (repoMapStore.Paths.Any())
             {
-                var filenames = repoMapStore.Paths
-                    .Select(s => fileSystem.Path.GetFileName(s).ToLowerInvariant())
+                var filenames = repoMapStore.Paths.Select(s => fileSystem.Path.GetFileName(s).ToLowerInvariant())
                     .ToList();
-                
+
                 var paths = string.Join(" | ", filenames);
-                
+
                 AnsiConsole.MarkupLine($"[yellow]{paths}[/]");
             }
-            
+
             AnsiConsole.WriteLine();
             AnsiConsole.Markup("[green]> [/]");
 
@@ -74,9 +73,9 @@ public class InterfaceManager(
             {
                 continue;
             }
-            
+
             AnsiConsole.WriteLine();
-            
+
             var parsed = parser.Parse(input);
 
             // If it fails to parse as a command, assume it's a message for the assistant.
@@ -95,14 +94,14 @@ public class InterfaceManager(
     {
         AnsiConsole.Write(new Rule());
         AnsiConsole.WriteLine();
-        
+
         if (aiSettings.Value.Primary is null)
         {
             AnsiConsole.MarkupLine("[red]No model is set. Check '.scribal/scribal.config'.[/]");
             return;
         }
 
-        await DrawStatusLine();
+        await DrawStatusLine(aiSettings.Value.Primary.ModelId);
 
         var files = repoMapStore.Paths.ToList();
 
@@ -129,12 +128,14 @@ public class InterfaceManager(
         AnsiConsole.WriteLine();
     }
 
-    private async Task DrawStatusLine()
+    private async Task DrawStatusLine(string modelId)
     {
-        var modelId = aiSettings.Value.Primary.ModelId;
-        var workspace = workspaceManager.InWorkspace ? workspaceManager.TryFindWorkspaceFolder() : "not in workspace";
+        var workspace = workspaceManager.InWorkspace
+            ? WorkspaceManager.TryFindWorkspaceFolder(fileSystem)
+            : "not in workspace";
+
         var branch = gitService.Enabled ? await gitService.GetCurrentBranch() : "[not in a git repository]";
-        
+
         AnsiConsole.MarkupLine($"[yellow]{modelId}[/] | {workspace} | {branch}");
         AnsiConsole.WriteLine();
     }

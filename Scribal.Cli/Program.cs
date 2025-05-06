@@ -26,7 +26,9 @@ var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
 
 builder.Logging.ClearProviders();
 
-builder.Services.AddScribalAi(builder.Configuration);
+var modelConfiguration = new ModelConfiguration(builder.Configuration);
+
+builder.Services.AddScribalAi(builder.Configuration, modelConfiguration);
 builder.Services.AddScribal(builder.Configuration, new FileSystem(), TimeProvider.System);
 
 // UI services

@@ -22,24 +22,26 @@ namespace Scribal;
 
 public static class ScribalModelServiceCollectionExtensions
 {
-    public static IServiceCollection AddScribalAi(this IServiceCollection services, IConfiguration cfg)
+    public static IServiceCollection AddScribalAi(this IServiceCollection services,
+        IConfiguration cfg,
+        ModelConfiguration modelConfiguration)
     {
         var kb = services.AddKernel();
 
-        AddModels(cfg, kb);
+        AddModels(cfg, kb, modelConfiguration);
 
         AddPlugins(cfg, kb);
         
-        AddRag(cfg, kb);
+        AddRag(cfg, kb, modelConfiguration);
 
         AddFilters(kb);
 
         return services;
     }
 
-    private static void AddModels(IConfiguration cfg, IKernelBuilder kb)
+    private static void AddModels(IConfiguration cfg, IKernelBuilder kb, ModelConfiguration modelConfiguration)
     {
-        var oaiKey = cfg["OpenAI:ApiKey"];
+        var oaiKey = modelConfiguration.OpenAIConfig.ApiKey;
         var geminiKey = cfg["Gemini:ApiKey"];
         var deepseekKey = cfg["DeepSeek:ApiKey"];
 
@@ -63,7 +65,7 @@ public static class ScribalModelServiceCollectionExtensions
             }
         }
 
-        var oaiModel = cfg["OpenAI:Model"] ?? "gpt-4o-mini";
+        var oaiModel = modelConfiguration.OpenAIConfig.ModelId;
         var geminiModel = cfg["Gemini:Model"] ?? "gemini-1.5-pro";
         var deepseekModel = cfg["DeepSeek:Model"] ?? "deepseek-chat";
 
@@ -94,16 +96,16 @@ public static class ScribalModelServiceCollectionExtensions
         }
     }
 
-    private static void AddRag(IConfiguration cfg, IKernelBuilder kb)
+    private static void AddRag(IConfiguration cfg, IKernelBuilder kb, ModelConfiguration modelConfiguration)
     {
-        var apiKey = cfg["OpenAI:ApiKey"];
+        var apiKey = modelConfiguration.OpenAIConfig.ApiKey;
         var dry = cfg.GetValue<bool>("DryRun");
         
         var store = dry ? new VolatileMemoryStore() : new VolatileMemoryStore();
 
         var memory = new MemoryBuilder()
             .WithMemoryStore(store)
-            .WithOpenAITextEmbeddingGeneration("text-embedding-3-small", apiKey)
+            .WithOpenAITextEmbeddingGeneration(modelConfiguration.OpenAIConfig.EmbeddingsModelId, apiKey)
             .Build();
 
         kb.Services.AddSingleton(memory);

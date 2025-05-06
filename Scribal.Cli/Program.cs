@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Embeddings;
 using Scribal;
@@ -26,7 +27,7 @@ var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
 builder.Logging.ClearProviders();
 
 builder.Services.AddScribalAi(builder.Configuration);
-builder.Services.AddScribal(new FileSystem(), TimeProvider.System);
+builder.Services.AddScribal(builder.Configuration, new FileSystem(), TimeProvider.System);
 
 // UI services
 builder.Services.AddSingleton<CancellationService>();
@@ -38,12 +39,12 @@ builder.Services.AddSingleton<MarkdownIngestor>();
 var app = builder.Build();
 
 var filesystem = app.Services.GetRequiredService<IFileSystem>();
-var config = app.Services.GetRequiredService<IConfiguration>();
+var config = app.Services.GetRequiredService<IOptions<AppConfig>>();
 
 var ingestor = app.Services.GetRequiredService<MarkdownIngestor>();
 var cwd = filesystem.DirectoryInfo.New(filesystem.Directory.GetCurrentDirectory());
 
-if (config.GetValue<bool>("IngestContent"))
+if (config.Value.IngestContent)
 {
     await ingestor.IngestAllMarkdown(cwd, SearchOption.AllDirectories);
 }

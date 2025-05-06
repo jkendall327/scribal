@@ -1,4 +1,5 @@
 using System.IO.Abstractions;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Scribal.Agency;
 using Scribal.AI;
@@ -9,8 +10,13 @@ namespace Scribal;
 
 public static class ScribalServiceCollectionExtensions
 {
-    public static IServiceCollection AddScribal(this IServiceCollection services, IFileSystem fileSystem, TimeProvider time)
+    public static IServiceCollection AddScribal(this IServiceCollection services,
+        IConfiguration config,
+        IFileSystem fileSystem,
+        TimeProvider time)
     {
+        services.Configure<AppConfig>(config.GetSection("AppConfig"));
+
         // Infrastructure
         services.AddSingleton(fileSystem);
         services.AddSingleton(time);

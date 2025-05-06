@@ -15,21 +15,8 @@ public class WorkspaceManager(IFileSystem fileSystem, IGitService git, IUserInte
     private const string StateFileName = "state.json";
 
     public bool InWorkspace => _workspace is not null;
-    public bool Headless => !InWorkspace;
-
+    
     private IDirectoryInfo? _workspace;
-
-    public async Task CheckForWorkspace()
-    {
-        var workspace = TryFindWorkspaceFolder(fileSystem);
-
-        if (workspace is null)
-        {
-            return;
-        }
-
-        _workspace = fileSystem.DirectoryInfo.New(workspace);
-    }
 
     public async Task<WorkspaceCreation> InitialiseWorkspace()
     {

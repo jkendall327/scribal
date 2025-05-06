@@ -17,6 +17,8 @@ public static class ScribalServiceCollectionExtensions
     {
         services.Configure<AppConfig>(config.GetSection("AppConfig"));
 
+        services.AddSingleton<ModelState>();
+        
         // Infrastructure
         services.AddSingleton(fileSystem);
         services.AddSingleton(time);

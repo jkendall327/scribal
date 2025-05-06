@@ -109,7 +109,6 @@ public class InterfaceManager(
         {
             var enumerable = aiChatService.StreamAsync(_conversationId.ToString(),
                 userInput,
-                "gemini",
                 cancellationService.Source.Token);
 
             await StreamWithSpinnerAsync(enumerable, cancellationService.Source.Token);

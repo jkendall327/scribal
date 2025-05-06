@@ -4,14 +4,15 @@ using Scribal.Context;
 
 namespace Scribal.AI;
 
-public class CommitGenerator(PromptRenderer renderer)
+public class CommitGenerator(PromptRenderer renderer, ModelState state)
 {
     public async Task<string> GetCommitMessage(Kernel kernel,
         List<string> diffs,
-        string? serviceId = null,
         CancellationToken ct = default)
     {
-        var chat = kernel.GetRequiredService<IChatCompletionService>(serviceId + "-weak");
+        var sid = state.WeakModelServiceId;
+        
+        var chat = kernel.GetRequiredService<IChatCompletionService>(sid);
 
         var request = new RenderRequest("Commits",
             "GitCommitSummaryTemplate",

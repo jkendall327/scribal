@@ -20,7 +20,6 @@ public interface IAiChatService
 {
     IAsyncEnumerable<ChatStreamItem> StreamAsync(string conversationId,
         string userMessage,
-        string? serviceId = null,
         CancellationToken ct = default);
 }
 
@@ -43,13 +42,14 @@ public sealed class AiChatService(
     Kernel kernel,
     IChatSessionStore store,
     PromptBuilder prompts,
+    ModelState modelState,
     IFileSystem fileSystem,
     TimeProvider time) : IAiChatService
 {
     private PromptExecutionSettings GetSettings(string? sid)
     {
         // Gemini requires special treatment to actually use tools.
-        return sid switch
+        return modelState.ModelServiceId switch
         {
             "gemini" => new GeminiPromptExecutionSettings
             {
@@ -65,10 +65,12 @@ public sealed class AiChatService(
 
     public async IAsyncEnumerable<ChatStreamItem> StreamAsync(string cid,
         string user,
-        string? sid,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
         var start = time.GetTimestamp();
+
+        var sid = modelState.ModelServiceId;
+        
         var chat = kernel.GetRequiredService<IChatCompletionService>(sid);
         var history = await PrepareHistoryAsync(cid, user, ct);
 

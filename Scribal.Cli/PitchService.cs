@@ -6,17 +6,13 @@ using Scribal.AI;
 using Scribal.Cli; // Required for ConsoleChatRenderer and ReadLine
 using Scribal.Context;
 using Spectre.Console; // Required for AnsiConsole
-using System.Text; // Required for StringBuilder
+using System.Text;
 
 namespace Scribal;
 
-public class PitchService(
-    IAiChatService chat,
-    PromptRenderer renderer,
-    Kernel kernel,
-    IOptions<AiSettings> options)
+public class PitchService(IAiChatService chat, PromptRenderer renderer, Kernel kernel, IOptions<AiSettings> options)
 {
-    public async Task CreatePremiseFromPitch(string initialPitch, CancellationToken commandCancellationToken = default)
+    public async Task CreatePremiseFromPitch(string pitch, CancellationToken ct = default)
     {
         if (options.Value.Primary is null)
         {
@@ -24,60 +20,74 @@ public class PitchService(
             return;
         }
 
-        var primaryProviderSid = options.Value.Primary.Provider;
+        var sid = options.Value.Primary.Provider;
 
-        // --- Step 1: Generate the initial premise ---
-        var premiseRenderRequest =
-            new RenderRequest("Premise", "Premise", "Prompt for turning a story pitch into a premise", new());
-        var premiseSystemPrompt = await renderer.RenderPromptTemplateFromFileAsync(kernel, premiseRenderRequest);
+        var generatedPremise = await GenerateInitialPremise(pitch, ct, sid);
 
-        string initialPremiseConversationId = $"pitch-init-{Guid.NewGuid()}";
-        var initialHistory = new ChatHistory();
-        initialHistory.AddSystemMessage(premiseSystemPrompt);
-        // user message (initialPitch) will be added by StreamWithExplicitHistoryAsync
+        // Refinement loop.
+        var ok = await AnsiConsole.ConfirmAsync("Do you want to refine this premise?", cancellationToken: ct);
 
-        AnsiConsole.MarkupLine("[yellow]Generating initial premise...[/]");
-
-        var premiseStream = chat.StreamWithExplicitHistoryAsync(initialPremiseConversationId,
-            initialHistory,
-            initialPitch,
-            primaryProviderSid,
-            commandCancellationToken);
-
-        var premiseBuilder = new StringBuilder();
-        // Use ConsoleChatRenderer to show the stream for initial premise generation
-        await ConsoleChatRenderer.StreamWithSpinnerAsync(
-            CollectWhileStreaming(premiseStream, premiseBuilder, commandCancellationToken),
-            commandCancellationToken);
-
-        string generatedPremise = premiseBuilder.ToString().Trim();
-        // The ConsoleChatRenderer already adds a newline, so we might not need extra ones here.
-        // AnsiConsole.WriteLine(); // Already handled by StreamWithSpinnerAsync
-        AnsiConsole.MarkupLine("[cyan]Initial Premise Generated.[/]");
-        AnsiConsole.WriteLine();
-
-        // --- Step 2: Interactive Refinement Loop ---
-        if (!await AnsiConsole.ConfirmAsync("Do you want to refine this premise?",
-                cancellationToken: commandCancellationToken))
+        if (!ok)
         {
             return;
         }
 
-        string refinementConversationId = $"pitch-refine-{Guid.NewGuid()}";
+        var refinementCid = $"pitch-refine-{Guid.NewGuid()}";
         var refinementHistory = new ChatHistory();
-        // System prompt for refinement
-        refinementHistory.AddSystemMessage(
-            $"You are an assistant helping to refine a story premise. The current premise is:\n---\n{generatedPremise
-            }\n---\nFocus on improving it based on user feedback. Be concise and helpful.");
-        // Add the generated premise as the first AI message in the refinement history
+
+        var sb = new StringBuilder("You are an assistant helping to refine a story premise. The current premise is:");
+        sb.AppendLine("---");
+        sb.AppendLine(generatedPremise);
+        sb.AppendLine("---");
+        sb.AppendLine("Focus on improving it based on user feedback. Be concise and helpful.");
+
+        refinementHistory.AddSystemMessage(sb.ToString());
+
         refinementHistory.AddAssistantMessage(generatedPremise);
 
         AnsiConsole.MarkupLine(
             "Entering premise refinement chat. Type [blue]/done[/] when finished or [blue]/cancel[/] to abort.");
 
+        await RefinePremise(ct, refinementCid, refinementHistory, sid);
+
+        AnsiConsole.MarkupLine("[yellow]Premise refinement finished.[/]");
+    }
+
+    private async Task<string> GenerateInitialPremise(string initialPitch, CancellationToken ct, string sid)
+    {
+        var request = new RenderRequest("Premise", "Premise", "Prompt for turning a story pitch into a premise", new());
+
+        var prompt = await renderer.RenderPromptTemplateFromFileAsync(kernel, request);
+
+        var cid = $"pitch-init-{Guid.NewGuid()}";
+
+        var history = new ChatHistory();
+        history.AddSystemMessage(prompt);
+
+        AnsiConsole.MarkupLine("[yellow]Generating initial premise...[/]");
+
+        var premiseStream = chat.StreamWithExplicitHistoryAsync(cid, history, initialPitch, sid, ct);
+
+        var premiseBuilder = new StringBuilder();
+
+        // Stream the initial premise generation.
+        await ConsoleChatRenderer.StreamWithSpinnerAsync(CollectWhileStreaming(premiseStream, premiseBuilder, ct), ct);
+
+        var generatedPremise = premiseBuilder.ToString().Trim();
+
+        AnsiConsole.MarkupLine("[cyan]Initial Premise Generated.[/]");
+        AnsiConsole.WriteLine();
+        return generatedPremise;
+    }
+
+    private async Task RefinePremise(CancellationToken ct,
+        string refinementCid,
+        ChatHistory refinementHistory,
+        string sid)
+    {
         while (true)
         {
-            if (commandCancellationToken.IsCancellationRequested)
+            if (ct.IsCancellationRequested)
             {
                 AnsiConsole.MarkupLine("[yellow]Refinement cancelled by host.[/]");
                 break;
@@ -85,27 +95,35 @@ public class PitchService(
 
             AnsiConsole.WriteLine();
             AnsiConsole.Markup("[green]Refine Premise > [/]");
-            var userInput = ReadLine.Read(); // ReadLine does not directly support CancellationToken
+            var userInput = ReadLine.Read();
 
-            if (string.IsNullOrWhiteSpace(userInput)) continue;
-            if (userInput.Equals("/done", StringComparison.OrdinalIgnoreCase)) break;
-            if (userInput.Equals("/cancel", StringComparison.OrdinalIgnoreCase))
+            if (string.IsNullOrWhiteSpace(userInput))
             {
-                AnsiConsole.MarkupLine("[yellow]Refinement aborted by user.[/]");
+                continue;
+            }
+
+            if (userInput.Equals("/done", StringComparison.OrdinalIgnoreCase))
+            {
                 break;
             }
 
-            AnsiConsole.WriteLine(); // Newline after prompt before AI response
+            if (userInput.Equals("/cancel", StringComparison.OrdinalIgnoreCase))
+            {
+                AnsiConsole.MarkupLine("[yellow]Cancelling...[/]");
+                break;
+            }
+
+            AnsiConsole.WriteLine();
 
             try
             {
-                var refinementStream = chat.StreamWithExplicitHistoryAsync(refinementConversationId,
+                var refinementStream = chat.StreamWithExplicitHistoryAsync(refinementCid,
                     refinementHistory,
                     userInput,
-                    primaryProviderSid,
-                    commandCancellationToken);
+                    sid,
+                    ct);
 
-                await ConsoleChatRenderer.StreamWithSpinnerAsync(refinementStream, commandCancellationToken);
+                await ConsoleChatRenderer.StreamWithSpinnerAsync(refinementStream, ct);
             }
             catch (OperationCanceledException)
             {
@@ -119,8 +137,6 @@ public class PitchService(
                 AnsiConsole.MarkupLine("[red]An error occurred during refinement.[/]");
             }
         }
-
-        AnsiConsole.MarkupLine("[yellow]Premise refinement finished.[/]");
     }
 
     // Helper to collect content while streaming for the initial premise

@@ -37,7 +37,8 @@ public sealed class AiChatService(
     IChatSessionStore store,
     PromptBuilder prompts,
     IFileSystem fileSystem,
-    TimeProvider time) : IAiChatService
+    TimeProvider time,
+    MetadataCollector metadataCollector) : IAiChatService // Added MetadataCollector
 {
     public async IAsyncEnumerable<ChatStreamItem> StreamAsync(string cid,
         string user,
@@ -69,7 +70,8 @@ public sealed class AiChatService(
         
         await UpdateChatHistoryWithAssistantMessage(cid, final, history, ct);
 
-        var metadata = CollectMetadata(sid, start, final);
+        // Use the new MetadataCollector
+        var metadata = metadataCollector.Collect(sid, start, final);
 
         yield return metadata;
     }
@@ -109,8 +111,8 @@ public sealed class AiChatService(
         // Save the updated history
         await store.SaveAsync(conversationId, history, ct);
 
-        // Collect and yield metadata
-        var metadata = CollectMetadata(sid, start, finalAssistantMessageContent);
+        // Collect and yield metadata using the new MetadataCollector
+        var metadata = metadataCollector.Collect(sid, start, finalAssistantMessageContent);
         yield return metadata;
     }
     
@@ -140,39 +142,7 @@ public sealed class AiChatService(
         await store.SaveAsync(cid, history, ct);
     }
 
-    private ChatStreamItem.Metadata CollectMetadata(string? sid, long start, ChatMessageContent final)
-    {
-        var elapsed = time.GetElapsedTime(start);
-
-        int promptTokens = 0, completionTokens = 0;
-
-        if (final.Metadata is GeminiMetadata geminiMetadata)
-        {
-            promptTokens = geminiMetadata.PromptTokenCount;
-            completionTokens = geminiMetadata.CandidatesTokenCount;
-        }
-        // OpenAI format
-        else if (final.Metadata?.TryGetValue("Usage", out var u) is true && u is ChatTokenUsage usage)
-        {
-            promptTokens = usage.InputTokenCount;
-            completionTokens = usage.OutputTokenCount;
-        }
-        // Anthropic format (example, might need adjustment based on actual metadata structure)
-        else if (final.Metadata?.TryGetValue("anthropic_metadata", out var anthropicMetaObj) == true && anthropicMetaObj is Dictionary<string, object> anthropicMetaDict)
-        {
-            if (anthropicMetaDict.TryGetValue("usage", out var usageObj) && usageObj is Dictionary<string, object> usageDict)
-            {
-                if (usageDict.TryGetValue("input_tokens", out var inTokens) && inTokens is int pTokens) promptTokens = pTokens;
-                if (usageDict.TryGetValue("output_tokens", out var outTokens) && outTokens is int cTokens) completionTokens = cTokens;
-            }
-        }
-
-        var metadata = new ChatStreamItem.Metadata(Elapsed: elapsed,
-            PromptTokens: promptTokens,
-            CompletionTokens: completionTokens);
-        
-        return metadata;
-    }
+    // Removed CollectMetadata method from here
 
     private async Task<ChatHistory> PrepareHistoryAsync(string cid, string user, CancellationToken ct)
     {

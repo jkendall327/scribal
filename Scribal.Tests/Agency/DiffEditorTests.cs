@@ -1,11 +1,8 @@
-using System;
-using System.Collections.Generic;
 using System.IO.Abstractions;
 using FluentAssertions;
 using Microsoft.Extensions.Options;
 using NSubstitute;
 using Scribal.Agency;
-using Xunit;
 
 namespace Scribal.Tests.Agency
 {
@@ -532,6 +529,74 @@ namespace Scribal.Tests.Agency
                 .Throw<InvalidOperationException>()
                 .WithMessage(
                     "Context mismatch at line 2. Expected: 'line2_expected_context', Actual: 'Out of bounds/End of file'. Hunk: @@ -1,2 +1,2 @@");
+        }
+
+        [Fact]
+        public async Task ApplyUnifiedDiffInner_ComplexMultiHunkDiff_MatchesSnapshot()
+        {
+            // Arrange
+            var originalLines = new List<string>
+            {
+                "Line 1: The quick brown fox",
+                "Line 2: jumps over the lazy dog.",
+                "Line 3: This is an important line.",
+                "Line 4: Another line for context.",
+                "Line 5: The middle section starts here.",
+                "Line 6: A line to be modified.",
+                "Line 7: A line to be deleted.",
+                "Line 8: End of middle section.",
+                "Line 9: Penultimate line.",
+                "Line 10: The very last line."
+            };
+            var diff = """
+                       @@ -1,4 +1,5 @@
+                       -Line 1: The quick brown fox
+                       +Line 1: The SLOW brown fox
+                       +A new line inserted after original line 1.
+                        Line 2: jumps over the lazy dog.
+                        Line 3: This is an important line.
+                        Line 4: Another line for context.
+                       @@ -5,4 +6,3 @@
+                        Line 5: The middle section starts here.
+                       -Line 6: A line to be modified.
+                       -Line 7: A line to be deleted.
+                       +Line 6: This line was MODIFIED.
+                        Line 8: End of middle section.
+                       @@ -9,2 +9,3 @@
+                        Line 9: Penultimate line.
+                       -Line 10: The very last line.
+                       +Line 10: The very final line.
+                       +And one more line at the very end.
+                       """;
+
+            // Act
+            var resultLines = _sut.ApplyUnifiedDiffInner(originalLines, diff);
+
+            // Assert
+            await Verify(resultLines).UseDirectory("Snapshots");
+        }
+
+        [Fact]
+        public async Task ApplyUnifiedDiffInner_CreateNewFileWithMultipleLines_MatchesSnapshot()
+        {
+            // Arrange
+            var originalLines = new List<string>(); // Empty original file
+            var diff = """
+                       @@ -0,0 +1,7 @@
+                       +Chapter 1: The Beginning
+                       +
+                       +It was a dark and stormy night.
+                       +The wind howled through the trees.
+                       +
+                       +Suddenly, a shot rang out!
+                       +--- End of File ---
+                       """;
+
+            // Act
+            var resultLines = _sut.ApplyUnifiedDiffInner(originalLines, diff);
+
+            // Assert
+            await Verify(resultLines).UseDirectory("Snapshots");
         }
     }
 }

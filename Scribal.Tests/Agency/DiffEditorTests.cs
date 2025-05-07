@@ -572,8 +572,10 @@ namespace Scribal.Tests.Agency
             // Act
             var resultLines = _sut.ApplyUnifiedDiffInner(originalLines, diff);
 
+            var final = string.Join(Environment.NewLine, resultLines);
+
             // Assert
-            await Verify(resultLines).UseDirectory("Snapshots");
+            await Verify(final).UseDirectory("Snapshots");
         }
 
         [Fact]
@@ -595,8 +597,10 @@ namespace Scribal.Tests.Agency
             // Act
             var resultLines = _sut.ApplyUnifiedDiffInner(originalLines, diff);
 
+            var final = string.Join(Environment.NewLine, resultLines);
+            
             // Assert
-            await Verify(resultLines).UseDirectory("Snapshots");
+            await Verify(final).UseDirectory("Snapshots");
         }
     }
 }

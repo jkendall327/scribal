@@ -1,9 +1,7 @@
-﻿[
-  Chapter 1: The Beginning,
-  ,
-  It was a dark and stormy night.,
-  The wind howled through the trees.,
-  ,
-  Suddenly, a shot rang out!,
-  --- End of File ---
-]
+﻿Chapter 1: The Beginning
+
+It was a dark and stormy night.
+The wind howled through the trees.
+
+Suddenly, a shot rang out!
+--- End of File ---

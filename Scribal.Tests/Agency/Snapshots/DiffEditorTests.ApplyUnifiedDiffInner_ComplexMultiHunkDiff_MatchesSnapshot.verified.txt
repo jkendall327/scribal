@@ -1,13 +1,11 @@
-﻿[
-  Line 1: The SLOW brown fox,
-  A new line inserted after original line 1.,
-  Line 2: jumps over the lazy dog.,
-  Line 3: This is an important line.,
-  Line 4: Another line for context.,
-  Line 5: The middle section starts here.,
-  Line 6: This line was MODIFIED.,
-  Line 8: End of middle section.,
-  Line 9: Penultimate line.,
-  Line 10: The very final line.,
-  And one more line at the very end.
-]
+﻿Line 1: The SLOW brown fox
+A new line inserted after original line 1.
+Line 2: jumps over the lazy dog.
+Line 3: This is an important line.
+Line 4: Another line for context.
+Line 5: The middle section starts here.
+Line 6: This line was MODIFIED.
+Line 8: End of middle section.
+Line 9: Penultimate line.
+Line 10: The very final line.
+And one more line at the very end.

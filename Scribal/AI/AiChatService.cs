@@ -71,7 +71,7 @@ public sealed class AiChatService(
         await UpdateChatHistoryWithAssistantMessage(cid, final, history, ct);
 
         // Use the new MetadataCollector
-        var metadata = metadataCollector.Collect(sid, start, final);
+        var metadata = metadataCollector.CollectMetadata(sid, start, final);
 
         yield return metadata;
     }
@@ -112,7 +112,7 @@ public sealed class AiChatService(
         await store.SaveAsync(conversationId, history, ct);
 
         // Collect and yield metadata using the new MetadataCollector
-        var metadata = metadataCollector.Collect(sid, start, finalAssistantMessageContent);
+        var metadata = metadataCollector.CollectMetadata(sid, start, finalAssistantMessageContent);
         yield return metadata;
     }
     

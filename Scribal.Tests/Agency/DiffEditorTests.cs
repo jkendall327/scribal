@@ -1,8 +1,11 @@
+using System;
+using System.Collections.Generic;
 using System.IO.Abstractions;
 using FluentAssertions;
 using Microsoft.Extensions.Options;
 using NSubstitute;
 using Scribal.Agency;
+using Xunit;
 
 namespace Scribal.Tests.Agency
 {
@@ -12,24 +15,26 @@ namespace Scribal.Tests.Agency
 
         public DiffEditorTests()
         {
-            // Mock IFileSystem (not directly used by ApplyUnifiedDiffInner but required by constructor)
-            var mockFileSystem = Substitute.For<IFileSystem>(); 
-            
-            // Mock IOptions<AppConfig> (not directly used by ApplyUnifiedDiffInner but required by constructor)
+            var mockFileSystem = Substitute.For<IFileSystem>();
             var mockOptions = Substitute.For<IOptions<AppConfig>>();
-            mockOptions.Value.Returns(new AppConfig { DryRun = false });
+            mockOptions.Value.Returns(new AppConfig
+            {
+                DryRun = false
+            });
 
             _sut = new DiffEditor(mockFileSystem, mockOptions);
         }
 
         [Fact]
-        public void ApplyUnifiedDiffInner_SimpleAddition_AddsLineAtEndOfHunkContext()
+        public void ApplyUnifiedDiffInner_SimpleAddition_AddsLineCorrectlyInContext() // Name updated for clarity
         {
             // Arrange
-            var originalLines = new List<string> { "a", "b", "c" };
-            // This diff means: within the context of lines a, b, c, a line 'x' is added.
-            // The current ApplyHunk logic processes context lines first, advancing lineIndex,
-            // then inserts added lines at the final lineIndex.
+            var originalLines = new List<string>
+            {
+                "a",
+                "b",
+                "c"
+            };
             var diff = """
                        @@ -1,3 +1,4 @@
                         a
@@ -37,27 +42,14 @@ namespace Scribal.Tests.Agency
                         b
                         c
                        """;
-
-            // Act
-            var resultLines = _sut.ApplyUnifiedDiffInner(originalLines, diff);
-
-            // Assert
-            // Expected based on current logic: a, b, c, then x is inserted.
-            resultLines.Should().Equal("a", "b", "c", "x");
-        }
-
-        [Fact]
-        public void ApplyUnifiedDiffInner_SimpleDeletion_RemovesLineCorrectly()
-        {
-            // Arrange
-            var originalLines = new List<string> { "a", "b", "c" };
-            var diff = """
-                       @@ -1,3 +1,2 @@
-                        a
-                       -b
-                        c
-                       """;
-            var expectedLines = new List<string> { "a", "c" };
+            // Expected: 'x' is inserted between 'a' and 'b'
+            var expectedLines = new List<string>
+            {
+                "a",
+                "x",
+                "b",
+                "c"
+            };
 
             // Act
             var resultLines = _sut.ApplyUnifiedDiffInner(originalLines, diff);
@@ -67,13 +59,44 @@ namespace Scribal.Tests.Agency
         }
 
         [Fact]
-        public void ApplyUnifiedDiffInner_SimpleChange_AppliesChangeAtEndOfHunkContext()
+        public void ApplyUnifiedDiffInner_SimpleDeletion_RemovesLineCorrectly()
         {
             // Arrange
-            var originalLines = new List<string> { "a", "b", "c" };
-            // This diff means: within context a,b,c, 'b' is removed and 'x' is added.
-            // Current logic: process 'a' (lineIndex=1), remove 'b' (file=["a","c"], lineIndex=1),
-            // collect '+x', process 'c' (lineIndex=2). Insert 'x' at index 2.
+            var originalLines = new List<string>
+            {
+                "a",
+                "b",
+                "c"
+            };
+            var diff = """
+                       @@ -1,3 +1,2 @@
+                        a
+                       -b
+                        c
+                       """;
+            var expectedLines = new List<string>
+            {
+                "a",
+                "c"
+            };
+
+            // Act
+            var resultLines = _sut.ApplyUnifiedDiffInner(originalLines, diff);
+
+            // Assert
+            resultLines.Should().Equal(expectedLines);
+        }
+
+        [Fact]
+        public void ApplyUnifiedDiffInner_SimpleChange_AppliesChangeInPlace() // Name updated for clarity
+        {
+            // Arrange
+            var originalLines = new List<string>
+            {
+                "a",
+                "b",
+                "c"
+            };
             var diff = """
                        @@ -1,3 +1,3 @@
                         a
@@ -81,7 +104,13 @@ namespace Scribal.Tests.Agency
                        +x
                         c
                        """;
-            var expectedLines = new List<string> { "a", "c", "x" };
+            // Expected: 'b' is replaced by 'x'
+            var expectedLines = new List<string>
+            {
+                "a",
+                "x",
+                "c"
+            };
 
             // Act
             var resultLines = _sut.ApplyUnifiedDiffInner(originalLines, diff);
@@ -89,20 +118,28 @@ namespace Scribal.Tests.Agency
             // Assert
             resultLines.Should().Equal(expectedLines);
         }
-        
+
         [Fact]
         public void ApplyUnifiedDiffInner_ChangeAtSpecificLine_AppliesCorrectly()
         {
             // Arrange
-            var originalLines = new List<string> { "a", "b", "c" };
-            // This diff targets line 'b' specifically for replacement.
+            var originalLines = new List<string>
+            {
+                "a",
+                "b",
+                "c"
+            };
             var diff = """
                        @@ -2,1 +2,1 @@
                        -b
                        +x
                        """;
-            // Expected: line 'b' (index 1) removed, 'x' inserted at index 1.
-            var expectedLines = new List<string> { "a", "x", "c" };
+            var expectedLines = new List<string>
+            {
+                "a",
+                "x",
+                "c"
+            };
 
             // Act
             var resultLines = _sut.ApplyUnifiedDiffInner(originalLines, diff);
@@ -111,19 +148,25 @@ namespace Scribal.Tests.Agency
             resultLines.Should().Equal(expectedLines);
         }
 
-
         [Fact]
         public void ApplyUnifiedDiffInner_AdditionAtBeginning_UsingZeroOriginalCountHunk_AppliesCorrectly()
         {
             // Arrange
-            var originalLines = new List<string> { "a", "b" };
-            // Diff means: at original line 1, 0 lines taken, new line 1, 1 line added. Insert '+x'.
+            var originalLines = new List<string>
+            {
+                "a",
+                "b"
+            };
             var diff = """
                        @@ -1,0 +1,1 @@
                        +x
                        """;
-            // Expected: 'x' inserted at index 0.
-            var expectedLines = new List<string> { "x", "a", "b" };
+            var expectedLines = new List<string>
+            {
+                "x",
+                "a",
+                "b"
+            };
 
             // Act
             var resultLines = _sut.ApplyUnifiedDiffInner(originalLines, diff);
@@ -136,14 +179,23 @@ namespace Scribal.Tests.Agency
         public void ApplyUnifiedDiffInner_AdditionInMiddle_UsingZeroOriginalCountHunk_AppliesCorrectly()
         {
             // Arrange
-            var originalLines = new List<string> { "a", "b", "c" };
-            // Diff means: at original line 2, 0 lines taken, new line 2, 1 line added. Insert '+x'.
+            var originalLines = new List<string>
+            {
+                "a",
+                "b",
+                "c"
+            };
             var diff = """
                        @@ -2,0 +2,1 @@
                        +x
                        """;
-            // Expected: 'x' inserted at index 1 (before 'b').
-            var expectedLines = new List<string> { "a", "x", "b", "c" };
+            var expectedLines = new List<string>
+            {
+                "a",
+                "x",
+                "b",
+                "c"
+            };
 
             // Act
             var resultLines = _sut.ApplyUnifiedDiffInner(originalLines, diff);
@@ -156,14 +208,21 @@ namespace Scribal.Tests.Agency
         public void ApplyUnifiedDiffInner_AdditionAtEnd_UsingZeroOriginalCountHunk_AppliesCorrectly()
         {
             // Arrange
-            var originalLines = new List<string> { "a", "b" };
-            // Diff means: at original line 3 (after 'b'), 0 lines taken, new line 3, 1 line added. Insert '+x'.
+            var originalLines = new List<string>
+            {
+                "a",
+                "b"
+            };
             var diff = """
                        @@ -3,0 +3,1 @@
                        +x
                        """;
-            // Expected: 'x' inserted at index 2 (end of list).
-            var expectedLines = new List<string> { "a", "b", "x" };
+            var expectedLines = new List<string>
+            {
+                "a",
+                "b",
+                "x"
+            };
 
             // Act
             var resultLines = _sut.ApplyUnifiedDiffInner(originalLines, diff);
@@ -176,13 +235,21 @@ namespace Scribal.Tests.Agency
         public void ApplyUnifiedDiffInner_DeletionAtBeginning_SpecificDeletion_AppliesCorrectly()
         {
             // Arrange
-            var originalLines = new List<string> { "a", "b", "c" };
-            // Diff means: remove line 'a'.
+            var originalLines = new List<string>
+            {
+                "a",
+                "b",
+                "c"
+            };
             var diff = """
                        @@ -1,1 +0,0 @@
                        -a
                        """;
-            var expectedLines = new List<string> { "b", "c" };
+            var expectedLines = new List<string>
+            {
+                "b",
+                "c"
+            };
 
             // Act
             var resultLines = _sut.ApplyUnifiedDiffInner(originalLines, diff);
@@ -190,17 +257,26 @@ namespace Scribal.Tests.Agency
             // Assert
             resultLines.Should().Equal(expectedLines);
         }
-        
+
         [Fact]
         public void ApplyUnifiedDiffInner_DeletionAtEnd_SpecificDeletion_AppliesCorrectly()
         {
             // Arrange
-            var originalLines = new List<string> { "a", "b", "c" };
+            var originalLines = new List<string>
+            {
+                "a",
+                "b",
+                "c"
+            };
             var diff = """
                        @@ -3,1 +2,0 @@
                        -c
                        """;
-            var expectedLines = new List<string> { "a", "b" };
+            var expectedLines = new List<string>
+            {
+                "a",
+                "b"
+            };
 
             // Act
             var resultLines = _sut.ApplyUnifiedDiffInner(originalLines, diff);
@@ -209,12 +285,18 @@ namespace Scribal.Tests.Agency
             resultLines.Should().Equal(expectedLines);
         }
 
-
         [Fact]
-        public void ApplyUnifiedDiffInner_MultipleHunks_AppliedInReverseAndCorrectlyReflectsCurrentLogic()
+        public void ApplyUnifiedDiffInner_MultipleHunks_AppliedInReverseAndCorrectly() // Name updated
         {
             // Arrange
-            var originalLines = new List<string> { "one", "two", "three", "four", "five" };
+            var originalLines = new List<string>
+            {
+                "one",
+                "two",
+                "three",
+                "four",
+                "five"
+            };
             var diff = """
                        @@ -1,2 +1,2 @@
                         one
@@ -225,21 +307,14 @@ namespace Scribal.Tests.Agency
                        -five
                        +FIVE
                        """;
-            // Hunks are applied in reverse order.
-            // Hunk 2 (OriginalStart=4): " four", "-five", "+FIVE"
-            //   lineIndex starts at 3.
-            //   " four": lineIndex = 4.
-            //   "-five": remove "five" at index 4. fileContent = ["one", "two", "three", "four"]. lineIndex = 4.
-            //   "+FIVE": linesToAdd = ["FIVE"]. lineIndex = 4.
-            //   Insert ["FIVE"] at index 4. fileContent = ["one", "two", "three", "four", "FIVE"].
-            //
-            // Hunk 1 (OriginalStart=1): " one", "-two", "+TWO"
-            //   lineIndex starts at 0. fileContent = ["one", "two", "three", "four", "FIVE"].
-            //   " one": lineIndex = 1.
-            //   "-two": remove "two" at index 1. fileContent = ["one", "three", "four", "FIVE"]. lineIndex = 1.
-            //   "+TWO": linesToAdd = ["TWO"]. lineIndex = 1.
-            //   Insert ["TWO"] at index 1. fileContent = ["one", "TWO", "three", "four", "FIVE"].
-            var expectedLines = new List<string> { "one", "TWO", "three", "four", "FIVE" };
+            var expectedLines = new List<string>
+            {
+                "one",
+                "TWO",
+                "three",
+                "four",
+                "FIVE"
+            };
 
             // Act
             var resultLines = _sut.ApplyUnifiedDiffInner(originalLines, diff);
@@ -249,33 +324,44 @@ namespace Scribal.Tests.Agency
         }
 
         [Fact]
-        public void ApplyUnifiedDiffInner_AddLinesToEmptyFile_UsingZeroZeroHunk_ThrowsArgumentOutOfRangeException()
+        public void
+            ApplyUnifiedDiffInner_AddLinesToEmptyFile_UsingZeroZeroHunk_AppliesCorrectly() // Name and assertion updated
         {
             // Arrange
             var originalLines = new List<string>();
-            // Diff for adding lines to an empty file. OriginalStart is 0.
             var diff = """
                        @@ -0,0 +1,2 @@
                        +line1
                        +line2
                        """;
-            // ApplyHunk: lineIndex = hunk.OriginalStart - 1 = -1.
-            // InsertRange(-1, ...) will throw.
+            var expectedLines = new List<string>
+            {
+                "line1",
+                "line2"
+            };
 
             // Act
-            Action act = () => _sut.ApplyUnifiedDiffInner(originalLines, diff);
+            var resultLines = _sut.ApplyUnifiedDiffInner(originalLines, diff);
 
             // Assert
-            act.Should().Throw<ArgumentOutOfRangeException>();
+            resultLines.Should().Equal(expectedLines);
         }
 
         [Fact]
         public void ApplyUnifiedDiffInner_EmptyDiffString_ReturnsOriginalContent()
         {
             // Arrange
-            var originalLines = new List<string> { "a", "b" };
+            var originalLines = new List<string>
+            {
+                "a",
+                "b"
+            };
             var diff = "";
-            var expectedLines = new List<string> { "a", "b" };
+            var expectedLines = new List<string>
+            {
+                "a",
+                "b"
+            };
 
             // Act
             var resultLines = _sut.ApplyUnifiedDiffInner(originalLines, diff);
@@ -288,13 +374,21 @@ namespace Scribal.Tests.Agency
         public void ApplyUnifiedDiffInner_DiffWithOnlyContextLines_ReturnsOriginalContent()
         {
             // Arrange
-            var originalLines = new List<string> { "a", "b" };
+            var originalLines = new List<string>
+            {
+                "a",
+                "b"
+            };
             var diff = """
                        @@ -1,2 +1,2 @@
                         a
                         b
                        """;
-            var expectedLines = new List<string> { "a", "b" };
+            var expectedLines = new List<string>
+            {
+                "a",
+                "b"
+            };
 
             // Act
             var resultLines = _sut.ApplyUnifiedDiffInner(originalLines, diff);
@@ -304,18 +398,26 @@ namespace Scribal.Tests.Agency
         }
 
         [Fact]
-        public void ApplyUnifiedDiffInner_IgnoresNoNewlineAtEndOfFileMessage()
+        public void ApplyUnifiedDiffInner_IgnoresNoNewlineAtEndOfFileMessageInDiffParsing()
         {
             // Arrange
-            var originalLines = new List<string> { "a" };
+            var originalLines = new List<string>
+            {
+                "a"
+            };
+            // The ParseUnifiedDiff method is now more strict about lines added to hunk.Lines.
+            // It only adds lines starting with ' ', '+', or '-'.
+            // So, "\ No newline at end of file" will not be in hunk.Lines.
             var diff = """
                        @@ -1,1 +1,1 @@
                        -a
                        +b
-                       \ No newline at end of file
+                       \ No newline at end of file 
                        """;
-            // Expected: 'a' removed, 'b' added. '\ No newline...' is ignored by ApplyHunk.
-            var expectedLines = new List<string> { "b" };
+            var expectedLines = new List<string>
+            {
+                "b"
+            };
 
             // Act
             var resultLines = _sut.ApplyUnifiedDiffInner(originalLines, diff);
@@ -323,25 +425,113 @@ namespace Scribal.Tests.Agency
             // Assert
             resultLines.Should().Equal(expectedLines);
         }
-        
+
         [Fact]
         public void ApplyUnifiedDiffInner_HandlesMissingCountsInHunkHeader()
         {
             // Arrange
-            var originalLines = new List<string> { "line1", "line2", "line3" };
-            // @@ -2 +2 @@ is equivalent to @@ -2,1 +2,1 @@
+            var originalLines = new List<string>
+            {
+                "line1",
+                "line2",
+                "line3"
+            };
             var diff = """
                        @@ -2 +2 @@
                        -line2
                        +LINE2_MODIFIED
                        """;
-            var expectedLines = new List<string> { "line1", "LINE2_MODIFIED", "line3" };
+            var expectedLines = new List<string>
+            {
+                "line1",
+                "LINE2_MODIFIED",
+                "line3"
+            };
 
             // Act
             var resultLines = _sut.ApplyUnifiedDiffInner(originalLines, diff);
 
             // Assert
             resultLines.Should().Equal(expectedLines);
+        }
+
+        [Fact]
+        public void ApplyUnifiedDiffInner_ContextMismatch_ThrowsInvalidOperationException()
+        {
+            // Arrange
+            var originalLines = new List<string>
+            {
+                "a",
+                "different_b",
+                "c"
+            };
+            var diff = """
+                       @@ -1,3 +1,3 @@
+                        a
+                       -b
+                       +x
+                        c
+                       """; // Diff expects 'b' but file has 'different_b'
+
+            // Act
+            Action act = () => _sut.ApplyUnifiedDiffInner(originalLines, diff);
+
+            // Assert
+            act.Should()
+                .Throw<InvalidOperationException>()
+                .WithMessage(
+                    "Deletion mismatch at line 2. Expected to delete: 'b', Actual: 'different_b'. Hunk: @@ -1,3 +1,3 @@");
+        }
+
+        [Fact]
+        public void ApplyUnifiedDiffInner_DeletionMismatch_ThrowsInvalidOperationException()
+        {
+            // Arrange
+            var originalLines = new List<string>
+            {
+                "a",
+                "b",
+                "c"
+            };
+            var diff = """
+                       @@ -1,3 +1,2 @@
+                        a
+                       -unexpected_line_content 
+                        c
+                       """; // Diff expects to delete 'unexpected_line_content' at line 2
+
+            // Act
+            Action act = () => _sut.ApplyUnifiedDiffInner(originalLines, diff);
+
+            // Assert
+            act.Should()
+                .Throw<InvalidOperationException>()
+                .WithMessage(
+                    "Deletion mismatch at line 2. Expected to delete: 'unexpected_line_content ', Actual: 'b'. Hunk: @@ -1,3 +1,2 @@");
+        }
+
+        [Fact]
+        public void ApplyUnifiedDiffInner_ContextMismatchAtEndOfFile_ThrowsInvalidOperationException()
+        {
+            // Arrange
+            var originalLines = new List<string>
+            {
+                "line1"
+            }; // File is shorter than diff expects
+            var diff = """
+                       @@ -1,2 +1,2 @@
+                        line1
+                        line2_expected_context
+                       """;
+
+            // Act
+            Action act = () => _sut.ApplyUnifiedDiffInner(originalLines, diff);
+
+            // Assert
+            act.Should()
+                .Throw<InvalidOperationException>()
+                .WithMessage(
+                    "Context mismatch at line 2. Expected: 'line2_expected_context', Actual: 'Out of bounds/End of file'. Hunk: @@ -1,2 +1,2 @@");
         }
     }
 }

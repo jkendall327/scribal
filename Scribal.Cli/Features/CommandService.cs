@@ -4,6 +4,7 @@ using System.CommandLine.Invocation;
 using System.CommandLine.Parsing;
 using System.IO.Abstractions;
 using Scribal.AI;
+using Scribal.Cli.Features; // Added for OutlineService
 using Scribal.Context;
 using Scribal.Workspace;
 using Spectre.Console;
@@ -15,13 +16,21 @@ public class CommandService(
     RepoMapStore repoStore,
     IChatSessionStore conversationStore,
     PitchService pitchService,
+    OutlineService outlineService, // Added OutlineService
     WorkspaceManager workspaceManager)
 {
-    private readonly Argument<string> _ideaArgument = new Argument<string>
+    private readonly Argument<string> _ideaArgument = new()
     {
         Name = "Idea",
         Arity = ArgumentArity.ExactlyOne,
         Description = "Your basic idea for the story",
+    };
+
+    private readonly Argument<string> _premiseArgument = new() // Added premise argument
+    {
+        Name = "Premise",
+        Arity = ArgumentArity.ExactlyOne,
+        Description = "The story premise to be turned into an outline",
     };
 
     public Parser Build()
@@ -47,12 +56,16 @@ public class CommandService(
         
         var pitch = Create("/pitch", "Turns an initial story idea into a fleshed-out premise", PitchCommand);
         pitch.AddArgument(_ideaArgument);
+
+        var outline = Create("/outline", "Generates a plot outline from a premise", OutlineCommand); // Added outline command
+        outline.AddArgument(_premiseArgument);
         
         var root = new RootCommand("Scribal interactive shell")
         {
             init,
             clear,
             pitch,
+            outline, // Added outline command to root
             tree,
             quit,
         };
@@ -60,11 +73,37 @@ public class CommandService(
         return new CommandLineBuilder(root).UseDefaults().UseHelp("/help").Build();
     }
 
+    private async Task OutlineCommand(InvocationContext arg) // Added OutlineCommand handler
+    {
+        var premise = arg.ParseResult.GetValueForArgument(_premiseArgument);
+        var token = arg.GetCancellationToken();
+
+        if (string.IsNullOrWhiteSpace(premise))
+        {
+            AnsiConsole.MarkupLine("[red]Premise cannot be empty.[/]");
+            return;
+        }
+        
+        try
+        {
+            await outlineService.CreateOutlineFromPremise(premise, token);
+        }
+        catch (Exception e)
+        {
+            AnsiConsole.WriteException(e);
+        }
+    }
+
     private async Task PitchCommand(InvocationContext arg)
     {
         var idea = arg.ParseResult.GetValueForArgument(_ideaArgument);
-
         var token = arg.GetCancellationToken();
+
+        if (string.IsNullOrWhiteSpace(idea))
+        {
+            AnsiConsole.MarkupLine("[red]Idea cannot be empty.[/]");
+            return;
+        }
         
         try
         {
@@ -100,18 +139,17 @@ public class CommandService(
     private Task ClearCommand(InvocationContext ctx)
     {
         _ = conversationStore.TryClearConversation(string.Empty);
-
+        AnsiConsole.MarkupLine("[yellow]Conversation history cleared.[/]");
         return Task.FromResult(true);
     }
 
     private Task TreeCommand(InvocationContext ctx)
     {
         var cwd = fileSystem.Directory.GetCurrentDirectory();
-
-        var files = StickyTreeSelector.Scan(cwd);
-
+        // Assuming StickyTreeSelector is available and working as intended.
+        var files = StickyTreeSelector.Scan(cwd); 
         repoStore.Paths = files;
-
+        AnsiConsole.MarkupLine($"[green]Context files updated. {files.Count} files/directories selected.[/]");
         return Task.FromResult(true);
     }
 
@@ -121,10 +159,7 @@ public class CommandService(
         {
             AnsiConsole.MarkupLine("[yellow]Thank you for using Scribal. Goodbye![/]");
             Environment.Exit(0);
-
-            return Task.CompletedTask;
         }
-
         return Task.CompletedTask;
     }
 }

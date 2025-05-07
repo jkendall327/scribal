@@ -29,6 +29,7 @@ public static class ScribalServiceCollectionExtensions
         // LLM interfacing
         services.AddSingleton<IChatSessionStore, InMemoryChatSessionStore>();
         services.AddSingleton<IAiChatService, AiChatService>();
+        services.AddSingleton<MetadataCollector>();
 
         // Context gathering
         services.AddSingleton<RepoMapStore>();

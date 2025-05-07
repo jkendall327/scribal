@@ -17,14 +17,6 @@ using ChatMessageContent = Microsoft.SemanticKernel.ChatMessageContent;
 
 namespace Scribal.AI;
 
-public interface IAiChatService
-{
-    IAsyncEnumerable<ChatStreamItem> StreamAsync(string conversationId,
-        string userMessage,
-        string sid,
-        CancellationToken ct = default);
-}
-
 /// <summary>
 /// Discriminated union between a chunk of the model's streamed output and a metadata record produced when it's done.
 /// </summary>
@@ -55,7 +47,7 @@ public sealed class AiChatService(
         var start = time.GetTimestamp();
 
         var chat = kernel.GetRequiredService<IChatCompletionService>(sid);
-        var history = await PrepareHistoryAsync(cid, user, ct);
+        var history = await PrepareHistoryAsync(cid, user, ct); // PrepareHistoryAsync adds the user message
 
         var settings = GetSettings(sid);
         
@@ -63,7 +55,7 @@ public sealed class AiChatService(
         var stream = chat
             .GetStreamingChatMessageContentsAsync(history, settings, kernel, ct);
 
-        await foreach (var chunk in stream)
+        await foreach (var chunk in stream.WithCancellation(ct))
         {
             if (chunk.Content is {Length: > 0} text)
             {
@@ -81,17 +73,57 @@ public sealed class AiChatService(
 
         yield return metadata;
     }
+
+    public async IAsyncEnumerable<ChatStreamItem> StreamWithExplicitHistoryAsync(
+        string conversationId,
+        ChatHistory history,
+        string userMessage,
+        string sid,
+        [EnumeratorCancellation] CancellationToken ct = default)
+    {
+        var start = time.GetTimestamp();
+        var chat = kernel.GetRequiredService<IChatCompletionService>(sid);
+
+        // Add the current user message to the provided history
+        history.AddUserMessage(userMessage);
+
+        var settings = GetSettings(sid);
+        
+        // Stream response back for the UI.
+        var stream = chat.GetStreamingChatMessageContentsAsync(history, settings, kernel, ct);
+        await foreach (var chunk in stream.WithCancellation(ct))
+        {
+            if (chunk.Content is {Length: > 0} text)
+            {
+                yield return new ChatStreamItem.TokenChunk(text);
+            }
+        }
+
+        // Collect the full assistant message from streamed chunks.
+        var finalAssistantMessageContent = await chat.GetChatMessageContentAsync(history, settings, kernel, ct);
+        
+        // Update the passed-in ChatHistory object with the assistant's full response
+        var assistantMessageText = string.Concat(finalAssistantMessageContent).Trim();
+        history.AddAssistantMessage(assistantMessageText); // This modifies the 'history' instance
+
+        // Save the updated history
+        await store.SaveAsync(conversationId, history, ct);
+
+        // Collect and yield metadata
+        var metadata = CollectMetadata(sid, start, finalAssistantMessageContent);
+        yield return metadata;
+    }
     
     private PromptExecutionSettings GetSettings(string sid)
     {
         // Gemini requires special treatment to actually use tools.
-        return sid switch
+        return sid.ToLowerInvariant() switch // Ensure case-insensitivity for service ID
         {
             "gemini" => new GeminiPromptExecutionSettings
             {
                 ToolCallBehavior = GeminiToolCallBehavior.AutoInvokeKernelFunctions
             },
-            var _ => new OpenAIPromptExecutionSettings
+            _ => new OpenAIPromptExecutionSettings // Default to OpenAI settings
             {
                 ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions
             },
@@ -125,6 +157,15 @@ public sealed class AiChatService(
             promptTokens = usage.InputTokenCount;
             completionTokens = usage.OutputTokenCount;
         }
+        // Anthropic format (example, might need adjustment based on actual metadata structure)
+        else if (final.Metadata?.TryGetValue("anthropic_metadata", out var anthropicMetaObj) == true && anthropicMetaObj is Dictionary<string, object> anthropicMetaDict)
+        {
+            if (anthropicMetaDict.TryGetValue("usage", out var usageObj) && usageObj is Dictionary<string, object> usageDict)
+            {
+                if (usageDict.TryGetValue("input_tokens", out var inTokens) && inTokens is int pTokens) promptTokens = pTokens;
+                if (usageDict.TryGetValue("output_tokens", out var outTokens) && outTokens is int cTokens) completionTokens = cTokens;
+            }
+        }
 
         var metadata = new ChatStreamItem.Metadata(Elapsed: elapsed,
             PromptTokens: promptTokens,
@@ -152,11 +193,12 @@ public sealed class AiChatService(
             var info = fileSystem.DirectoryInfo.New(cwd);
 
             var cooked = await prompts.BuildContextPrimerAsync(kernel, info, user);
-
             history.AddUserMessage(cooked);
         }
-
-        history.AddUserMessage(user);
+        else // If not the first user message, just add the plain user message
+        {
+            history.AddUserMessage(user);
+        }
         return history;
     }
 }

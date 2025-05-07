@@ -30,7 +30,7 @@ public class CommandService(
         {
             var cmd = new Command(name, description);
             
-            foreach (var alias in aliases)
+            foreach (var alias in aliases ?? [])
             {
                 cmd.AddAlias(alias);
             }

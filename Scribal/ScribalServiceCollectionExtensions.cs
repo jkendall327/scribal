@@ -39,7 +39,6 @@ public static class ScribalServiceCollectionExtensions
         
         // Workspace
         services.AddSingleton<WorkspaceManager>();
-        services.AddSingleton<PitchService>();
 
         // Other
         services.AddSingleton<CommitGenerator>();

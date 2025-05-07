@@ -10,6 +10,7 @@ public static class ScribalInterfaceServiceCollectionExtensions
         services.AddSingleton<IUserInteraction, SpectreUserInteraction>();
         services.AddSingleton<CommandService>();
         services.AddSingleton<InterfaceManager>();
+        services.AddSingleton<PitchService>();
 
         return services;
     }

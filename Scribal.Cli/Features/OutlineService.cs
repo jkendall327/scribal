@@ -39,8 +39,7 @@ public class OutlineService(IAiChatService chat, PromptRenderer renderer, Kernel
         var refinementCid = $"outline-refine-{Guid.NewGuid()}";
         var refinementHistory = new ChatHistory();
 
-        var sb = new StringBuilder(
-            "You are an assistant helping to refine a story plot outline. The current outline is:");
+        var sb = new StringBuilder("You are an assistant helping to refine a story plot outline. The current outline is:");
         sb.AppendLine("---");
         sb.AppendLine(generatedOutline);
         sb.AppendLine("---");
@@ -48,8 +47,9 @@ public class OutlineService(IAiChatService chat, PromptRenderer renderer, Kernel
             "Focus on improving it based on user feedback. Ensure the chapter breakdown is clear and detailed as per original instructions. Be concise and helpful.");
 
         refinementHistory.AddSystemMessage(sb.ToString());
-        refinementHistory
-            .AddAssistantMessage(generatedOutline); // Add the AI's generated outline as the first assistant message
+        
+        // Add the AI's generated outline as the first assistant message
+        refinementHistory.AddAssistantMessage(generatedOutline); 
 
         AnsiConsole.MarkupLine(
             "Entering plot outline refinement chat. Type [blue]/done[/] when finished or [blue]/cancel[/] to abort.");
@@ -64,10 +64,8 @@ public class OutlineService(IAiChatService chat, PromptRenderer renderer, Kernel
 
     private async Task<string> GenerateInitialOutline(string premise, CancellationToken ct, string sid)
     {
-        // Assuming a prompt template file named "OutlineFromPremise.scribal-prompt" exists
-        // The prompt should instruct the AI to create a synopsis and chapter breakdown from the premise.
         var request = new RenderRequest("Outline",
-            "OutlineFromPremise",
+            "Outline",
             "Prompt for turning a story premise into a plot outline with chapter breakdown.",
             new()
             {
@@ -113,7 +111,7 @@ public class OutlineService(IAiChatService chat, PromptRenderer renderer, Kernel
         string sid,
         string currentOutline)
     {
-        string lastAssistantResponse = currentOutline;
+        var lastAssistantResponse = currentOutline;
 
         while (true)
         {
@@ -198,7 +196,6 @@ public class OutlineService(IAiChatService chat, PromptRenderer renderer, Kernel
                 collector.Append(tc.Content);
             }
 
-            // You might want to handle other ChatStreamItem types like Metadata explicitly
             yield return item;
         }
     }

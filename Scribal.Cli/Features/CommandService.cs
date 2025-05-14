@@ -58,6 +58,8 @@ public class CommandService(
 
         var outline = Create("/outline", "Generates a plot outline from a premise", OutlineCommand); // Added outline command
         outline.AddArgument(_premiseArgument);
+
+        var chaptersCmd = Create("/chapters", "Manage chapters in the workspace", ChaptersCommandAsync); // Added chapters command
         
         var root = new RootCommand("Scribal interactive shell")
         {
@@ -65,6 +67,7 @@ public class CommandService(
             clear,
             pitch,
             outline, // Added outline command to root
+            chaptersCmd, // Added chapters command to root
             tree,
             quit,
         };
@@ -90,6 +93,97 @@ public class CommandService(
         catch (Exception e)
         {
             AnsiConsole.WriteException(e);
+        }
+    }
+
+    private async Task ChaptersCommandAsync(InvocationContext arg)
+    {
+        var token = arg.GetCancellationToken();
+
+        if (!workspaceManager.InWorkspace)
+        {
+            var foundWorkspace = WorkspaceManager.TryFindWorkspaceFolder(fileSystem);
+            if (foundWorkspace == null)
+            {
+                AnsiConsole.MarkupLine("[red]You are not currently in a Scribal workspace. Use '/init' to create one.[/]");
+                return;
+            }
+            // If a workspace is found but not loaded (e.g. app just started),
+            // LoadWorkspaceStateAsync will handle loading it.
+        }
+
+        var state = await workspaceManager.LoadWorkspaceStateAsync();
+
+        if (state == null)
+        {
+            AnsiConsole.MarkupLine("[red]Could not load workspace state.[/]");
+            return;
+        }
+
+        if (state.Chapters == null || !state.Chapters.Any())
+        {
+            AnsiConsole.MarkupLine("[yellow]No chapters found in the workspace. Generate an outline first using '/outline'.[/]");
+            return;
+        }
+
+        while (!token.IsCancellationRequested)
+        {
+            AnsiConsole.WriteLine();
+            var chapterChoices = state.Chapters
+                .OrderBy(c => c.Number)
+                .Select(c => $"{c.Number}. {Markup.Escape(c.Title)} ({c.State})")
+                .ToList();
+            
+            var selectionPrompt = new SelectionPrompt<string>()
+                .Title("Select a chapter to manage or [blue]Back[/] to return:")
+                .PageSize(10)
+                .AddChoices(chapterChoices.Append("Back"));
+
+            var choice = AnsiConsole.Prompt(selectionPrompt);
+
+            if (choice == "Back" || token.IsCancellationRequested)
+            {
+                break;
+            }
+
+            var selectedChapterState = state.Chapters.FirstOrDefault(c => $"{c.Number}. {Markup.Escape(c.Title)} ({c.State})" == choice);
+            if (selectedChapterState != null)
+            {
+                await ChapterSubMenuAsync(selectedChapterState, token);
+            }
+        }
+    }
+
+    private async Task ChapterSubMenuAsync(ChapterState selectedChapter, CancellationToken token)
+    {
+        while (!token.IsCancellationRequested)
+        {
+            AnsiConsole.WriteLine();
+            AnsiConsole.MarkupLine($"Managing Chapter {selectedChapter.Number}: [yellow]{Markup.Escape(selectedChapter.Title)}[/] ({selectedChapter.State})");
+
+            var subMenuPrompt = new SelectionPrompt<string>()
+                .Title("Choose an action:")
+                .PageSize(5)
+                .AddChoices("Dummy Action (Does Nothing)", "Back to Chapter Selection")
+                // Future actions: "View Details", "Edit Summary", "Draft Content", "Mark as Done", etc.
+               ;
+
+            var subChoice = AnsiConsole.Prompt(subMenuPrompt);
+
+            if (subChoice == "Back to Chapter Selection" || token.IsCancellationRequested)
+            {
+                break;
+            }
+
+            switch (subChoice)
+            {
+                case "Dummy Action (Does Nothing)":
+                    AnsiConsole.MarkupLine($"[grey]Executed dummy action for chapter {selectedChapter.Number}.[/]");
+                    // In a real scenario, this would call a service method.
+                    await Task.Delay(100, token); // Simulate work
+                    break;
+                // Add cases for other actions here
+            }
         }
     }
 

@@ -5,6 +5,7 @@ using System.CommandLine.Parsing;
 using System.IO.Abstractions;
 using Scribal.AI;
 using Scribal.Context;
+using Scribal.Cli.Features; // Required for ChapterManagerService
 using Scribal.Workspace;
 using Spectre.Console;
 
@@ -15,9 +16,11 @@ public class CommandService(
     RepoMapStore repoStore,
     IChatSessionStore conversationStore,
     PitchService pitchService,
-    OutlineService outlineService, // Added OutlineService
-    WorkspaceManager workspaceManager)
+    OutlineService outlineService,
+    WorkspaceManager workspaceManager,
+    ChapterManagerService chapterManagerService) // Injected ChapterManagerService
 {
+    private readonly ChapterManagerService _chapterManagerService = chapterManagerService;
     private readonly Argument<string> _ideaArgument = new()
     {
         Name = "Idea",
@@ -56,10 +59,10 @@ public class CommandService(
         var pitch = Create("/pitch", "Turns an initial story idea into a fleshed-out premise", PitchCommand);
         pitch.AddArgument(_ideaArgument);
 
-        var outline = Create("/outline", "Generates a plot outline from a premise", OutlineCommand); // Added outline command
+        var outline = Create("/outline", "Generates a plot outline from a premise", OutlineCommand);
         outline.AddArgument(_premiseArgument);
 
-        var chaptersCmd = Create("/chapters", "Manage chapters in the workspace", ChaptersCommandAsync); // Added chapters command
+        var chaptersCmd = Create("/chapters", "Manage chapters in the workspace", _chapterManagerService.ManageChaptersAsync); // Use ChapterManagerService
         
         var root = new RootCommand("Scribal interactive shell")
         {
@@ -96,145 +99,8 @@ public class CommandService(
         }
     }
 
-    private async Task ChaptersCommandAsync(InvocationContext arg)
-    {
-        var token = arg.GetCancellationToken();
-
-        if (!workspaceManager.InWorkspace)
-        {
-            var foundWorkspace = WorkspaceManager.TryFindWorkspaceFolder(fileSystem);
-            if (foundWorkspace == null)
-            {
-                AnsiConsole.MarkupLine("[red]You are not currently in a Scribal workspace. Use '/init' to create one.[/]");
-                return;
-            }
-            // If a workspace is found but not loaded (e.g. app just started),
-            // LoadWorkspaceStateAsync will handle loading it.
-        }
-
-        var state = await workspaceManager.LoadWorkspaceStateAsync();
-
-        if (state == null)
-        {
-            AnsiConsole.MarkupLine("[red]Could not load workspace state.[/]");
-            return;
-        }
-
-        if (state.Chapters == null || !state.Chapters.Any())
-        {
-            AnsiConsole.MarkupLine("[yellow]No chapters found in the workspace. Generate an outline first using '/outline'.[/]");
-            return;
-        }
-
-        while (!token.IsCancellationRequested)
-        {
-            AnsiConsole.WriteLine();
-            var chapterChoices = state.Chapters
-                .OrderBy(c => c.Number)
-                .Select(c => $"{c.Number}. {Markup.Escape(c.Title)} ({c.State})")
-                .ToList();
-            
-            var selectionPrompt = new SelectionPrompt<string>()
-                .Title("Select a chapter to manage or [blue]Back[/] to return:")
-                .PageSize(10)
-                .AddChoices(chapterChoices.Append("Back"));
-
-            var choice = AnsiConsole.Prompt(selectionPrompt);
-
-            if (choice == "Back" || token.IsCancellationRequested)
-            {
-                break;
-            }
-
-            var selectedChapterState = state.Chapters.FirstOrDefault(c => $"{c.Number}. {Markup.Escape(c.Title)} ({c.State})" == choice);
-            if (selectedChapterState != null)
-            {
-                await ChapterSubMenuAsync(selectedChapterState, token);
-            }
-        }
-    }
-
-    private Parser BuildChapterSubMenuParser(ChapterState chapter, CancellationTokenSource linkedCts)
-    {
-        var dummyCmd = new Command("/dummy", "A dummy action for the chapter.");
-        dummyCmd.SetHandler(async () => {
-            AnsiConsole.MarkupLine($"[grey]Executed dummy action for chapter {chapter.Number}: {Markup.Escape(chapter.Title)}.[/]");
-            // In a real scenario, this would call a service method.
-            try
-            {
-                await Task.Delay(100, linkedCts.Token); // Simulate work respecting cancellation
-            }
-            catch (OperationCanceledException)
-            {
-                AnsiConsole.MarkupLine("[yellow]Dummy action cancelled.[/]");
-            }
-        });
-
-        var backCmd = new Command("/back", "Return to chapter selection.");
-        backCmd.SetHandler(() => {
-            AnsiConsole.MarkupLine("[blue]Returning to chapter selection...[/]");
-            linkedCts.Cancel(); // Signal the sub-menu loop to terminate
-        });
-        
-        var chapterRootCommand = new RootCommand($"Actions for Chapter {chapter.Number}: {Markup.Escape(chapter.Title)}")
-        {
-            dummyCmd,
-            backCmd
-            // Future actions: "/details", "/edit-summary", "/draft", "/mark-done", etc.
-        };
-        // Remove default execution if RootCommand directly executes something.
-        // chapterRootCommand.Handler = null; // Ensure root command itself doesn't have a handler unless intended
-
-        return new CommandLineBuilder(chapterRootCommand)
-            .UseDefaults() // Includes help, version, etc.
-            .UseHelp("/help") // Customize help command name
-            .Build();
-    }
-
-    private async Task ChapterSubMenuAsync(ChapterState selectedChapter, CancellationToken parentToken)
-    {
-        using var chapterSubMenuCts = CancellationTokenSource.CreateLinkedTokenSource(parentToken);
-        var chapterSubMenuParser = BuildChapterSubMenuParser(selectedChapter, chapterSubMenuCts);
-
-        while (!chapterSubMenuCts.IsCancellationRequested && !parentToken.IsCancellationRequested)
-        {
-            AnsiConsole.WriteLine(); // For spacing
-            AnsiConsole.MarkupLine($"Managing Chapter {selectedChapter.Number}: [yellow]{Markup.Escape(selectedChapter.Title)}[/] ({selectedChapter.State})");
-            AnsiConsole.MarkupLine("Enter a command for this chapter ([blue]/help[/] for options, [blue]/back[/] to return to chapter list):");
-            AnsiConsole.Markup($"Chapter {selectedChapter.Number} > ");
-            
-            var input = ReadLine.Read(); // Assuming ReadLine.Read() handles basic input reading
-
-            if (parentToken.IsCancellationRequested) // Check parent token before processing
-            {
-                AnsiConsole.MarkupLine("[yellow]Exiting chapter menu due to external cancellation.[/]");
-                break;
-            }
-
-            if (string.IsNullOrWhiteSpace(input))
-            {
-                continue;
-            }
-
-            try
-            {
-                // InvokeAsync will use the CancellationToken from chapterSubMenuCts
-                await chapterSubMenuParser.InvokeAsync(input);
-            }
-            catch (OperationCanceledException) when (chapterSubMenuCts.IsCancellationRequested)
-            {
-                // This can happen if /back was called, or if a command itself was cancelled by chapterSubMenuCts.
-                // If it was /back, the loop condition will handle exit.
-                // If it was a command cancelled by this CTS, it's already handled by the command or loop.
-                AnsiConsole.MarkupLine("[yellow](Chapter action cancelled or /back invoked)[/]");
-            }
-            catch (Exception ex) // Catch parsing errors or command execution errors
-            {
-                AnsiConsole.MarkupLine($"[red]Error processing chapter command: {ex.Message}[/]");
-                // AnsiConsole.WriteException(ex); // Optionally print full exception for debugging
-            }
-        }
-    }
+    // ChaptersCommandAsync, BuildChapterSubMenuParser, and ChapterSubMenuAsync
+    // have been moved to Scribal.Cli/Features/ChapterManagerService.cs
 
     private async Task PitchCommand(InvocationContext arg)
     {

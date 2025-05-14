@@ -12,7 +12,8 @@ public static class ScribalInterfaceServiceCollectionExtensions
         services.AddSingleton<CommandService>();
         services.AddSingleton<InterfaceManager>();
         services.AddSingleton<PitchService>();
-        services.AddSingleton<ChapterManagerService>(); // Added ChapterManagerService
+        services.AddSingleton<OutlineService>(); // Added OutlineService
+        services.AddSingleton<ChapterManagerService>();
 
         return services;
     }

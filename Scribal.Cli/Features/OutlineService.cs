@@ -10,7 +10,7 @@ using Spectre.Console; // Required for AnsiConsole
 using System.Text;
 using System.Text.Json;
 using Scribal; // Required for JsonSerializer
-using Scribal.Workspace; // Required for WorkspaceManager
+// Scribal.Workspace; // This was the duplicate, removed. WorkspaceManager is covered by the other Scribal.Workspace using.
 
 public class OutlineService(
     IAiChatService chat, 

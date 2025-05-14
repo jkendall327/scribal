@@ -4,3 +4,8 @@ obj/
 riderModule.iml
 /_ReSharper.Caches/
 .aider*
+
+# Scribal workspace files
+.scribal/config.json
+.scribal/state.json
+.scribal/plot_outline.json

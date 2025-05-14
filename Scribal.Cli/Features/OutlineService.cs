@@ -8,7 +8,8 @@ using Scribal.Context;
 using Scribal.Workspace; // Required for StoryOutline and Chapter
 using Spectre.Console; // Required for AnsiConsole
 using System.Text;
-using System.Text.Json; // Required for JsonSerializer
+using System.Text.Json;
+using Scribal; // Required for JsonSerializer
 
 public class OutlineService(IAiChatService chat, PromptRenderer renderer, Kernel kernel, IOptions<AiSettings> options)
 {

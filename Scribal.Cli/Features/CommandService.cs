@@ -4,7 +4,6 @@ using System.CommandLine.Invocation;
 using System.CommandLine.Parsing;
 using System.IO.Abstractions;
 using Scribal.AI;
-using Scribal.Cli.Features; // Added for OutlineService
 using Scribal.Context;
 using Scribal.Workspace;
 using Spectre.Console;

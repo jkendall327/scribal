@@ -5,11 +5,10 @@ using Microsoft.SemanticKernel.ChatCompletion; // Required for ChatHistory
 using Scribal.AI;
 using Scribal.Cli; // Required for ConsoleChatRenderer and ReadLine
 using Scribal.Context;
+using Scribal.Workspace; // Required for StoryOutline and Chapter
 using Spectre.Console; // Required for AnsiConsole
 using System.Text;
-
-namespace Scribal.Cli.Features;
-// Changed namespace to Scribal.Cli.Features
+using System.Text.Json; // Required for JsonSerializer
 
 public class OutlineService(IAiChatService chat, PromptRenderer renderer, Kernel kernel, IOptions<AiSettings> options)
 {
@@ -23,16 +22,27 @@ public class OutlineService(IAiChatService chat, PromptRenderer renderer, Kernel
 
         var sid = options.Value.Primary.Provider;
 
-        var generatedOutline = await GenerateInitialOutline(premise, ct, sid);
+        var generatedOutlineJson = await GenerateInitialOutline(premise, ct, sid);
+
+        StoryOutline? storyOutline;
+        if (!TryParseOutline(generatedOutlineJson, out storyOutline))
+        {
+            AnsiConsole.MarkupLine("[red]Failed to parse the initial outline JSON.[/]");
+            AnsiConsole.MarkupLine("[yellow]Displaying raw output:[/]");
+            AnsiConsole.WriteLine(generatedOutlineJson);
+        }
+        else
+        {
+            DisplayParsedOutline(storyOutline!);
+        }
 
         // Refinement loop.
         var ok = await AnsiConsole.ConfirmAsync("Do you want to refine this plot outline?", cancellationToken: ct);
 
         if (!ok)
         {
-            // Here you might want to save the generatedOutline to a file, e.g., plot_outline.md
             AnsiConsole.MarkupLine("[yellow]Plot outline generation complete. Outline not saved yet.[/]");
-            AnsiConsole.WriteLine(generatedOutline); // Display the final outline if not refining
+            // The outline (parsed or raw) has already been displayed above.
             return;
         }
 
@@ -41,7 +51,7 @@ public class OutlineService(IAiChatService chat, PromptRenderer renderer, Kernel
 
         var sb = new StringBuilder("You are an assistant helping to refine a story plot outline. The current outline is:");
         sb.AppendLine("---");
-        sb.AppendLine(generatedOutline);
+        sb.AppendLine(generatedOutlineJson); // Use the raw JSON for the refinement prompt
         sb.AppendLine("---");
         sb.AppendLine(
             "Focus on improving it based on user feedback. Ensure the chapter breakdown is clear and detailed as per original instructions. Be concise and helpful.");
@@ -49,17 +59,113 @@ public class OutlineService(IAiChatService chat, PromptRenderer renderer, Kernel
         refinementHistory.AddSystemMessage(sb.ToString());
         
         // Add the AI's generated outline as the first assistant message
-        refinementHistory.AddAssistantMessage(generatedOutline); 
+        refinementHistory.AddAssistantMessage(generatedOutlineJson); // Use the raw JSON
 
         AnsiConsole.MarkupLine(
             "Entering plot outline refinement chat. Type [blue]/done[/] when finished or [blue]/cancel[/] to abort.");
 
-        var finalOutline = await RefineOutline(ct, refinementCid, refinementHistory, sid, generatedOutline);
+        var finalOutlineJson = await RefineOutline(ct, refinementCid, refinementHistory, sid, generatedOutlineJson);
 
         AnsiConsole.MarkupLine("[yellow]Plot outline refinement finished.[/]");
-        // Here you might want to save the finalOutline to a file
         AnsiConsole.MarkupLine("[yellow]Final plot outline (not saved yet):[/]");
-        AnsiConsole.WriteLine(finalOutline);
+
+        StoryOutline? finalStoryOutline;
+        if (!TryParseOutline(finalOutlineJson, out finalStoryOutline))
+        {
+            AnsiConsole.MarkupLine("[red]Failed to parse the final refined outline JSON.[/]");
+            AnsiConsole.MarkupLine("[yellow]Displaying raw output:[/]");
+            AnsiConsole.WriteLine(finalOutlineJson);
+        }
+        else
+        {
+            DisplayParsedOutline(finalStoryOutline!);
+        }
+    }
+
+    private bool TryParseOutline(string jsonText, out StoryOutline? outline)
+    {
+        outline = null;
+        if (string.IsNullOrWhiteSpace(jsonText))
+        {
+            AnsiConsole.MarkupLine("[red]Outline JSON is empty.[/]");
+            return false;
+        }
+
+        // Attempt to find the start of the JSON block if it's embedded
+        var jsonStartIndex = jsonText.IndexOf('{');
+        var jsonEndIndex = jsonText.LastIndexOf('}');
+
+        if (jsonStartIndex == -1 || jsonEndIndex == -1 || jsonEndIndex < jsonStartIndex)
+        {
+            AnsiConsole.MarkupLine("[red]Could not find valid JSON structure in the output.[/]");
+            return false;
+        }
+
+        var actualJson = jsonText.Substring(jsonStartIndex, jsonEndIndex - jsonStartIndex + 1);
+
+        try
+        {
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            };
+            outline = JsonSerializer.Deserialize<StoryOutline>(actualJson, options);
+            return outline?.Chapters != null && outline.Chapters.Count > 0;
+        }
+        catch (JsonException ex)
+        {
+            AnsiConsole.MarkupLine($"[red]Error deserializing outline JSON: {ex.Message}[/]");
+            AnsiConsole.MarkupLine($"[dim]Path: {ex.Path}, Line: {ex.LineNumber}, BytePos: {ex.BytePositionInLine}[/]");
+            return false;
+        }
+        catch (Exception ex)
+        {
+            AnsiConsole.MarkupLine($"[red]An unexpected error occurred during JSON parsing: {ex.Message}[/]");
+            return false;
+        }
+    }
+
+    private void DisplayParsedOutline(StoryOutline storyOutline)
+    {
+        AnsiConsole.WriteLine();
+        AnsiConsole.Write(new Rule("[bold cyan]Story Outline[/]").RuleStyle("blue").LeftJustified());
+        
+        if (storyOutline.Chapters == null || !storyOutline.Chapters.Any())
+        {
+            AnsiConsole.MarkupLine("[yellow]No chapters found in the outline.[/]");
+            return;
+        }
+
+        foreach (var chapter in storyOutline.Chapters.OrderBy(c => c.ChapterNumber))
+        {
+            AnsiConsole.WriteLine();
+            var title = $"Chapter {chapter.ChapterNumber}: {Markup.Escape(chapter.Title)}";
+            AnsiConsole.Write(new Rule($"[bold yellow]{title}[/]").RuleStyle("green").LeftJustified());
+
+            AnsiConsole.MarkupLine($"[bold]Summary:[/] {Markup.Escape(chapter.Summary)}");
+
+            if (chapter.Beats != null && chapter.Beats.Any())
+            {
+                AnsiConsole.MarkupLine("[bold]Beats:[/]");
+                foreach (var beat in chapter.Beats)
+                {
+                    AnsiConsole.MarkupLine($"  - {Markup.Escape(beat)}");
+                }
+            }
+
+            if (chapter.EstimatedWordCount.HasValue)
+            {
+                AnsiConsole.MarkupLine($"[bold]Estimated Word Count:[/] {chapter.EstimatedWordCount.Value}");
+            }
+
+            if (chapter.KeyCharacters != null && chapter.KeyCharacters.Any())
+            {
+                AnsiConsole.MarkupLine($"[bold]Key Characters:[/] {Markup.Escape(string.Join(", ", chapter.KeyCharacters))}");
+            }
+        }
+        AnsiConsole.WriteLine();
+        AnsiConsole.Write(new Rule().RuleStyle("blue"));
+        AnsiConsole.WriteLine();
     }
 
     private async Task<string> GenerateInitialOutline(string premise, CancellationToken ct, string sid)
@@ -96,13 +202,12 @@ public class OutlineService(IAiChatService chat, PromptRenderer renderer, Kernel
 
         await ConsoleChatRenderer.StreamWithSpinnerAsync(CollectWhileStreaming(outlineStream, outlineBuilder, ct), ct);
 
-        var generatedOutline = outlineBuilder.ToString().Trim();
+        var generatedOutlineJson = outlineBuilder.ToString().Trim();
 
         AnsiConsole.MarkupLine("[cyan]Initial Plot Outline Generated.[/]");
-        AnsiConsole.WriteLine();
-        AnsiConsole.WriteLine(generatedOutline); // Display the generated outline
-        AnsiConsole.WriteLine();
-        return generatedOutline;
+        // Displaying the outline (parsed or raw) will now be handled by the calling method CreateOutlineFromPremise
+        AnsiConsole.WriteLine(); 
+        return generatedOutlineJson;
     }
 
     private async Task<string> RefineOutline(CancellationToken ct,

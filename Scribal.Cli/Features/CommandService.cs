@@ -154,35 +154,84 @@ public class CommandService(
         }
     }
 
-    private async Task ChapterSubMenuAsync(ChapterState selectedChapter, CancellationToken token)
+    private Parser BuildChapterSubMenuParser(ChapterState chapter, CancellationTokenSource linkedCts)
     {
-        while (!token.IsCancellationRequested)
-        {
-            AnsiConsole.WriteLine();
-            AnsiConsole.MarkupLine($"Managing Chapter {selectedChapter.Number}: [yellow]{Markup.Escape(selectedChapter.Title)}[/] ({selectedChapter.State})");
-
-            var subMenuPrompt = new SelectionPrompt<string>()
-                .Title("Choose an action:")
-                .PageSize(5)
-                .AddChoices("Dummy Action (Does Nothing)", "Back to Chapter Selection")
-                // Future actions: "View Details", "Edit Summary", "Draft Content", "Mark as Done", etc.
-               ;
-
-            var subChoice = AnsiConsole.Prompt(subMenuPrompt);
-
-            if (subChoice == "Back to Chapter Selection" || token.IsCancellationRequested)
+        var dummyCmd = new Command("/dummy", "A dummy action for the chapter.");
+        dummyCmd.SetHandler(async () => {
+            AnsiConsole.MarkupLine($"[grey]Executed dummy action for chapter {chapter.Number}: {Markup.Escape(chapter.Title)}.[/]");
+            // In a real scenario, this would call a service method.
+            try
             {
+                await Task.Delay(100, linkedCts.Token); // Simulate work respecting cancellation
+            }
+            catch (OperationCanceledException)
+            {
+                AnsiConsole.MarkupLine("[yellow]Dummy action cancelled.[/]");
+            }
+        });
+
+        var backCmd = new Command("/back", "Return to chapter selection.");
+        backCmd.SetHandler(() => {
+            AnsiConsole.MarkupLine("[blue]Returning to chapter selection...[/]");
+            linkedCts.Cancel(); // Signal the sub-menu loop to terminate
+        });
+        
+        var chapterRootCommand = new RootCommand($"Actions for Chapter {chapter.Number}: {Markup.Escape(chapter.Title)}")
+        {
+            dummyCmd,
+            backCmd
+            // Future actions: "/details", "/edit-summary", "/draft", "/mark-done", etc.
+        };
+        // Remove default execution if RootCommand directly executes something.
+        // chapterRootCommand.Handler = null; // Ensure root command itself doesn't have a handler unless intended
+
+        return new CommandLineBuilder(chapterRootCommand)
+            .UseDefaults() // Includes help, version, etc.
+            .UseHelp("/help") // Customize help command name
+            .Build();
+    }
+
+    private async Task ChapterSubMenuAsync(ChapterState selectedChapter, CancellationToken parentToken)
+    {
+        using var chapterSubMenuCts = CancellationTokenSource.CreateLinkedTokenSource(parentToken);
+        var chapterSubMenuParser = BuildChapterSubMenuParser(selectedChapter, chapterSubMenuCts);
+
+        while (!chapterSubMenuCts.IsCancellationRequested && !parentToken.IsCancellationRequested)
+        {
+            AnsiConsole.WriteLine(); // For spacing
+            AnsiConsole.MarkupLine($"Managing Chapter {selectedChapter.Number}: [yellow]{Markup.Escape(selectedChapter.Title)}[/] ({selectedChapter.State})");
+            AnsiConsole.MarkupLine("Enter a command for this chapter ([blue]/help[/] for options, [blue]/back[/] to return to chapter list):");
+            AnsiConsole.Markup($"Chapter {selectedChapter.Number} > ");
+            
+            var input = ReadLine.Read(); // Assuming ReadLine.Read() handles basic input reading
+
+            if (parentToken.IsCancellationRequested) // Check parent token before processing
+            {
+                AnsiConsole.MarkupLine("[yellow]Exiting chapter menu due to external cancellation.[/]");
                 break;
             }
 
-            switch (subChoice)
+            if (string.IsNullOrWhiteSpace(input))
             {
-                case "Dummy Action (Does Nothing)":
-                    AnsiConsole.MarkupLine($"[grey]Executed dummy action for chapter {selectedChapter.Number}.[/]");
-                    // In a real scenario, this would call a service method.
-                    await Task.Delay(100, token); // Simulate work
-                    break;
-                // Add cases for other actions here
+                continue;
+            }
+
+            try
+            {
+                // InvokeAsync will use the CancellationToken from chapterSubMenuCts
+                await chapterSubMenuParser.InvokeAsync(input);
+            }
+            catch (OperationCanceledException) when (chapterSubMenuCts.IsCancellationRequested)
+            {
+                // This can happen if /back was called, or if a command itself was cancelled by chapterSubMenuCts.
+                // If it was /back, the loop condition will handle exit.
+                // If it was a command cancelled by this CTS, it's already handled by the command or loop.
+                AnsiConsole.MarkupLine("[yellow](Chapter action cancelled or /back invoked)[/]");
+            }
+            catch (Exception ex) // Catch parsing errors or command execution errors
+            {
+                AnsiConsole.MarkupLine($"[red]Error processing chapter command: {ex.Message}[/]");
+                // AnsiConsole.WriteException(ex); // Optionally print full exception for debugging
             }
         }
     }

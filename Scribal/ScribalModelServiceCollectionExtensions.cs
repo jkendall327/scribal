@@ -22,7 +22,7 @@ public static class ScribalModelServiceCollectionExtensions
         // Register everything that implements IModelProvider.
         var providerTypes = typeof(IModelProvider).Assembly.GetTypes()
             .Where(t => typeof(IModelProvider).IsAssignableFrom(t))
-            .Where(t => t is {IsClass: true, IsAbstract: false});
+            .Where(t => t is { IsClass: true, IsAbstract: false });
 
         foreach (var providerType in providerTypes)
         {
@@ -83,7 +83,7 @@ public static class ScribalModelServiceCollectionExtensions
             {
                 kb.Plugins.AddFromObject(sp.GetRequiredService<VectorSearch>(), nameof(VectorSearch));
             }
-            
+
             kb.Services.AddSingleton<IFunctionInvocationFilter>(sp.GetRequiredService<GitCommitFilter>());
 
             return kb.Build();

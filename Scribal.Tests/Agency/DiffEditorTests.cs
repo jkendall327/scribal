@@ -598,7 +598,7 @@ namespace Scribal.Tests.Agency
             var resultLines = _sut.ApplyUnifiedDiffInner(originalLines, diff);
 
             var final = string.Join(Environment.NewLine, resultLines);
-            
+
             // Assert
             await Verify(final).UseDirectory("Snapshots");
         }

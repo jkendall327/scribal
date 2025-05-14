@@ -20,7 +20,7 @@ public class CommitGenerator(PromptRenderer renderer)
             {
                 ["diffs"] = diffs
             });
-        
+
         var prompt = await renderer.RenderPromptTemplateFromFileAsync(kernel, request);
 
         var response = await chat.GetChatMessageContentAsync(prompt, kernel: kernel, cancellationToken: ct);

@@ -18,7 +18,7 @@ public class MarkdownMapExtractor
         foreach (var block in document.Descendants())
         {
             if (block is not HeadingBlock headingBlock) continue;
-            
+
             var headerText = ExtractTextFromHeading(headingBlock);
 
             headers.Add(new()

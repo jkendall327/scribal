@@ -51,14 +51,14 @@ public sealed class AiChatService(
         var history = await PrepareHistoryAsync(cid, user, ct); // PrepareHistoryAsync adds the user message
 
         var settings = GetSettings(sid);
-        
+
         // Stream response back for the UI.
         var stream = chat
             .GetStreamingChatMessageContentsAsync(history, settings, kernel, ct);
 
         await foreach (var chunk in stream.WithCancellation(ct))
         {
-            if (chunk.Content is {Length: > 0} text)
+            if (chunk.Content is { Length: > 0 } text)
             {
                 yield return new ChatStreamItem.TokenChunk(text);
             }
@@ -67,7 +67,7 @@ public sealed class AiChatService(
         // Collect the full assistant message from streamed chunks.
         var final = await chat
             .GetChatMessageContentAsync(history, settings, kernel, ct);
-        
+
         await UpdateChatHistoryWithAssistantMessage(cid, final, history, ct);
 
         // Use the new MetadataCollector
@@ -90,12 +90,12 @@ public sealed class AiChatService(
         history.AddUserMessage(userMessage);
 
         var settings = GetSettings(sid);
-        
+
         // Stream response back for the UI.
         var stream = chat.GetStreamingChatMessageContentsAsync(history, settings, kernel, ct);
         await foreach (var chunk in stream.WithCancellation(ct))
         {
-            if (chunk.Content is {Length: > 0} text)
+            if (chunk.Content is { Length: > 0 } text)
             {
                 yield return new ChatStreamItem.TokenChunk(text);
             }
@@ -103,7 +103,7 @@ public sealed class AiChatService(
 
         // Collect the full assistant message from streamed chunks.
         var finalAssistantMessageContent = await chat.GetChatMessageContentAsync(history, settings, kernel, ct);
-        
+
         // Update the passed-in ChatHistory object with the assistant's full response
         var assistantMessageText = string.Concat(finalAssistantMessageContent).Trim();
         history.AddAssistantMessage(assistantMessageText); // This modifies the 'history' instance
@@ -115,7 +115,7 @@ public sealed class AiChatService(
         var metadata = metadataCollector.CollectMetadata(sid, start, finalAssistantMessageContent);
         yield return metadata;
     }
-    
+
     private PromptExecutionSettings GetSettings(string sid)
     {
         // Gemini requires special treatment to actually use tools.
@@ -131,7 +131,7 @@ public sealed class AiChatService(
             },
         };
     }
-    
+
     private async Task UpdateChatHistoryWithAssistantMessage(string cid,
         ChatMessageContent final,
         ChatHistory history,

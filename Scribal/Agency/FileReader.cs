@@ -13,7 +13,7 @@ public class FileReader(IFileSystem fileSystem)
         {
             return "[ERROR: the file did not exist.]";
         }
-        
+
         return await fileSystem.File.ReadAllTextAsync(filepath);
     }
 }

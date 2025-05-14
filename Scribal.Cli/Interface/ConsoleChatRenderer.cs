@@ -48,19 +48,19 @@ public static class ConsoleChatRenderer
         {
             case ChatStreamItem.TokenChunk tc: AnsiConsole.Write(tc.Content); break;
             case ChatStreamItem.Metadata md:
-            {
-                AnsiConsole.WriteLine();
-                AnsiConsole.WriteLine();
+                {
+                    AnsiConsole.WriteLine();
+                    AnsiConsole.WriteLine();
 
-                AnsiConsole.Decoration = Decoration.Italic;
+                    AnsiConsole.Decoration = Decoration.Italic;
 
-                var time = FormatTimeSpan(md.Elapsed);
+                    var time = FormatTimeSpan(md.Elapsed);
 
-                AnsiConsole.Write($"{time}, {md.CompletionTokens} output tokens");
+                    AnsiConsole.Write($"{time}, {md.CompletionTokens} output tokens");
 
-                AnsiConsole.ResetDecoration();
-                break;
-            }
+                    AnsiConsole.ResetDecoration();
+                    break;
+                }
         }
     }
 
@@ -72,6 +72,6 @@ public static class ConsoleChatRenderer
             $"{timeSpan.Seconds}s"
             :
             // Display minutes and seconds
-            $"{(int) timeSpan.TotalMinutes}m{timeSpan.Seconds}s";
+            $"{(int)timeSpan.TotalMinutes}m{timeSpan.Seconds}s";
     }
 }

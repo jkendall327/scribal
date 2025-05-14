@@ -123,12 +123,12 @@ public sealed class GitService(
         {
             throw new InvalidOperationException("Couldn't find parent directory to the .git folder.");
         }
-        
+
         var path = fileSystem.Path.Combine(root.FullName, ".gitignore");
 
         if (!config.Value.DryRun)
         {
-            await fileSystem.File.WriteAllTextAsync(path, gitignore); 
+            await fileSystem.File.WriteAllTextAsync(path, gitignore);
         }
     }
 

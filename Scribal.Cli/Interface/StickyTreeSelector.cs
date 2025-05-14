@@ -57,8 +57,7 @@ public class StickyTreeSelector
         }
         catch (UnauthorizedAccessException ex)
         {
-            AnsiConsole.MarkupLine($"[red]Error: Insufficient permissions to access parts of the directory tree. {
-                ex.Message}[/]");
+            AnsiConsole.MarkupLine($"[red]Error: Insufficient permissions to access parts of the directory tree. {ex.Message}[/]");
             return [];
         }
         catch (Exception ex)
@@ -133,18 +132,18 @@ public class StickyTreeSelector
                 break;
 
             case ConsoleKey.RightArrow:
-            {
-                currentNode.IsExpanded = true;
-                needsRedraw = true;
-            }
+                {
+                    currentNode.IsExpanded = true;
+                    needsRedraw = true;
+                }
 
                 break;
 
             case ConsoleKey.LeftArrow:
-            {
-                currentNode.IsExpanded = false;
-                needsRedraw = true;
-            }
+                {
+                    currentNode.IsExpanded = false;
+                    needsRedraw = true;
+                }
                 break;
         }
 

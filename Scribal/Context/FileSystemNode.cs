@@ -16,7 +16,7 @@ public class FileSystemNode
         Path = path;
         IsDirectory = isDirectory;
         Name = System.IO.Path.GetFileName(path);
-        
+
         if (string.IsNullOrEmpty(Name) && isDirectory)
         {
             Name = path;

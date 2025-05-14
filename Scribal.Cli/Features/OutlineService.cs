@@ -13,9 +13,9 @@ using Scribal; // Required for JsonSerializer
 // Scribal.Workspace; // This was the duplicate, removed. WorkspaceManager is covered by the other Scribal.Workspace using.
 
 public class OutlineService(
-    IAiChatService chat, 
-    PromptRenderer renderer, 
-    Kernel kernel, 
+    IAiChatService chat,
+    PromptRenderer renderer,
+    Kernel kernel,
     IOptions<AiSettings> options,
     WorkspaceManager workspaceManager) // Injected WorkspaceManager
 {
@@ -74,7 +74,7 @@ public class OutlineService(
             "Focus on improving it based on user feedback. Ensure the chapter breakdown is clear and detailed as per original instructions. Be concise and helpful.");
 
         refinementHistory.AddSystemMessage(sb.ToString());
-        
+
         // Add the AI's generated outline as the first assistant message
         refinementHistory.AddAssistantMessage(generatedOutlineJson); // Use the raw JSON
 
@@ -103,7 +103,7 @@ public class OutlineService(
 
     // Added PlotOutlineFileName constant for messaging, assuming it's not directly accessible here
     // Alternatively, WorkspaceManager could return the path, or this message could be more generic.
-    private const string PlotOutlineFileName = "plot_outline.json"; 
+    private const string PlotOutlineFileName = "plot_outline.json";
 
     private bool TryParseOutline(string jsonText, out StoryOutline? outline)
     {
@@ -152,7 +152,7 @@ public class OutlineService(
     {
         AnsiConsole.WriteLine();
         AnsiConsole.Write(new Rule("[bold cyan]Story Outline[/]").RuleStyle("blue").LeftJustified());
-        
+
         if (storyOutline.Chapters == null || !storyOutline.Chapters.Any())
         {
             AnsiConsole.MarkupLine("[yellow]No chapters found in the outline.[/]");
@@ -229,7 +229,7 @@ public class OutlineService(
 
         AnsiConsole.MarkupLine("[cyan]Initial Plot Outline Generated.[/]");
         // Displaying the outline (parsed or raw) will now be handled by the calling method CreateOutlineFromPremise
-        AnsiConsole.WriteLine(); 
+        AnsiConsole.WriteLine();
         return generatedOutlineJson;
     }
 

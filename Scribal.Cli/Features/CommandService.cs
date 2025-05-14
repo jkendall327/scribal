@@ -40,7 +40,7 @@ public class CommandService(
         Command Create(string name, string description, Func<InvocationContext, Task> action, string[]? aliases = null)
         {
             var cmd = new Command(name, description);
-            
+
             foreach (var alias in aliases ?? [])
             {
                 cmd.AddAlias(alias);
@@ -55,7 +55,7 @@ public class CommandService(
         var clear = Create("/clear", "Clear conversation history", ClearCommand);
         var tree = Create("/tree", "Set files to be included in context", TreeCommand);
         var init = Create("/init", "Creates a new Scribal workspace in the current folder", InitCommand);
-        
+
         var pitch = Create("/pitch", "Turns an initial story idea into a fleshed-out premise", PitchCommand);
         pitch.AddArgument(_ideaArgument);
 
@@ -63,7 +63,7 @@ public class CommandService(
         outline.AddArgument(_premiseArgument);
 
         var chaptersCmd = Create("/chapters", "Manage chapters in the workspace", _chapterManagerService.ManageChaptersAsync); // Use ChapterManagerService
-        
+
         var root = new RootCommand("Scribal interactive shell")
         {
             init,
@@ -88,7 +88,7 @@ public class CommandService(
             AnsiConsole.MarkupLine("[red]Premise cannot be empty.[/]");
             return;
         }
-        
+
         try
         {
             await outlineService.CreateOutlineFromPremise(premise, token);
@@ -112,7 +112,7 @@ public class CommandService(
             AnsiConsole.MarkupLine("[red]Idea cannot be empty.[/]");
             return;
         }
-        
+
         try
         {
             await pitchService.CreatePremiseFromPitch(idea, token);
@@ -155,7 +155,7 @@ public class CommandService(
     {
         var cwd = fileSystem.Directory.GetCurrentDirectory();
         // Assuming StickyTreeSelector is available and working as intended.
-        var files = StickyTreeSelector.Scan(cwd); 
+        var files = StickyTreeSelector.Scan(cwd);
         repoStore.Paths = files;
         AnsiConsole.MarkupLine($"[green]Context files updated. {files.Count} files/directories selected.[/]");
         return Task.FromResult(true);

@@ -94,7 +94,7 @@ public partial class DiffEditor(IFileSystem fileSystem, IOptions<AppConfig> opti
             }
 
             if (currentHunk == null) continue;
-            
+
             // Add the line to the current hunk
             // Only add lines that are part of the hunk body (context, add, remove)
             // This also implicitly ignores "\ No newline at end of file"
@@ -124,12 +124,9 @@ public partial class DiffEditor(IFileSystem fileSystem, IOptions<AppConfig> opti
             {
                 if (currentPositionInFile >= fileContent.Count || fileContent[currentPositionInFile] != lineData)
                 {
-                    throw new InvalidOperationException($"Context mismatch at line {currentPositionInFile + 1
-                    }. Expected: '{lineData}', Actual: '{
-                        (currentPositionInFile < fileContent.Count
+                    throw new InvalidOperationException($"Context mismatch at line {currentPositionInFile + 1}. Expected: '{lineData}', Actual: '{(currentPositionInFile < fileContent.Count
                             ? fileContent[currentPositionInFile]
-                            : "Out of bounds/End of file")}'. Hunk: @@ -{hunk.OriginalStart},{hunk.OriginalCount} +{
-                            hunk.NewStart},{hunk.NewCount} @@");
+                            : "Out of bounds/End of file")}'. Hunk: @@ -{hunk.OriginalStart},{hunk.OriginalCount} +{hunk.NewStart},{hunk.NewCount} @@");
                 }
 
                 currentPositionInFile++;
@@ -138,12 +135,9 @@ public partial class DiffEditor(IFileSystem fileSystem, IOptions<AppConfig> opti
             {
                 if (currentPositionInFile >= fileContent.Count || fileContent[currentPositionInFile] != lineData)
                 {
-                    throw new InvalidOperationException($"Deletion mismatch at line {currentPositionInFile + 1
-                    }. Expected to delete: '{lineData}', Actual: '{
-                        (currentPositionInFile < fileContent.Count
+                    throw new InvalidOperationException($"Deletion mismatch at line {currentPositionInFile + 1}. Expected to delete: '{lineData}', Actual: '{(currentPositionInFile < fileContent.Count
                             ? fileContent[currentPositionInFile]
-                            : "Out of bounds/End of file")}'. Hunk: @@ -{hunk.OriginalStart},{hunk.OriginalCount} +{
-                            hunk.NewStart},{hunk.NewCount} @@");
+                            : "Out of bounds/End of file")}'. Hunk: @@ -{hunk.OriginalStart},{hunk.OriginalCount} +{hunk.NewStart},{hunk.NewCount} @@");
                 }
 
                 fileContent.RemoveAt(currentPositionInFile);
@@ -154,9 +148,7 @@ public partial class DiffEditor(IFileSystem fileSystem, IOptions<AppConfig> opti
                 // Ensure insertion happens within valid bounds (at Count is okay for end-of-list)
                 if (currentPositionInFile > fileContent.Count)
                 {
-                    throw new InvalidOperationException($"Attempting to insert line at an invalid position {
-                        currentPositionInFile} (file size {fileContent.Count}). Hunk: @@ -{hunk.OriginalStart},{
-                            hunk.OriginalCount} +{hunk.NewStart},{hunk.NewCount} @@");
+                    throw new InvalidOperationException($"Attempting to insert line at an invalid position {currentPositionInFile} (file size {fileContent.Count}). Hunk: @@ -{hunk.OriginalStart},{hunk.OriginalCount} +{hunk.NewStart},{hunk.NewCount} @@");
                 }
 
                 fileContent.Insert(currentPositionInFile, lineData);

@@ -10,9 +10,9 @@ namespace Scribal.Workspace;
 public record WorkspaceCreation(bool Created, bool GitRepoInitialised);
 
 public class WorkspaceManager(
-    IFileSystem fileSystem, 
-    IGitService git, 
-    IUserInteraction interaction, 
+    IFileSystem fileSystem,
+    IGitService git,
+    IUserInteraction interaction,
     IOptions<AppConfig> options,
     ILogger<WorkspaceManager> logger)
 {
@@ -22,7 +22,7 @@ public class WorkspaceManager(
     private const string PlotOutlineFileName = "plot_outline.json";
 
     public bool InWorkspace => _workspace is not null;
-    
+
     private IDirectoryInfo? _workspace;
 
     public async Task<WorkspaceCreation> InitialiseWorkspace()
@@ -34,7 +34,7 @@ public class WorkspaceManager(
         }
 
         var dry = options.Value.DryRun;
-        
+
         var cwd = fileSystem.Directory.GetCurrentDirectory();
         logger.LogInformation("Initializing workspace in {CurrentDirectory}", cwd);
 
@@ -55,13 +55,13 @@ public class WorkspaceManager(
         var state = new WorkspaceState();
         // State file path should be inside the workspace directory
         // var statePath = fileSystem.Path.Join(workspace.FullName, StateFileName); // Not directly used, SaveWorkspaceStateAsync handles path
-        
+
         if (!dry)
         {
             logger.LogDebug("Writing workspace config to {ConfigPath}", configPath);
             var jsonConfig = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
             await fileSystem.File.WriteAllTextAsync(configPath, jsonConfig);
-            
+
             // Use SaveWorkspaceStateAsync to ensure consistency and save to the correct location
             await SaveWorkspaceStateAsync(state, workspace.FullName);
         }
@@ -108,7 +108,7 @@ public class WorkspaceManager(
         // CreateGitIgnore expects the content of the .gitignore file.
         // It will create/update .gitignore in the root of the repository (cwd).
         await git.CreateGitIgnore(gitignoreContent);
-        
+
         logger.LogInformation("Git repository successfully initialized");
         return true;
     }
@@ -146,13 +146,13 @@ public class WorkspaceManager(
         }
 
         var path = fileSystem.Path.Combine(dir, ConfigFileName);
-        
+
         if (fileSystem.File.Exists(path))
         {
             logger?.LogDebug("Found workspace config at {ConfigPath}", path);
             return path;
         }
-        
+
         logger?.LogDebug("Workspace config not found at {ConfigPath}", path);
         return null;
     }
@@ -186,7 +186,7 @@ public class WorkspaceManager(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to load or deserialize workspace state from {StateFilePath}", stateFilePath);
-            return null; 
+            return null;
         }
     }
 
@@ -201,7 +201,7 @@ public class WorkspaceManager(
             logger.LogError("Cannot save workspace state, workspace directory not found or not initialized.");
             return;
         }
-        
+
         if (!fileSystem.Directory.Exists(workspacePath))
         {
             logger.LogDebug("Workspace directory {WorkspacePath} does not exist. Creating it.", workspacePath);
@@ -240,18 +240,18 @@ public class WorkspaceManager(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to save plot outline to {PlotOutlineFilePath}", plotOutlineFilePath);
-            return; 
+            return;
         }
 
         var state = await LoadWorkspaceStateAsync(workspacePath) ?? new WorkspaceState();
 
         state.Premise = premise;
-        state.PlotOutlineFile = PlotOutlineFileName; 
+        state.PlotOutlineFile = PlotOutlineFileName;
         state.Chapters = outline.Chapters.Select(c => new ChapterState
         {
             Number = c.ChapterNumber,
             Title = c.Title,
-            State = ChapterStateType.Unstarted 
+            State = ChapterStateType.Unstarted
         }).ToList();
 
         await SaveWorkspaceStateAsync(state, workspacePath);

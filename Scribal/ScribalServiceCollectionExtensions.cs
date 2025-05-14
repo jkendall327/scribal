@@ -17,7 +17,7 @@ public static class ScribalServiceCollectionExtensions
         TimeProvider time)
     {
         services.Configure<AppConfig>(config.GetSection("AppConfig"));
-        
+
         // Infrastructure
         services.AddSingleton(fileSystem);
         services.AddSingleton(time);
@@ -37,7 +37,7 @@ public static class ScribalServiceCollectionExtensions
         services.AddSingleton<PromptBuilder>();
         services.AddSingleton<IDocumentScanService, DocumentScanService>();
         services.AddSingleton<MarkdownIngestor>();
-        
+
         // Workspace
         services.AddSingleton<WorkspaceManager>();
 

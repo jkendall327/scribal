@@ -61,7 +61,7 @@ public class DocumentScanService(IFileSystem fileSystem) : IDocumentScanService
     private async Task<DirectoryNode> BuildDirectoryTreeAsync(IDirectoryInfo currentDirectory, IDirectoryInfo rootDirectory)
     {
         var directoryNode = new DirectoryNode(currentDirectory.FullName, fileSystem);
-        
+
         // Process all markdown files in the current directory
         var markdownFiles = currentDirectory.GetFiles()
             .Where(file =>
@@ -71,9 +71,9 @@ public class DocumentScanService(IFileSystem fileSystem) : IDocumentScanService
                 {
                     return false;
                 }
-                
+
                 var extension = fileSystem.Path.GetExtension(file.FullName).ToLowerInvariant();
-                
+
                 return _markdownExtensions.Contains(extension);
             })
             .ToList();
@@ -88,7 +88,7 @@ public class DocumentScanService(IFileSystem fileSystem) : IDocumentScanService
         var subdirectories = currentDirectory
             .GetDirectories()
             .Where(d => !d.Name.StartsWith('.'));
-        
+
         foreach (var subdirectory in subdirectories)
         {
             var subdirectoryNode = await BuildDirectoryTreeAsync(subdirectory, rootDirectory);
@@ -102,9 +102,9 @@ public class DocumentScanService(IFileSystem fileSystem) : IDocumentScanService
     {
         var content = await fileSystem.File.ReadAllTextAsync(file.FullName);
         var headers = MarkdownMapExtractor.ExtractHeaders(content);
-        
+
         var relativePath = fileSystem.Path.GetRelativePath(rootDirectory.FullName, file.FullName);
-        
+
         return new DocumentInfo
         {
             FilePath = file.FullName,

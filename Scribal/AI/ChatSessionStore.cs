@@ -25,7 +25,7 @@ public sealed class InMemoryChatSessionStore : IChatSessionStore
         _store[id] = h;
         return Task.CompletedTask;
     }
-    
+
     public bool TryClearConversation(string key)
     {
         return _store.TryRemove(key, out var _);

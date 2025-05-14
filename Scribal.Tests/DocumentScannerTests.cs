@@ -43,14 +43,14 @@ public class DocumentScannerTests
             { "/project/assets/style.css", new("body { font-family: Arial; }") },
             { "/project/assets/script.js", new("console.log('Hello world');") },
         });
-        
+
         var sut = new DocumentScanService(filesystem);
 
         var projectDir = filesystem.DirectoryInfo.New("/project");
-        
+
         // Act
         var result = await sut.ScanDirectoryForMarkdownAsync(projectDir);
-        
+
         // Assert
         await Verify(result)
             .UseDirectory("Snapshots")

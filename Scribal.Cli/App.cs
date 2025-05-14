@@ -13,7 +13,7 @@ public static class App
     {
         var filesystem = app.Services.GetRequiredService<IFileSystem>();
         var cwd = filesystem.DirectoryInfo.New(filesystem.Directory.GetCurrentDirectory());
-        
+
         var ingestor = app.Services.GetRequiredService<MarkdownIngestor>();
 
         var config = app.Services.GetRequiredService<IOptions<AppConfig>>();

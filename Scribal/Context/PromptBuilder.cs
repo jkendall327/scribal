@@ -87,7 +87,7 @@ public class PromptBuilder(
 
             // Get character files
             var characterFiles = await GetCharacterFilesAsync(directory);
-            
+
             var kernelArgs = new KernelArguments
             {
                 {
@@ -147,7 +147,7 @@ public class PromptBuilder(
                 {
                     continue;
                 }
-                
+
                 var headerIndent = new string(' ', depth * 2 + 4 + header.Level - 1);
                 sb.AppendLine($"{headerIndent}• {header.Text}");
             }
@@ -192,14 +192,14 @@ public class PromptBuilder(
         foreach (var specialFile in _specialFiles)
         {
             var filePath = fileSystem.Path.Combine(directory.FullName, specialFile.Key);
-            
+
             if (!fileSystem.File.Exists(filePath))
             {
                 continue;
             }
 
             var fileContent = await fileSystem.File.ReadAllTextAsync(filePath);
-            
+
             result.Add(new()
             {
                 Title = specialFile.Value,
@@ -216,7 +216,7 @@ public class PromptBuilder(
 
         // Check for Characters directory
         var charactersDirectoryPath = fileSystem.Path.Combine(directory.FullName, "Characters");
-        
+
         if (!fileSystem.Directory.Exists(charactersDirectoryPath))
         {
             return result;

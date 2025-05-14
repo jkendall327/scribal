@@ -98,8 +98,7 @@ public class ChapterManagerService
         var dummyCmd = new Command("/dummy", "A dummy action for the chapter.");
         dummyCmd.SetHandler(async () =>
         {
-            AnsiConsole.MarkupLine($"[grey]Executed dummy action for chapter {chapter.Number}: {
-                Markup.Escape(chapter.Title)}.[/]");
+            AnsiConsole.MarkupLine($"[grey]Executed dummy action for chapter {chapter.Number}: {Markup.Escape(chapter.Title)}.[/]");
             try
             {
                 await Task.Delay(100, linkedCts.Token);
@@ -139,8 +138,7 @@ public class ChapterManagerService
         while (!chapterSubMenuCts.IsCancellationRequested && !parentToken.IsCancellationRequested)
         {
             AnsiConsole.WriteLine();
-            AnsiConsole.MarkupLine($"Managing Chapter {selectedChapter.Number}: [yellow]{
-                Markup.Escape(selectedChapter.Title)}[/] ({selectedChapter.State})");
+            AnsiConsole.MarkupLine($"Managing Chapter {selectedChapter.Number}: [yellow]{Markup.Escape(selectedChapter.Title)}[/] ({selectedChapter.State})");
             AnsiConsole.MarkupLine(
                 "Enter a command for this chapter ([blue]/help[/] for options, [blue]/back[/] to return to chapter list):");
             AnsiConsole.Markup($"Chapter {selectedChapter.Number} > ");
@@ -175,8 +173,7 @@ public class ChapterManagerService
 
     private async Task DeleteChapterAsync(ChapterState chapterToDelete, CancellationTokenSource subMenuCts)
     {
-        var confirmPrompt = $"Are you sure you want to delete Chapter {chapterToDelete.Number}: '{
-            Markup.Escape(chapterToDelete.Title)}'? This action cannot be undone.";
+        var confirmPrompt = $"Are you sure you want to delete Chapter {chapterToDelete.Number}: '{Markup.Escape(chapterToDelete.Title)}'? This action cannot be undone.";
         if (!await _userInteraction.ConfirmAsync(confirmPrompt))
         {
             AnsiConsole.MarkupLine("[yellow]Chapter deletion cancelled.[/]");

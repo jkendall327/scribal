@@ -72,7 +72,7 @@ public class MetadataCollector(TimeProvider timeProvider, ILogger<MetadataCollec
             sid,
             promptTokens,
             completionTokens);
-        
+
         return true;
     }
 

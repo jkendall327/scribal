@@ -26,9 +26,9 @@ public sealed class GitCommitFilter(
         {
             return;
         }
-        
+
         // Was it the edit-file tool?
-        if (ctx.Function is {PluginName: nameof(DiffEditor), Name: DiffEditor.DiffEditorToolName})
+        if (ctx.Function is { PluginName: nameof(DiffEditor), Name: DiffEditor.DiffEditorToolName })
         {
             logger.LogInformation("Creating commit after diff editor tool invocation");
 

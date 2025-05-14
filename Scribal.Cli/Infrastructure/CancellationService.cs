@@ -13,7 +13,7 @@ public sealed class CancellationService : IDisposable
     {
         // Keep app alive.
         e.Cancel = true;
-        
+
         Source.Cancel();
         Source = new();
     }

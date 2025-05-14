@@ -157,7 +157,8 @@ public class WorkspaceManager(
         return null;
     }
 
-    public async Task<WorkspaceState?> LoadWorkspaceStateAsync(string? workspacePath = null)
+    public async Task<WorkspaceState?> LoadWorkspaceStateAsync(string? workspacePath = null,
+        CancellationToken cancellationToken = default)
     {
         workspacePath ??= _workspace?.FullName ?? TryFindWorkspaceFolder(fileSystem, logger);
 
@@ -177,7 +178,7 @@ public class WorkspaceManager(
 
         try
         {
-            var json = await fileSystem.File.ReadAllTextAsync(stateFilePath);
+            var json = await fileSystem.File.ReadAllTextAsync(stateFilePath, cancellationToken);
             var state = JsonSerializer.Deserialize<WorkspaceState>(json);
             logger.LogInformation("Workspace state loaded from {StateFilePath}", stateFilePath);
             return state;
@@ -189,7 +190,9 @@ public class WorkspaceManager(
         }
     }
 
-    public async Task SaveWorkspaceStateAsync(WorkspaceState state, string? workspacePath = null)
+    public async Task SaveWorkspaceStateAsync(WorkspaceState state,
+        string? workspacePath = null,
+        CancellationToken cancellationToken = default)
     {
         workspacePath ??= _workspace?.FullName ?? TryFindWorkspaceFolder(fileSystem, logger);
 
@@ -209,7 +212,7 @@ public class WorkspaceManager(
         try
         {
             var json = JsonSerializer.Serialize(state, new JsonSerializerOptions { WriteIndented = true });
-            await fileSystem.File.WriteAllTextAsync(stateFilePath, json);
+            await fileSystem.File.WriteAllTextAsync(stateFilePath, json, cancellationToken);
             logger.LogInformation("Workspace state saved to {StateFilePath}", stateFilePath);
         }
         catch (Exception ex)

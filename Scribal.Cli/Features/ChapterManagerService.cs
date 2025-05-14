@@ -19,18 +19,19 @@ public class ChapterManagerService
     private readonly WorkspaceManager _workspaceManager;
     private readonly IUserInteraction _userInteraction;
     private readonly ILogger<ChapterManagerService> _logger;
-    private const string PlotOutlineFileName = "plot_outline.json"; // From WorkspaceManager
-    private const string ChaptersDirectoryName = "chapters";
+    private readonly IChapterDeletionService _chapterDeletionService; // Added
 
     public ChapterManagerService(IFileSystem fileSystem,
         WorkspaceManager workspaceManager,
         IUserInteraction userInteraction,
-        ILogger<ChapterManagerService> logger)
+        ILogger<ChapterManagerService> logger,
+        IChapterDeletionService chapterDeletionService) // Added
     {
         _fileSystem = fileSystem;
         _workspaceManager = workspaceManager;
         _userInteraction = userInteraction;
         _logger = logger;
+        _chapterDeletionService = chapterDeletionService; // Added
     }
 
     public async Task ManageChaptersAsync(InvocationContext context)
@@ -182,157 +183,33 @@ public class ChapterManagerService
             return;
         }
 
-        _logger.LogInformation("Attempting to delete Chapter {ChapterNumber}: {ChapterTitle}",
-            chapterToDelete.Number,
-            chapterToDelete.Title);
+        var deletionResult = await _chapterDeletionService.DeleteChapterAsync(chapterToDelete, subMenuCts.Token);
 
-        var workspaceDir = WorkspaceManager.TryFindWorkspaceFolder(_fileSystem, _logger);
-        if (string.IsNullOrEmpty(workspaceDir))
+        foreach (var error in deletionResult.Errors)
         {
-            AnsiConsole.MarkupLine("[red]Could not find workspace directory. Cannot delete chapter.[/]");
-            _logger.LogError("Workspace directory not found, aborting chapter deletion.");
-            return;
+            AnsiConsole.MarkupLine($"[red]{Markup.Escape(error)}[/]");
+        }
+        foreach (var warning in deletionResult.Warnings)
+        {
+            AnsiConsole.MarkupLine($"[yellow]{Markup.Escape(warning)}[/]");
+        }
+        foreach (var action in deletionResult.ActionsTaken)
+        {
+            AnsiConsole.MarkupLine($"[green]{Markup.Escape(action)}[/]");
         }
 
-        var projectRootDir = _fileSystem.DirectoryInfo.New(workspaceDir).Parent?.FullName;
-        if (string.IsNullOrEmpty(projectRootDir))
+        if (deletionResult.Success)
         {
-            AnsiConsole.MarkupLine("[red]Could not determine project root directory. Cannot delete chapter.[/]");
-            _logger.LogError("Project root directory not found, aborting chapter deletion.");
-            return;
-        }
-
-        var mainChaptersDirPath = _fileSystem.Path.Join(projectRootDir, ChaptersDirectoryName);
-        var plotOutlineFilePath = _fileSystem.Path.Join(workspaceDir, PlotOutlineFileName);
-
-        try
-        {
-            // 1. Delete chapter subfolder
-            var chapterDirName = $"chapter_{chapterToDelete.Number:D2}";
-            var chapterDirPath = _fileSystem.Path.Join(mainChaptersDirPath, chapterDirName);
-            if (_fileSystem.Directory.Exists(chapterDirPath))
-            {
-                _fileSystem.Directory.Delete(chapterDirPath, recursive: true);
-                _logger.LogInformation("Deleted chapter directory: {ChapterDirectoryPath}", chapterDirPath);
-                AnsiConsole.MarkupLine($"[green]Deleted directory: {chapterDirPath}[/]");
-            }
-            else
-            {
-                _logger.LogWarning("Chapter directory not found, skipping deletion: {ChapterDirectoryPath}",
-                    chapterDirPath);
-                AnsiConsole.MarkupLine($"[yellow]Directory not found, skipped deletion: {chapterDirPath}[/]");
-            }
-
-            // 2. Update StoryOutline
-            StoryOutline? storyOutline = null;
-            if (_fileSystem.File.Exists(plotOutlineFilePath))
-            {
-                var outlineJson = await _fileSystem.File.ReadAllTextAsync(plotOutlineFilePath);
-                storyOutline = JsonSerializer.Deserialize<StoryOutline>(outlineJson,
-                    new JsonSerializerOptions
-                    {
-                        PropertyNameCaseInsensitive = true
-                    });
-            }
-
-            if (storyOutline?.Chapters == null)
-            {
-                storyOutline = new StoryOutline(); // Should not happen if chapters exist, but good for safety
-                _logger.LogWarning("Plot outline file was missing or empty. Initializing new one.");
-            }
-
-            var chapterToRemoveFromOutline =
-                storyOutline.Chapters.FirstOrDefault(c => c.ChapterNumber == chapterToDelete.Number);
-            List<(int OriginalNumber, Chapter ChapterRef)> originalChapterMap = [];
-
-            if (chapterToRemoveFromOutline != null)
-            {
-                storyOutline.Chapters.Remove(chapterToRemoveFromOutline);
-                _logger.LogInformation("Removed chapter {ChapterNumber} from StoryOutline object.",
-                    chapterToDelete.Number);
-            }
-
-            // Re-number chapters in StoryOutline and store original numbers for folder renaming
-            var newChapterNumber = 1;
-            foreach (var ch in
-                     storyOutline.Chapters.OrderBy(c => c.ChapterNumber)) // Order by old numbers before re-assigning
-            {
-                originalChapterMap.Add((ch.ChapterNumber, ch)); // Store old number before it's changed
-                ch.ChapterNumber = newChapterNumber++;
-            }
-
-            var updatedOutlineJson = JsonSerializer.Serialize(storyOutline,
-                new JsonSerializerOptions
-                {
-                    WriteIndented = true
-                });
-            await _fileSystem.File.WriteAllTextAsync(plotOutlineFilePath, updatedOutlineJson);
-            _logger.LogInformation("Updated and saved plot_outline.json.");
-            AnsiConsole.MarkupLine("[green]Plot outline updated.[/]");
-
-            // 3. Update WorkspaceState
-            var workspaceState = await _workspaceManager.LoadWorkspaceStateAsync(workspaceDir) ?? new WorkspaceState();
-            var chapterToRemoveFromState =
-                workspaceState.Chapters.FirstOrDefault(cs => cs.Number == chapterToDelete.Number);
-            if (chapterToRemoveFromState != null)
-            {
-                workspaceState.Chapters.Remove(chapterToRemoveFromState);
-                _logger.LogInformation("Removed chapter {ChapterNumber} from WorkspaceState object.",
-                    chapterToDelete.Number);
-            }
-
-            newChapterNumber = 1;
-            foreach (var cs in workspaceState.Chapters.OrderBy(c => c.Number)) // Order by old numbers
-            {
-                cs.Number = newChapterNumber++;
-            }
-
-            await _workspaceManager.SaveWorkspaceStateAsync(workspaceState, workspaceDir);
-            _logger.LogInformation("Updated and saved workspace state.");
-            AnsiConsole.MarkupLine("[green]Workspace state updated.[/]");
-
-            // 4. Rename remaining chapter subfolders (in reverse order of their new numbers)
-            // Use the originalChapterMap which contains chapters that *remained* and their *original* numbers
-            // And their references now have *new* numbers.
-            foreach (var (originalNum, chapterRef) in originalChapterMap.OrderByDescending(m =>
-                         m.ChapterRef.ChapterNumber))
-            {
-                var currentChapterNewNumber = chapterRef.ChapterNumber; // This is the new, re-ordered number
-
-                if (originalNum != currentChapterNewNumber)
-                {
-                    var oldDirName = $"chapter_{originalNum:D2}";
-                    var newDirName = $"chapter_{currentChapterNewNumber:D2}";
-                    var oldPath = _fileSystem.Path.Join(mainChaptersDirPath, oldDirName);
-                    var newPath = _fileSystem.Path.Join(mainChaptersDirPath, newDirName);
-
-                    if (_fileSystem.Directory.Exists(oldPath) && oldPath != newPath)
-                    {
-                        _logger.LogInformation("Renaming chapter directory from {OldPath} to {NewPath}",
-                            oldPath,
-                            newPath);
-                        _fileSystem.Directory.Move(oldPath, newPath);
-                        AnsiConsole.MarkupLine($"[green]Renamed directory: {Markup.Escape(oldDirName)} -> {
-                            Markup.Escape(newDirName)}[/]");
-                    }
-                    else if (!_fileSystem.Directory.Exists(oldPath))
-                    {
-                        _logger.LogWarning("Expected old chapter directory {OldPath} not found for renaming.", oldPath);
-                    }
-                }
-            }
-
-            AnsiConsole.MarkupLine("[green]Chapter directories re-organized.[/]");
-
-            AnsiConsole.MarkupLine($"[bold green]Chapter {chapterToDelete.Number}: '{
-                Markup.Escape(chapterToDelete.Title)}' successfully deleted and workspace updated.[/]");
+            AnsiConsole.MarkupLine($"[bold green]{Markup.Escape(deletionResult.OverallMessage ?? "Chapter deleted successfully.")}[/]");
             subMenuCts.Cancel(); // Exit the current chapter's sub-menu
         }
-        catch (Exception ex)
+        else
         {
-            _logger.LogError(ex, "Failed to delete chapter {ChapterNumber}", chapterToDelete.Number);
-            AnsiConsole.MarkupLine($"[red]An error occurred while deleting the chapter: {ex.Message}[/]");
-            AnsiConsole.WriteException(ex);
+            AnsiConsole.MarkupLine($"[bold red]{Markup.Escape(deletionResult.OverallMessage ?? "Chapter deletion failed.")}[/]");
+            if (deletionResult.Exception != null && !(deletionResult.Exception is OperationCanceledException))
+            {
+                AnsiConsole.WriteException(deletionResult.Exception);
+            }
         }
     }
 }

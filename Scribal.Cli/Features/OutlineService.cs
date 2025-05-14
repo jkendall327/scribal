@@ -10,9 +10,17 @@ using Spectre.Console; // Required for AnsiConsole
 using System.Text;
 using System.Text.Json;
 using Scribal; // Required for JsonSerializer
+using Scribal.Workspace; // Required for WorkspaceManager
 
-public class OutlineService(IAiChatService chat, PromptRenderer renderer, Kernel kernel, IOptions<AiSettings> options)
+public class OutlineService(
+    IAiChatService chat, 
+    PromptRenderer renderer, 
+    Kernel kernel, 
+    IOptions<AiSettings> options,
+    WorkspaceManager workspaceManager) // Injected WorkspaceManager
 {
+    private readonly WorkspaceManager _workspaceManager = workspaceManager;
+
     public async Task CreateOutlineFromPremise(string premise, CancellationToken ct = default)
     {
         if (options.Value.Primary is null)
@@ -42,8 +50,16 @@ public class OutlineService(IAiChatService chat, PromptRenderer renderer, Kernel
 
         if (!ok)
         {
-            AnsiConsole.MarkupLine("[yellow]Plot outline generation complete. Outline not saved yet.[/]");
-            // The outline (parsed or raw) has already been displayed above.
+            AnsiConsole.MarkupLine("[yellow]Plot outline generation complete.[/]");
+            if (storyOutline != null)
+            {
+                await _workspaceManager.SavePlotOutlineAsync(storyOutline, premise);
+                AnsiConsole.MarkupLine($"[green]Initial plot outline saved to workspace: .scribal/{PlotOutlineFileName}[/]");
+            }
+            else
+            {
+                AnsiConsole.MarkupLine("[yellow]Initial plot outline was not parsed successfully and therefore not saved.[/]");
+            }
             return;
         }
 
@@ -80,8 +96,14 @@ public class OutlineService(IAiChatService chat, PromptRenderer renderer, Kernel
         else
         {
             DisplayParsedOutline(finalStoryOutline!);
+            await _workspaceManager.SavePlotOutlineAsync(finalStoryOutline!, premise);
+            AnsiConsole.MarkupLine($"[green]Final plot outline saved to workspace: .scribal/{PlotOutlineFileName}[/]");
         }
     }
+
+    // Added PlotOutlineFileName constant for messaging, assuming it's not directly accessible here
+    // Alternatively, WorkspaceManager could return the path, or this message could be more generic.
+    private const string PlotOutlineFileName = "plot_outline.json"; 
 
     private bool TryParseOutline(string jsonText, out StoryOutline? outline)
     {

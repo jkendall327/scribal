@@ -18,7 +18,8 @@ public class WorkspaceManager(
 {
     private const string WorkspaceDirectoryName = ".scribal";
     private const string ConfigFileName = "config.json";
-    private const string StateFileName = "state.json";
+    private const string StateFileName = "state.json"; // As per plans.md, this could be project_state.json, sticking to current code
+    private const string PlotOutlineFileName = "plot_outline.json";
 
     public bool InWorkspace => _workspace is not null;
     
@@ -48,20 +49,21 @@ public class WorkspaceManager(
         }
 
         var config = new WorkspaceConfig();
-        var json = JsonSerializer.Serialize(config);
-        var configPath = fileSystem.Path.Join(cwd, ConfigFileName);
+        // Config file path should be inside the workspace directory
+        var configPath = fileSystem.Path.Join(workspace.FullName, ConfigFileName);
 
         var state = new WorkspaceState();
-        var statePath = fileSystem.Path.Join(cwd, StateFileName);
-        var stateJson = JsonSerializer.Serialize(state);
+        // State file path should be inside the workspace directory
+        // var statePath = fileSystem.Path.Join(workspace.FullName, StateFileName); // Not directly used, SaveWorkspaceStateAsync handles path
         
         if (!dry)
         {
             logger.LogDebug("Writing workspace config to {ConfigPath}", configPath);
-            await fileSystem.File.WriteAllTextAsync(configPath, json);
+            var jsonConfig = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
+            await fileSystem.File.WriteAllTextAsync(configPath, jsonConfig);
             
-            logger.LogDebug("Writing workspace state to {StatePath}", statePath);
-            await fileSystem.File.WriteAllTextAsync(statePath, stateJson);
+            // Use SaveWorkspaceStateAsync to ensure consistency and save to the correct location
+            await SaveWorkspaceStateAsync(state, workspace.FullName);
         }
 
         var repoInitialised = await TryInitialiseGitRepo(dry, cwd);
@@ -93,11 +95,19 @@ public class WorkspaceManager(
             git.CreateRepository(cwd);
         }
 
-        // Might want to add more stuff to this later.
-        var gitignore = ConfigFileName;
+        // .gitignore should ignore the config and state files within .scribal directory
+        var gitignoreBuilder = new StringBuilder();
+        // Paths in .gitignore are relative to the .gitignore file itself (which is in cwd)
+        gitignoreBuilder.AppendLine($"{WorkspaceDirectoryName}/{ConfigFileName}");
+        gitignoreBuilder.AppendLine($"{WorkspaceDirectoryName}/{StateFileName}");
+        gitignoreBuilder.AppendLine($"{WorkspaceDirectoryName}/{PlotOutlineFileName}");
+        // Potentially add other patterns to .gitignore later e.g. .scribal/vectors/
 
-        logger.LogDebug("Creating .gitignore file with {Content}", gitignore);
-        await git.CreateGitIgnore(gitignore);
+        var gitignoreContent = gitignoreBuilder.ToString();
+        logger.LogDebug("Creating .gitignore file in {Directory} with content:\n{Content}", cwd, gitignoreContent);
+        // CreateGitIgnore expects the content of the .gitignore file.
+        // It will create/update .gitignore in the root of the repository (cwd).
+        await git.CreateGitIgnore(gitignoreContent);
         
         logger.LogInformation("Git repository successfully initialized");
         return true;
@@ -136,8 +146,111 @@ public class WorkspaceManager(
         }
 
         var path = fileSystem.Path.Combine(dir, ConfigFileName);
-        logger?.LogDebug("Found workspace config at {ConfigPath}", path);
+        
+        if (fileSystem.File.Exists(path))
+        {
+            logger?.LogDebug("Found workspace config at {ConfigPath}", path);
+            return path;
+        }
+        
+        logger?.LogDebug("Workspace config not found at {ConfigPath}", path);
+        return null;
+    }
 
-        return path;
+    public async Task<WorkspaceState?> LoadWorkspaceStateAsync(string? workspacePath = null)
+    {
+        workspacePath ??= _workspace?.FullName ?? TryFindWorkspaceFolder(fileSystem, logger);
+
+        if (string.IsNullOrEmpty(workspacePath))
+        {
+            logger.LogWarning("Cannot load workspace state, workspace directory not found.");
+            return null;
+        }
+
+        var stateFilePath = fileSystem.Path.Join(workspacePath, StateFileName);
+
+        if (!fileSystem.File.Exists(stateFilePath))
+        {
+            logger.LogDebug("Workspace state file not found at {StateFilePath}. Returning new state.", stateFilePath);
+            return new WorkspaceState(); // Return a new empty state if file doesn't exist
+        }
+
+        try
+        {
+            var json = await fileSystem.File.ReadAllTextAsync(stateFilePath);
+            var state = JsonSerializer.Deserialize<WorkspaceState>(json);
+            logger.LogInformation("Workspace state loaded from {StateFilePath}", stateFilePath);
+            return state;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to load or deserialize workspace state from {StateFilePath}", stateFilePath);
+            return null; 
+        }
+    }
+
+    public async Task SaveWorkspaceStateAsync(WorkspaceState state, string? workspacePath = null)
+    {
+        workspacePath ??= _workspace?.FullName ?? TryFindWorkspaceFolder(fileSystem, logger);
+
+        if (string.IsNullOrEmpty(workspacePath))
+        {
+            logger.LogError("Cannot save workspace state, workspace directory not found or not initialized.");
+            return;
+        }
+        
+        if (!fileSystem.Directory.Exists(workspacePath))
+        {
+            logger.LogDebug("Workspace directory {WorkspacePath} does not exist. Creating it.", workspacePath);
+            fileSystem.Directory.CreateDirectory(workspacePath);
+        }
+
+        var stateFilePath = fileSystem.Path.Join(workspacePath, StateFileName);
+        try
+        {
+            var json = JsonSerializer.Serialize(state, new JsonSerializerOptions { WriteIndented = true });
+            await fileSystem.File.WriteAllTextAsync(stateFilePath, json);
+            logger.LogInformation("Workspace state saved to {StateFilePath}", stateFilePath);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to save workspace state to {StateFilePath}", stateFilePath);
+        }
+    }
+
+    public async Task SavePlotOutlineAsync(StoryOutline outline, string premise)
+    {
+        var workspacePath = _workspace?.FullName ?? TryFindWorkspaceFolder(fileSystem, logger);
+        if (string.IsNullOrEmpty(workspacePath))
+        {
+            logger.LogError("Cannot save plot outline, workspace directory not found or not initialized.");
+            return;
+        }
+
+        var plotOutlineFilePath = fileSystem.Path.Join(workspacePath, PlotOutlineFileName);
+        try
+        {
+            var outlineJson = JsonSerializer.Serialize(outline, new JsonSerializerOptions { WriteIndented = true });
+            await fileSystem.File.WriteAllTextAsync(plotOutlineFilePath, outlineJson);
+            logger.LogInformation("Plot outline saved to {PlotOutlineFilePath}", plotOutlineFilePath);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to save plot outline to {PlotOutlineFilePath}", plotOutlineFilePath);
+            return; 
+        }
+
+        var state = await LoadWorkspaceStateAsync(workspacePath) ?? new WorkspaceState();
+
+        state.Premise = premise;
+        state.PlotOutlineFile = PlotOutlineFileName; 
+        state.Chapters = outline.Chapters.Select(c => new ChapterState
+        {
+            Number = c.ChapterNumber,
+            Title = c.Title,
+            State = ChapterStateType.Unstarted 
+        }).ToList();
+
+        await SaveWorkspaceStateAsync(state, workspacePath);
     }
 }

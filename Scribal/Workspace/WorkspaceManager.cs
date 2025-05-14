@@ -252,5 +252,33 @@ public class WorkspaceManager(
         }).ToList();
 
         await SaveWorkspaceStateAsync(state, workspacePath);
+
+        // Create chapter directories
+        var projectRootPath = fileSystem.DirectoryInfo.New(workspacePath).Parent?.FullName;
+        if (string.IsNullOrEmpty(projectRootPath))
+        {
+            logger.LogError("Could not determine project root path to create chapter directories.");
+            return;
+        }
+
+        var mainChaptersDirectoryPath = fileSystem.Path.Join(projectRootPath, "chapters");
+        if (!fileSystem.Directory.Exists(mainChaptersDirectoryPath))
+        {
+            logger.LogInformation("Creating main chapters directory at {MainChaptersDirectoryPath}", mainChaptersDirectoryPath);
+            fileSystem.Directory.CreateDirectory(mainChaptersDirectoryPath);
+        }
+
+        foreach (var chapter in outline.Chapters.OrderBy(c => c.ChapterNumber))
+        {
+            // Format chapter directory name, e.g., "chapter_01", "chapter_02"
+            var chapterDirectoryName = $"chapter_{chapter.ChapterNumber:D2}";
+            var chapterSpecificDirectoryPath = fileSystem.Path.Join(mainChaptersDirectoryPath, chapterDirectoryName);
+
+            if (!fileSystem.Directory.Exists(chapterSpecificDirectoryPath))
+            {
+                logger.LogInformation("Creating chapter directory at {ChapterSpecificDirectoryPath}", chapterSpecificDirectoryPath);
+                fileSystem.Directory.CreateDirectory(chapterSpecificDirectoryPath);
+            }
+        }
     }
 }

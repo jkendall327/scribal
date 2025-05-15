@@ -21,7 +21,9 @@ public class WorkspaceManager(
     private const string StateFileName = "state.json"; // As per plans.md, this could be project_state.json, sticking to current code
     private const string PlotOutlineFileName = "plot_outline.json";
 
-    public bool InWorkspace => _workspace is not null;
+    public bool InWorkspace => _workspace is not null || !string.IsNullOrEmpty(TryFindWorkspaceFolder(fileSystem, logger));
+
+    public string? CurrentWorkspacePath => _workspace?.FullName ?? TryFindWorkspaceFolder(fileSystem, logger);
 
     private IDirectoryInfo? _workspace;
 
@@ -157,10 +159,10 @@ public class WorkspaceManager(
         return null;
     }
 
-    public async Task<WorkspaceState?> LoadWorkspaceStateAsync(string? workspacePath = null,
+    public async Task<WorkspaceState?> LoadWorkspaceStateAsync(string? workspacePathInput = null,
         CancellationToken cancellationToken = default)
     {
-        workspacePath ??= _workspace?.FullName ?? TryFindWorkspaceFolder(fileSystem, logger);
+        var workspacePath = workspacePathInput ?? CurrentWorkspacePath;
 
         if (string.IsNullOrEmpty(workspacePath))
         {
@@ -191,10 +193,10 @@ public class WorkspaceManager(
     }
 
     public async Task SaveWorkspaceStateAsync(WorkspaceState state,
-        string? workspacePath = null,
+        string? workspacePathInput = null,
         CancellationToken cancellationToken = default)
     {
-        workspacePath ??= _workspace?.FullName ?? TryFindWorkspaceFolder(fileSystem, logger);
+        var workspacePath = workspacePathInput ?? CurrentWorkspacePath;
 
         if (string.IsNullOrEmpty(workspacePath))
         {
@@ -221,9 +223,47 @@ public class WorkspaceManager(
         }
     }
 
+    public async Task<StoryOutline?> LoadPlotOutlineAsync(CancellationToken cancellationToken = default)
+    {
+        var workspacePath = CurrentWorkspacePath;
+
+        if (string.IsNullOrEmpty(workspacePath))
+        {
+            logger.LogWarning("Cannot load plot outline, workspace directory not found.");
+            return null;
+        }
+
+        var plotOutlineFilePath = fileSystem.Path.Join(workspacePath, PlotOutlineFileName);
+
+        if (!fileSystem.File.Exists(plotOutlineFilePath))
+        {
+            logger.LogDebug("Plot outline file not found at {PlotOutlineFilePath}. Returning null.", plotOutlineFilePath);
+            return null;
+        }
+
+        try
+        {
+            var json = await fileSystem.File.ReadAllTextAsync(plotOutlineFilePath, cancellationToken);
+            var outline = JsonSerializer.Deserialize<StoryOutline>(json,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            logger.LogInformation("Plot outline loaded from {PlotOutlineFilePath}", plotOutlineFilePath);
+            return outline;
+        }
+        catch (JsonException ex)
+        {
+            logger.LogError(ex, "Failed to deserialize plot outline from {PlotOutlineFilePath}", plotOutlineFilePath);
+            return null;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to load plot outline from {PlotOutlineFilePath}", plotOutlineFilePath);
+            return null;
+        }
+    }
+
     public async Task SavePlotOutlineAsync(StoryOutline outline, string premise)
     {
-        var workspacePath = _workspace?.FullName ?? TryFindWorkspaceFolder(fileSystem, logger);
+        var workspacePath = CurrentWorkspacePath;
         if (string.IsNullOrEmpty(workspacePath))
         {
             logger.LogError("Cannot save plot outline, workspace directory not found or not initialized.");

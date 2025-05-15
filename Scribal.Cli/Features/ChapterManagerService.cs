@@ -19,19 +19,22 @@ public class ChapterManagerService
     private readonly WorkspaceManager _workspaceManager;
     private readonly IUserInteraction _userInteraction;
     private readonly ILogger<ChapterManagerService> _logger;
-    private readonly IChapterDeletionService _chapterDeletionService; // Added
+    private readonly IChapterDeletionService _chapterDeletionService;
+    private readonly ChapterDrafterService _chapterDrafterService; // Added
 
     public ChapterManagerService(IFileSystem fileSystem,
         WorkspaceManager workspaceManager,
         IUserInteraction userInteraction,
         ILogger<ChapterManagerService> logger,
-        IChapterDeletionService chapterDeletionService) // Added
+        IChapterDeletionService chapterDeletionService,
+        ChapterDrafterService chapterDrafterService) // Added
     {
         _fileSystem = fileSystem;
         _workspaceManager = workspaceManager;
         _userInteraction = userInteraction;
         _logger = logger;
-        _chapterDeletionService = chapterDeletionService; // Added
+        _chapterDeletionService = chapterDeletionService;
+        _chapterDrafterService = chapterDrafterService; // Added
     }
 
     public async Task ManageChaptersAsync(InvocationContext context)
@@ -132,10 +135,24 @@ public class ChapterManagerService
         var deleteCmd = new Command("/delete", "Delete this chapter.");
         deleteCmd.SetHandler(async () => { await DeleteChapterAsync(chapter, linkedCts); });
 
+        var draftCmd = new Command("/draft", "Draft this chapter using AI.");
+        draftCmd.SetHandler(async () =>
+        {
+            // We want the draft operation to be cancellable by the parent token (e.g. Ctrl+C)
+            // but not necessarily by the subMenuCts which is for /back.
+            // However, if /back is invoked during drafting, it might be good to cancel.
+            // For now, pass the linkedCts.Token. If drafting becomes long and needs independent cancellation,
+            // we might need a different token strategy.
+            await _chapterDrafterService.DraftChapterAsync(chapter, linkedCts.Token);
+            // If drafting completes successfully, we might want to stay in the sub-menu.
+            // If it's cancelled by /back from within the refinement loop of drafting, linkedCts will be cancelled.
+        });
+
         var chapterRootCommand =
             new RootCommand($"Actions for Chapter {chapter.Number}: {Markup.Escape(chapter.Title)}")
             {
                 dummyCmd,
+                draftCmd, // Added draft command
                 deleteCmd,
                 backCmd
             };

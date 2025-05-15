@@ -14,6 +14,7 @@ public static class ScribalInterfaceServiceCollectionExtensions
         services.AddSingleton<PitchService>();
         services.AddSingleton<OutlineService>(); // Added OutlineService
         services.AddSingleton<ChapterManagerService>();
+        services.AddSingleton<ChapterDrafterService>(); // Added
         services.AddSingleton<Scribal.Workspace.IChapterDeletionService, Scribal.Workspace.ChapterDeletionService>(); // Added
 
         return services;

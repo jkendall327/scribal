@@ -17,6 +17,7 @@ public class ChapterDrafterService
     private readonly IAiChatService _chat;
     private readonly PromptRenderer _renderer;
     private readonly Kernel _kernel;
+    private readonly IAnsiConsole _console;
     private readonly IOptions<AiSettings> _options;
     private readonly IFileSystem _fileSystem;
     private readonly WorkspaceManager _workspaceManager;
@@ -25,6 +26,7 @@ public class ChapterDrafterService
     public ChapterDrafterService(IAiChatService chat,
         PromptRenderer renderer,
         Kernel kernel,
+        IAnsiConsole console,
         IOptions<AiSettings> options,
         IFileSystem fileSystem,
         WorkspaceManager workspaceManager,
@@ -33,6 +35,7 @@ public class ChapterDrafterService
         _chat = chat;
         _renderer = renderer;
         _kernel = kernel;
+        _console = console;
         _options = options;
         _fileSystem = fileSystem;
         _workspaceManager = workspaceManager;
@@ -49,8 +52,8 @@ public class ChapterDrafterService
 
         if (string.IsNullOrWhiteSpace(workspacePath))
         {
-            AnsiConsole.MarkupLine("[red]Could not determine current workspace path. Cannot draft chapter.[/]");
-
+            _console.MarkupLine("[red]Could not determine current workspace path. Cannot draft chapter.[/]");
+            
             _logger.LogWarning(
                 "Current workspace path is not set in WorkspaceManager. Chapter {ChapterNumber} drafting aborted.",
                 chapter.Number);
@@ -60,7 +63,7 @@ public class ChapterDrafterService
 
         if (_options.Value.Primary is null)
         {
-            AnsiConsole.MarkupLine("[red]No primary model is configured. Cannot draft chapter.[/]");
+            _console.MarkupLine("[red]No primary model is configured. Cannot draft chapter.[/]");
             _logger.LogWarning("Primary model not configured, cannot draft chapter.");
 
             return;
@@ -72,23 +75,23 @@ public class ChapterDrafterService
 
         if (string.IsNullOrWhiteSpace(initialDraft))
         {
-            AnsiConsole.MarkupLine("[red]Failed to generate an initial draft.[/]");
+            _console.MarkupLine("[red]Failed to generate an initial draft.[/]");
             _logger.LogWarning("Initial draft generation failed for chapter {ChapterNumber}", chapter.Number);
 
             return;
         }
 
-        AnsiConsole.MarkupLine("[cyan]Initial Draft Generated:[/]");
-        AnsiConsole.WriteLine(Markup.Escape(initialDraft)); // Display initial draft
+        _console.MarkupLine("[cyan]Initial Draft Generated:[/]");
+        _console.WriteLine(Markup.Escape(initialDraft)); // Display initial draft
 
-        var ok = await AnsiConsole.ConfirmAsync("Do you want to refine this draft?",
+        var ok = await _console.ConfirmAsync("Do you want to refine this draft?",
             cancellationToken: cancellationToken);
 
         string finalDraft;
 
         if (!ok)
         {
-            AnsiConsole.MarkupLine("[yellow]Chapter drafting complete (initial draft accepted).[/]");
+            _console.MarkupLine("[yellow]Chapter drafting complete (initial draft accepted).[/]");
             finalDraft = initialDraft;
         }
         else
@@ -105,15 +108,15 @@ public class ChapterDrafterService
             refinementHistory.AddSystemMessage(sb.ToString());
             refinementHistory.AddAssistantMessage(initialDraft);
 
-            AnsiConsole.MarkupLine(
+            _console.MarkupLine(
                 "Entering chapter draft refinement chat. Type [blue]/done[/] when finished or [blue]/cancel[/] to abort.");
 
             finalDraft = await RefineDraft(cancellationToken, refinementCid, refinementHistory, sid, initialDraft);
-            AnsiConsole.MarkupLine("[yellow]Chapter draft refinement finished.[/]");
+            _console.MarkupLine("[yellow]Chapter draft refinement finished.[/]");
         }
 
-        AnsiConsole.MarkupLine("[yellow]Final chapter draft:[/]");
-        AnsiConsole.WriteLine(Markup.Escape(finalDraft));
+        _console.MarkupLine("[yellow]Final chapter draft:[/]");
+        _console.WriteLine(Markup.Escape(finalDraft));
 
         await SaveDraftToFileAsync(chapter, finalDraft, cancellationToken);
     }
@@ -149,7 +152,7 @@ public class ChapterDrafterService
         var history = new ChatHistory();
         history.AddSystemMessage(prompt);
 
-        AnsiConsole.MarkupLine(
+        _console.MarkupLine(
             $"[yellow]Generating initial draft for Chapter {chapter.Number}: {Markup.Escape(chapter.Title)}...[/]");
 
         var initialUserMessage = "Generate the chapter draft based on the details provided in your instructions.";
@@ -179,15 +182,15 @@ public class ChapterDrafterService
         {
             if (ct.IsCancellationRequested)
             {
-                AnsiConsole.MarkupLine("[yellow]Refinement cancelled by host.[/]");
+                _console.MarkupLine("[yellow]Refinement cancelled by host.[/]");
                 _logger.LogInformation("Draft refinement cancelled by host for {RefinementCid}", refinementCid);
 
                 break;
             }
 
-            AnsiConsole.WriteLine();
-            AnsiConsole.Markup("[green]Refine Chapter Draft > [/]");
-            var userInput = ReadLine.Read(); // Assuming ReadLine is accessible or replace with AnsiConsole.Ask/Prompt
+            _console.WriteLine();
+            _console.Markup("[green]Refine Chapter Draft > [/]");
+            var userInput = ReadLine.Read(); // Assuming ReadLine is accessible or replace with _console.Ask/Prompt
 
             if (string.IsNullOrWhiteSpace(userInput))
             {
@@ -203,13 +206,13 @@ public class ChapterDrafterService
 
             if (userInput.Equals("/cancel", StringComparison.OrdinalIgnoreCase))
             {
-                AnsiConsole.MarkupLine("[yellow]Cancelling refinement...[/]");
+                _console.MarkupLine("[yellow]Cancelling refinement...[/]");
                 _logger.LogInformation("User cancelled draft refinement for {RefinementCid}", refinementCid);
 
                 return lastAssistantResponse;
             }
 
-            AnsiConsole.WriteLine();
+            _console.WriteLine();
             var responseBuilder = new StringBuilder();
 
             try
@@ -239,16 +242,16 @@ public class ChapterDrafterService
             }
             catch (OperationCanceledException)
             {
-                AnsiConsole.WriteLine();
-                AnsiConsole.MarkupLine("[yellow](Refinement stream cancelled)[/]");
+                _console.WriteLine();
+                _console.MarkupLine("[yellow](Refinement stream cancelled)[/]");
                 _logger.LogInformation("Refinement stream cancelled for {RefinementCid}", refinementCid);
 
                 break;
             }
             catch (Exception e)
             {
-                AnsiConsole.WriteException(e);
-                AnsiConsole.MarkupLine("[red]An error occurred during refinement.[/]");
+                _console.WriteException(e);
+                _console.MarkupLine("[red]An error occurred during refinement.[/]");
                 _logger.LogError(e, "Error during draft refinement for {RefinementCid}", refinementCid);
             }
         }
@@ -277,7 +280,7 @@ public class ChapterDrafterService
 
         if (string.IsNullOrWhiteSpace(workspacePath))
         {
-            AnsiConsole.MarkupLine(
+            _console.MarkupLine(
                 "[red]Could not determine workspace path from WorkspaceManager. Draft not saved.[/]");
 
             _logger.LogError(
@@ -292,7 +295,7 @@ public class ChapterDrafterService
 
         if (string.IsNullOrWhiteSpace(projectRootPath))
         {
-            AnsiConsole.MarkupLine("[red]Could not determine project root path. Draft not saved.[/]");
+            _console.MarkupLine("[red]Could not determine project root path. Draft not saved.[/]");
 
             _logger.LogError(
                 "Cannot save draft, project root path could not be determined from workspace path {WorkspacePath} for chapter {ChapterNumber}",
@@ -329,18 +332,18 @@ public class ChapterDrafterService
         try
         {
             await _fileSystem.File.WriteAllTextAsync(draftFilePath, content, cancellationToken);
-            AnsiConsole.MarkupLine($"[green]Draft saved successfully to: {Markup.Escape(draftFilePath)}[/]");
+            _console.MarkupLine($"[green]Draft saved successfully to: {Markup.Escape(draftFilePath)}[/]");
             _logger.LogInformation("Chapter {ChapterNumber} draft saved to {FilePath}", chapter.Number, draftFilePath);
 
             // Optionally, update ChapterState with the new draft path and save workspace state
             // chapter.DraftFilePath = draftFilePath; // Assuming ChapterState has such a property
             // chapter.State = ChapterStatus.Drafted; // Or similar
             // await _workspaceManager.SaveWorkspaceStateAsync(state, cancellationToken: cancellationToken);
-            // AnsiConsole.MarkupLine("[green]Workspace state updated with new draft information.[/]");
+            // _console.MarkupLine("[green]Workspace state updated with new draft information.[/]");
         }
         catch (Exception ex)
         {
-            AnsiConsole.MarkupLine($"[red]Failed to save draft: {Markup.Escape(ex.Message)}[/]");
+            _console.MarkupLine($"[red]Failed to save draft: {Markup.Escape(ex.Message)}[/]");
 
             _logger.LogError(ex,
                 "Failed to save draft for chapter {ChapterNumber} to {FilePath}",

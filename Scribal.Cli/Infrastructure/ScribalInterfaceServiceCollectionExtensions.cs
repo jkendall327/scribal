@@ -1,5 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
-using Scribal.Cli.Features; // Added for ChapterManagerService
+using Scribal.Cli.Features;
+using Scribal.Workspace;
+using Spectre.Console; // Added for ChapterManagerService
 
 namespace Scribal.Cli;
 
@@ -15,8 +17,9 @@ public static class ScribalInterfaceServiceCollectionExtensions
         services.AddSingleton<OutlineService>(); // Added OutlineService
         services.AddSingleton<ChapterManagerService>();
         services.AddSingleton<ChapterDrafterService>(); // Added
-        services.AddSingleton<Scribal.Workspace.IChapterDeletionService, Scribal.Workspace.ChapterDeletionService>(); // Added
-
+        services.AddSingleton<IChapterDeletionService, ChapterDeletionService>(); // Added
+        services.AddSingleton(AnsiConsole.Console);
+        
         return services;
     }
 }

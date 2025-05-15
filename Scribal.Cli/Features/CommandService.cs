@@ -27,7 +27,7 @@ public class CommandService(
     {
         Name = "Idea",
         Arity = ArgumentArity.ExactlyOne,
-        Description = "Your basic idea for the story"
+        Description = "Your basic idea for the story",
     };
 
     private readonly Argument<string> _premiseArgument = new() // Added premise argument
@@ -108,9 +108,6 @@ public class CommandService(
             AnsiConsole.WriteException(e);
         }
     }
-
-    // ChaptersCommandAsync, BuildChapterSubMenuParser, and ChapterSubMenuAsync
-    // have been moved to Scribal.Cli/Features/ChapterManagerService.cs
 
     private async Task PitchCommand(InvocationContext arg)
     {

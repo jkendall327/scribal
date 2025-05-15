@@ -291,6 +291,7 @@ public class WorkspaceManager(
         {
             Number = c.ChapterNumber,
             Title = c.Title,
+            Summary = c.Summary, // Populate Summary from StoryOutline.Chapter
             State = ChapterStateType.Unstarted
         }).ToList();
 

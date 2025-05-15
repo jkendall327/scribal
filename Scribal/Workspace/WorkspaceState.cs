@@ -11,6 +11,7 @@ public class ChapterState
 {
     public int Number { get; set; }
     public required string Title { get; set; }
+    public string? Summary { get; set; } // Added Summary
     public ChapterStateType State { get; set; }
 }
 

@@ -10,7 +10,7 @@ public class PromptRenderer(IFileSystem fileSystem)
 {
     private readonly HandlebarsPromptTemplateFactory _templateFactory = new();
 
-    public async Task<string> RenderPromptTemplateFromFileAsync(Kernel kernel, RenderRequest request, string? promptsFolder = null)
+    public async Task<string> RenderPromptTemplateFromFileAsync(Kernel kernel, RenderRequest request, string? promptsFolder = null, CancellationToken cancellationToken = default)
     {
         (var promptFilename, var logicalName, var description, var arguments) = request;
 
@@ -18,7 +18,7 @@ public class PromptRenderer(IFileSystem fileSystem)
 
         var path = fileSystem.Path.Combine(promptsFolder, $"{promptFilename}.hbs");
 
-        var template = await fileSystem.File.ReadAllTextAsync(path);
+        var template = await fileSystem.File.ReadAllTextAsync(path, cancellationToken);
 
         var promptConfig = new PromptTemplateConfig
         {
@@ -30,7 +30,7 @@ public class PromptRenderer(IFileSystem fileSystem)
 
         var promptTemplate = _templateFactory.Create(promptConfig);
 
-        return await promptTemplate.RenderAsync(kernel, arguments);
+        return await promptTemplate.RenderAsync(kernel, arguments, cancellationToken);
     }
 
     private string GetPromptsFolder()

@@ -4,10 +4,12 @@ using System.CommandLine.Invocation;
 using System.CommandLine.Parsing;
 using System.IO.Abstractions;
 using Scribal.AI;
+using Scribal.Cli.Features;
 using Scribal.Context;
-using Scribal.Cli.Features; // Required for ChapterManagerService
 using Scribal.Workspace;
 using Spectre.Console;
+
+// Required for ChapterManagerService
 
 namespace Scribal.Cli;
 
@@ -17,22 +19,22 @@ public class CommandService(
     IChatSessionStore conversationStore,
     PitchService pitchService,
     OutlineService outlineService,
+    WorkspaceDeleter workspaceDeleter,
     WorkspaceManager workspaceManager,
-    ChapterManagerService chapterManagerService) // Injected ChapterManagerService
+    ChapterManagerService chapterManagerService)
 {
-    private readonly ChapterManagerService _chapterManagerService = chapterManagerService;
     private readonly Argument<string> _ideaArgument = new()
     {
         Name = "Idea",
         Arity = ArgumentArity.ExactlyOne,
-        Description = "Your basic idea for the story",
+        Description = "Your basic idea for the story"
     };
 
     private readonly Argument<string> _premiseArgument = new() // Added premise argument
     {
         Name = "Premise",
         Arity = ArgumentArity.ExactlyOne,
-        Description = "The story premise to be turned into an outline",
+        Description = "The story premise to be turned into an outline"
     };
 
     public Parser Build()
@@ -62,7 +64,13 @@ public class CommandService(
         var outline = Create("/outline", "Generates a plot outline from a premise", OutlineCommand);
         outline.AddArgument(_premiseArgument);
 
-        var chaptersCmd = Create("/chapters", "Manage chapters in the workspace", _chapterManagerService.ManageChaptersAsync); // Use ChapterManagerService
+        var chaptersCmd = Create("/chapters",
+            "Manage chapters in the workspace",
+            chapterManagerService.ManageChaptersAsync); // Use ChapterManagerService
+
+        var deleteWorkspaceCmd = Create("/delete",
+            "Deletes the .scribal workspace and optionally the .git folder",
+            workspaceDeleter.DeleteWorkspaceCommandAsync);
 
         var root = new RootCommand("Scribal interactive shell")
         {
@@ -71,8 +79,9 @@ public class CommandService(
             pitch,
             outline, // Added outline command to root
             chaptersCmd, // Added chapters command to root
+            deleteWorkspaceCmd, // Added delete workspace command
             tree,
-            quit,
+            quit
         };
 
         return new CommandLineBuilder(root).UseDefaults().UseHelp("/help").Build();
@@ -86,6 +95,7 @@ public class CommandService(
         if (string.IsNullOrWhiteSpace(premise))
         {
             AnsiConsole.MarkupLine("[red]Premise cannot be empty.[/]");
+
             return;
         }
 
@@ -110,6 +120,7 @@ public class CommandService(
         if (string.IsNullOrWhiteSpace(idea))
         {
             AnsiConsole.MarkupLine("[red]Idea cannot be empty.[/]");
+
             return;
         }
 
@@ -148,16 +159,19 @@ public class CommandService(
     {
         _ = conversationStore.TryClearConversation(string.Empty);
         AnsiConsole.MarkupLine("[yellow]Conversation history cleared.[/]");
+
         return Task.FromResult(true);
     }
 
     private Task TreeCommand(InvocationContext ctx)
     {
         var cwd = fileSystem.Directory.GetCurrentDirectory();
+
         // Assuming StickyTreeSelector is available and working as intended.
         var files = StickyTreeSelector.Scan(cwd);
         repoStore.Paths = files;
         AnsiConsole.MarkupLine($"[green]Context files updated. {files.Count} files/directories selected.[/]");
+
         return Task.FromResult(true);
     }
 
@@ -168,6 +182,7 @@ public class CommandService(
             AnsiConsole.MarkupLine("[yellow]Thank you for using Scribal. Goodbye![/]");
             Environment.Exit(0);
         }
+
         return Task.CompletedTask;
     }
 }

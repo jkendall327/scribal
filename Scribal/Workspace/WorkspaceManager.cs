@@ -109,7 +109,11 @@ public class WorkspaceManager(
         logger.LogDebug("Creating .gitignore file in {Directory} with content:\n{Content}", cwd, gitignoreContent);
         // CreateGitIgnore expects the content of the .gitignore file.
         // It will create/update .gitignore in the root of the repository (cwd).
-        await git.CreateGitIgnore(gitignoreContent);
+
+        if (!dry)
+        {
+            await git.CreateGitIgnore(gitignoreContent);
+        }
 
         logger.LogInformation("Git repository successfully initialized");
         return true;

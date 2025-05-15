@@ -55,6 +55,7 @@ public sealed class GitService(
     public void CreateRepository(string path)
     {
         Repository.Init(path);
+        Initialise(path);
     }
 
     [MemberNotNull(nameof(_repo))]

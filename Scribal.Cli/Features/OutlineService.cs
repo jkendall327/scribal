@@ -203,7 +203,7 @@ public class OutlineService(
                 }
             });
 
-        var prompt = await renderer.RenderPromptTemplateFromFileAsync(kernel, request);
+        var prompt = await renderer.RenderPromptTemplateFromFileAsync(kernel, request, cancellationToken: ct);
 
         var cid = $"outline-init-{Guid.NewGuid()}";
 

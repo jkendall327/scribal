@@ -36,6 +36,7 @@ public class ChapterManagerService
 
     public async Task ManageChaptersAsync(InvocationContext context)
     {
+        _logger.LogInformation("Starting chapter management");
         var token = context.GetCancellationToken();
 
         if (!_workspaceManager.InWorkspace)
@@ -43,10 +44,12 @@ public class ChapterManagerService
             var foundWorkspace = WorkspaceManager.TryFindWorkspaceFolder(_fileSystem);
             if (foundWorkspace == null)
             {
+                _logger.LogWarning("Not in a Scribal workspace and no workspace found nearby");
                 AnsiConsole.MarkupLine(
                     "[red]You are not currently in a Scribal workspace. Use '/init' to create one.[/]");
                 return;
             }
+            _logger.LogInformation("Workspace found at {WorkspacePath}, attempting to load", foundWorkspace);
             // If a workspace is found but not loaded, LoadWorkspaceStateAsync will handle it.
         }
 
@@ -54,16 +57,19 @@ public class ChapterManagerService
 
         if (state == null)
         {
+            _logger.LogError("Could not load workspace state");
             AnsiConsole.MarkupLine("[red]Could not load workspace state.[/]");
             return;
         }
 
         if (state.Chapters == null || !state.Chapters.Any())
         {
+            _logger.LogInformation("No chapters found in the workspace");
             AnsiConsole.MarkupLine(
                 "[yellow]No chapters found in the workspace. Generate an outline first using '/outline'.[/]");
             return;
         }
+        _logger.LogInformation("Loaded {ChapterCount} chapters", state.Chapters.Count);
 
         while (!token.IsCancellationRequested)
         {
@@ -88,9 +94,11 @@ public class ChapterManagerService
                 state.Chapters.FirstOrDefault(c => $"{c.Number}. {Markup.Escape(c.Title)} ({c.State})" == choice);
             if (selectedChapterState != null)
             {
+                _logger.LogInformation("Selected chapter {ChapterNumber}: {ChapterTitle}", selectedChapterState.Number, selectedChapterState.Title);
                 await ChapterSubMenuAsync(selectedChapterState, token);
             }
         }
+        _logger.LogInformation("Exiting chapter management");
     }
 
     private Parser BuildChapterSubMenuParser(ChapterState chapter, CancellationTokenSource linkedCts)
@@ -132,6 +140,7 @@ public class ChapterManagerService
 
     private async Task ChapterSubMenuAsync(ChapterState selectedChapter, CancellationToken parentToken)
     {
+        _logger.LogInformation("Entering sub-menu for chapter {ChapterNumber}: {ChapterTitle}", selectedChapter.Number, selectedChapter.Title);
         using var chapterSubMenuCts = CancellationTokenSource.CreateLinkedTokenSource(parentToken);
         var chapterSubMenuParser = BuildChapterSubMenuParser(selectedChapter, chapterSubMenuCts);
 
@@ -158,27 +167,34 @@ public class ChapterManagerService
 
             try
             {
+                _logger.LogDebug("Invoking chapter submenu command: {Input}", input);
                 await chapterSubMenuParser.InvokeAsync(input);
             }
             catch (OperationCanceledException) when (chapterSubMenuCts.IsCancellationRequested)
             {
+                _logger.LogInformation("Chapter action cancelled or /back invoked for chapter {ChapterNumber}", selectedChapter.Number);
                 AnsiConsole.MarkupLine("[yellow](Chapter action cancelled or /back invoked)[/]");
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error processing chapter command {CommandInput} for chapter {ChapterNumber}", input, selectedChapter.Number);
                 AnsiConsole.MarkupLine($"[red]Error processing chapter command: {ex.Message}[/]");
             }
         }
+        _logger.LogInformation("Exiting sub-menu for chapter {ChapterNumber}: {ChapterTitle}", selectedChapter.Number, selectedChapter.Title);
     }
 
     private async Task DeleteChapterAsync(ChapterState chapterToDelete, CancellationTokenSource subMenuCts)
     {
+        _logger.LogInformation("Attempting to delete chapter {ChapterNumber}: {ChapterTitle}", chapterToDelete.Number, chapterToDelete.Title);
         var confirmPrompt = $"Are you sure you want to delete Chapter {chapterToDelete.Number}: '{Markup.Escape(chapterToDelete.Title)}'? This action cannot be undone.";
         if (!await _userInteraction.ConfirmAsync(confirmPrompt))
         {
+            _logger.LogInformation("User cancelled deletion of chapter {ChapterNumber}", chapterToDelete.Number);
             AnsiConsole.MarkupLine("[yellow]Chapter deletion cancelled.[/]");
             return;
         }
+        _logger.LogInformation("User confirmed deletion of chapter {ChapterNumber}", chapterToDelete.Number);
 
         var deletionResult = await _chapterDeletionService.DeleteChapterAsync(chapterToDelete, subMenuCts.Token);
 
@@ -197,11 +213,13 @@ public class ChapterManagerService
 
         if (deletionResult.Success)
         {
+            _logger.LogInformation("Successfully deleted chapter {ChapterNumber}: {ChapterTitle}", chapterToDelete.Number, chapterToDelete.Title);
             AnsiConsole.MarkupLine($"[bold green]{Markup.Escape(deletionResult.OverallMessage ?? "Chapter deleted successfully.")}[/]");
             subMenuCts.Cancel(); // Exit the current chapter's sub-menu
         }
         else
         {
+            _logger.LogError(deletionResult.Exception, "Failed to delete chapter {ChapterNumber}: {ChapterTitle}. Reason: {DeletionMessage}", chapterToDelete.Number, chapterToDelete.Title, deletionResult.OverallMessage);
             AnsiConsole.MarkupLine($"[bold red]{Markup.Escape(deletionResult.OverallMessage ?? "Chapter deletion failed.")}[/]");
             if (deletionResult.Exception != null && !(deletionResult.Exception is OperationCanceledException))
             {

@@ -24,7 +24,7 @@
 - [x] AI transforms pitch into a more substantial premise via a back-and-forth interaction
 - [ ] Store the generated premise as a separate file
 - [ ] Implement `scribal premise revise` command to update the premise
-- [ ] Use the premise to generate the initial plot overview
+- [x] Use the premise to generate the initial plot overview
 
 ## Outline
 - [ ] Generate a high-level breakdown of chapters (the outline)

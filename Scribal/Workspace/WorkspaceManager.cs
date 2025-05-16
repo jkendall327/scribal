@@ -60,7 +60,11 @@ public class WorkspaceManager(
         // Config file path should be inside the workspace directory
         var configPath = fileSystem.Path.Join(workspace.FullName, ConfigFileName);
 
-        var state = new WorkspaceState();
+        var state = new WorkspaceState
+        {
+            // AI: Set initial pipeline stage
+            PipelineStage = PipelineStageType.AwaitingPremise
+        };
 
         // State file path should be inside the workspace directory
         // var statePath = fileSystem.Path.Join(workspace.FullName, StateFileName); // Not directly used, SaveWorkspaceStateAsync handles path
@@ -330,6 +334,8 @@ public class WorkspaceManager(
 
         state.Premise = premise;
         state.PlotOutlineFile = PlotOutlineFileName;
+        // AI: Set pipeline stage to DraftingChapters as an outline is now available
+        state.PipelineStage = PipelineStageType.DraftingChapters;
 
         state.Chapters = outline.Chapters.Select(c => new ChapterState
                                 {

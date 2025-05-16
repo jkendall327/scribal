@@ -258,8 +258,7 @@ public class CommandService(
         }
 
         // AI: Display the current pipeline stage
-        // AI: Assuming PipelineStage property exists on WorkspaceState as per plans
-        AnsiConsole.MarkupLine($"[green]Current Pipeline Stage:[/] {state.PipelineStage ?? "Not Set"}");
+        AnsiConsole.MarkupLine($"[green]Current Pipeline Stage:[/] {state.PipelineStage.ToString()}");
 
         // AI: Display the premise if available
         if (!string.IsNullOrWhiteSpace(state.Premise))

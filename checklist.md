@@ -85,7 +85,7 @@
 - [ ] `scribal export`: Concatenate all final chapter versions (and potentially other selected content) into a single large Markdown file
 
 ## General CLI Features
-- [ ] Implement `scribal status` command: Display current project state, active pipeline stage, and status of each chapter
+- [x] Implement `scribal status` command: Display current project state, active pipeline stage, and status of each chapter
 - [ ] Implement global `--dry-run` flag for commands that modify files
 - [ ] Implement global `--yes` flag to auto-confirm prompts
 - [ ] Differentiate behavior for 'workspace' mode (when a `.scribal` folder is found) versus 'headless' mode

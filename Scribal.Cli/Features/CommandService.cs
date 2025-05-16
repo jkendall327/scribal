@@ -85,9 +85,12 @@ public class CommandService(
 
         commitCmd.AddArgument(_commitMessageArgument);
 
+        var statusCmd = Create("/status", "Displays the current project status", StatusCommand);
+
         var root = new RootCommand("Scribal interactive shell")
         {
             init,
+            statusCmd,
             clear,
             pitch,
             outline,
@@ -232,6 +235,78 @@ public class CommandService(
         }
         
         return Task.FromResult(true);
+    }
+
+    private async Task StatusCommand(InvocationContext context)
+    {
+        // AI: Check if currently in a Scribal workspace
+        if (!workspaceManager.InWorkspace)
+        {
+            AnsiConsole.MarkupLine("[yellow]Not currently in a Scribal workspace. Use '/init' to create one.[/]");
+            return;
+        }
+
+        AnsiConsole.MarkupLine($"[green]Current Workspace Path:[/] {workspaceManager.CurrentWorkspacePath ?? "N/A"}");
+
+        // AI: Load the workspace state
+        var state = await workspaceManager.LoadWorkspaceStateAsync(cancellationToken: context.GetCancellationToken());
+
+        if (state is null)
+        {
+            AnsiConsole.MarkupLine("[red]Could not load workspace state. The state file might be corrupted or missing.[/]");
+            return;
+        }
+
+        // AI: Display the current pipeline stage
+        // AI: Assuming PipelineStage property exists on WorkspaceState as per plans
+        AnsiConsole.MarkupLine($"[green]Current Pipeline Stage:[/] {state.PipelineStage ?? "Not Set"}");
+
+        // AI: Display the premise if available
+        if (!string.IsNullOrWhiteSpace(state.Premise))
+        {
+            AnsiConsole.MarkupLine($"[green]Premise:[/] {state.Premise}");
+        }
+        else
+        {
+            AnsiConsole.MarkupLine("[green]Premise:[/] Not set");
+        }
+        
+        // AI: Display plot outline file if available
+        if (!string.IsNullOrWhiteSpace(state.PlotOutlineFile))
+        {
+            AnsiConsole.MarkupLine($"[green]Plot Outline File:[/] {state.PlotOutlineFile}");
+        }
+        else
+        {
+            AnsiConsole.MarkupLine("[green]Plot Outline File:[/] Not set");
+        }
+
+
+        // AI: Display chapter statuses
+        if (state.Chapters is not null && state.Chapters.Any())
+        {
+            AnsiConsole.MarkupLine("[green]Chapters:[/]");
+            var table = new Table().Expand();
+            table.AddColumn("Number");
+            table.AddColumn("Title");
+            table.AddColumn("State");
+            table.AddColumn("Summary");
+
+            foreach (var chapter in state.Chapters.OrderBy(c => c.Number))
+            {
+                table.AddRow(
+                    chapter.Number.ToString(),
+                    chapter.Title ?? "N/A",
+                    chapter.State.ToString(),
+                    chapter.Summary ?? "N/A"
+                );
+            }
+            AnsiConsole.Write(table);
+        }
+        else
+        {
+            AnsiConsole.MarkupLine("[yellow]No chapters found in the current workspace state.[/]");
+        }
     }
 
     private static Task QuitCommand(InvocationContext ctx)

@@ -42,19 +42,19 @@
 - [x] 'Refine' option: Enter a back-and-forth chat with the model to iterate on its work
 
 ## Chapter Mode
-- [ ] Implement a tree view menu for chapter selection
+- [x] Implement a tree view menu for chapter selection
 - [ ] Chapter menu: Include an option for creating a 'new' chapter
 - [ ] New chapter: Allow user to specify its ordinal position
 - [ ] New chapter: Allow user to specify its title
 - [ ] New chapter: Allow user to optionally provide an initial draft
 - [ ] New chapter: Allow user to optionally let the AI generate an initial version
-- [ ] Existing chapter: Display its current state
-- [ ] Existing chapter: Allow deletion
+- [x] Existing chapter: Display its current state
+- [x] Existing chapter: Allow deletion
 - [ ] Existing chapter: Allow splitting into multiple chapters
 - [ ] Existing chapter: Allow merging with other chapters
 - [ ] Chapter splitting: Prompt user for updated descriptions for the source and new chapter(s); create new chapter(s) empty for manual content transfer
 - [ ] Chapter merging: Prompt user for a description of the new merged chapter; concatenate file contents
-- [ ] Deleting a chapter: Automatically update the ordinals of subsequent chapters
+- [x] Deleting a chapter: Automatically update the ordinals of subsequent chapters
 
 ## Drafting
 - [ ] When in chapter mode, provide options for drafting content

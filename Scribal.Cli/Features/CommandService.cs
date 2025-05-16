@@ -225,8 +225,12 @@ public class CommandService(
         var files = StickyTreeSelector.Scan(cwd);
         
         // Add files, don't replace on multiple /tree invocations.
-        repoStore.Paths = repoStore.Paths.Union(files).ToList();
-
+        foreach (var file in files)
+        {
+            // Don't care if duplicates failed to be added.
+            _ = repoStore.Paths.Add(file);
+        }
+        
         return Task.FromResult(true);
     }
 

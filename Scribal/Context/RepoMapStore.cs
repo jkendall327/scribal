@@ -2,5 +2,5 @@ namespace Scribal.Context;
 
 public class RepoMapStore
 {
-    public List<string> Paths { get; set; } = [];
+    public HashSet<string> Paths { get; set; } = [];
 }

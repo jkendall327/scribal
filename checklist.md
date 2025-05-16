@@ -20,8 +20,8 @@
 - [ ] `project_state.json`: Track chapters and their individual states (e.g., unstarted, drafted, locked off)
 
 ## Pitch
-- [ ] Allow user to supply a core seed idea (pitch)
-- [ ] AI transforms pitch into a more substantial premise via a back-and-forth interaction
+- [x] Allow user to supply a core seed idea (pitch)
+- [x] AI transforms pitch into a more substantial premise via a back-and-forth interaction
 - [ ] Store the generated premise as a separate file
 - [ ] Implement `scribal premise revise` command to update the premise
 - [ ] Use the premise to generate the initial plot overview

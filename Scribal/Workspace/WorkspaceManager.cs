@@ -62,7 +62,6 @@ public class WorkspaceManager(
 
         var state = new WorkspaceState
         {
-            // AI: Set initial pipeline stage
             PipelineStage = PipelineStageType.AwaitingPremise
         };
 
@@ -334,7 +333,6 @@ public class WorkspaceManager(
 
         state.Premise = premise;
         state.PlotOutlineFile = PlotOutlineFileName;
-        // AI: Set pipeline stage to DraftingChapters as an outline is now available
         state.PipelineStage = PipelineStageType.DraftingChapters;
 
         state.Chapters = outline.Chapters.Select(c => new ChapterState

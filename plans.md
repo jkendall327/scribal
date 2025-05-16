@@ -1,3 +1,7 @@
+## Notes
+Regex for removing extraneous comments:
+\s*//\s*AI:.*\r?\n?
+
 ## TODO
 
 Plan: Define what gets indexed: chapters (latest? final?), character files, plot outline, premise, maybe user notes? How

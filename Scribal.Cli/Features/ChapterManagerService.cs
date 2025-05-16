@@ -56,11 +56,7 @@ public class ChapterManagerService
 
             // If a workspace is found but not loaded, LoadWorkspaceStateAsync will handle it.
         }
-
-        // AI: Initial load of workspace state with cancellation token
         var state = await _workspaceManager.LoadWorkspaceStateAsync(cancellationToken: token);
-
-        // AI: Initial check for state and chapters
         if (state == null)
         {
             _logger.LogError("Could not load workspace state initially");
@@ -73,7 +69,6 @@ public class ChapterManagerService
             _logger.LogInformation("No chapters found in the workspace upon initial load");
             AnsiConsole.MarkupLine(
                 "[yellow]No chapters found in the workspace. Generate an outline first using '/outline'.[/]");
-            // AI: No chapters to manage, so return.
             return;
         }
         
@@ -81,7 +76,7 @@ public class ChapterManagerService
 
         while (!token.IsCancellationRequested)
         {
-            // AI: Reload state at the beginning of each loop iteration to reflect changes (e.g., deletion)
+            // Reload state at the beginning of each loop iteration to reflect changes (e.g., deletion)
             state = await _workspaceManager.LoadWorkspaceStateAsync(cancellationToken: token);
 
             if (state == null)

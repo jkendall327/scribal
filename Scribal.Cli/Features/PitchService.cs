@@ -6,8 +6,7 @@ using Microsoft.SemanticKernel.ChatCompletion;
 using Scribal.AI;
 using Scribal.Cli;
 using Scribal.Context;
-using Scribal.Workspace; // AI: Added for WorkspaceManager and PipelineStageType
-using Spectre.Console;
+using Scribal.Workspace;using Spectre.Console;
 
 // Required for ChatHistory
 // Required for ConsoleChatRenderer and ReadLine
@@ -20,10 +19,8 @@ public class PitchService(
     PromptRenderer renderer,
     Kernel kernel,
     IOptions<AiSettings> options,
-    WorkspaceManager workspaceManager) // AI: Added WorkspaceManager
-{
-    private readonly WorkspaceManager _workspaceManager = workspaceManager; // AI: Store WorkspaceManager instance
-
+    WorkspaceManager workspaceManager){
+    private readonly WorkspaceManager _workspaceManager = workspaceManager;
     public async Task CreatePremiseFromPitch(string pitch, CancellationToken ct = default)
     {
         if (options.Value.Primary is null)
@@ -36,8 +33,7 @@ public class PitchService(
         var sid = options.Value.Primary.Provider;
 
         var initialGeneratedPremise = await GenerateInitialPremise(pitch, sid, ct);
-        string finalPremiseToSave = initialGeneratedPremise; // AI: Default to initial premise
-
+        string finalPremiseToSave = initialGeneratedPremise;
         // Refinement loop.
         var okToRefine = await AnsiConsole.ConfirmAsync("Do you want to refine this premise?", cancellationToken: ct);
 
@@ -48,13 +44,11 @@ public class PitchService(
 
             var sb = new StringBuilder("You are an assistant helping to refine a story premise. The current premise is:");
             sb.AppendLine("---");
-            sb.AppendLine(initialGeneratedPremise); // AI: Use initial premise for refinement context
-            sb.AppendLine("---");
+            sb.AppendLine(initialGeneratedPremise);            sb.AppendLine("---");
             sb.AppendLine("Focus on improving it based on user feedback. Be concise and helpful.");
 
             refinementHistory.AddSystemMessage(sb.ToString());
-            refinementHistory.AddAssistantMessage(initialGeneratedPremise); // AI: Add initial premise as assistant's starting point
-
+            refinementHistory.AddAssistantMessage(initialGeneratedPremise);
             AnsiConsole.MarkupLine(
                 "Entering premise refinement chat. Type [blue]/done[/] when finished or [blue]/cancel[/] to abort.");
 
@@ -82,8 +76,6 @@ public class PitchService(
         {
             AnsiConsole.MarkupLine("[yellow]Initial premise accepted without refinement.[/]");
         }
-
-        // AI: Save the determined premise and update workspace state
         await UpdateWorkspaceAfterPremiseFinalizedAsync(finalPremiseToSave, ct);
     }
 
@@ -114,8 +106,6 @@ public class PitchService(
 
         return generatedPremise;
     }
-
-    // AI: Modified to return true if user types /done, false otherwise
     private async Task<bool> RefinePremise(string refinementCid,
         ChatHistory refinementHistory,
         string sid,
@@ -126,8 +116,7 @@ public class PitchService(
             if (ct.IsCancellationRequested)
             {
                 AnsiConsole.MarkupLine("[yellow]Refinement cancelled by host.[/]");
-                return false; // AI: Cancelled
-            }
+                return false;            }
 
             AnsiConsole.WriteLine();
             AnsiConsole.Markup("[green]Refine Premise > [/]");
@@ -140,14 +129,12 @@ public class PitchService(
 
             if (userInput.Equals("/done", StringComparison.OrdinalIgnoreCase))
             {
-                return true; // AI: Successfully completed by user
-            }
+                return true;            }
 
             if (userInput.Equals("/cancel", StringComparison.OrdinalIgnoreCase))
             {
                 AnsiConsole.MarkupLine("[yellow]Cancelling refinement...[/]");
-                return false; // AI: User cancelled
-            }
+                return false;            }
 
             AnsiConsole.WriteLine();
 
@@ -165,18 +152,14 @@ public class PitchService(
             {
                 AnsiConsole.WriteLine();
                 AnsiConsole.MarkupLine("[yellow](Refinement stream cancelled)[/]");
-                return false; // AI: Stream cancelled
-            }
+                return false;            }
             catch (Exception e)
             {
                 AnsiConsole.WriteException(e);
                 AnsiConsole.MarkupLine("[red]An error occurred during refinement.[/]");
-                return false; // AI: Error during refinement
-            }
+                return false;            }
         }
     }
-
-    // AI: New method to update workspace state after premise is finalized
     private async Task UpdateWorkspaceAfterPremiseFinalizedAsync(string premise, CancellationToken ct)
     {
         if (!_workspaceManager.InWorkspace)
@@ -193,8 +176,7 @@ public class PitchService(
         }
 
         state.Premise = premise;
-        state.PipelineStage = PipelineStageType.AwaitingOutline; // AI: Update pipeline stage
-        await _workspaceManager.SaveWorkspaceStateAsync(state, cancellationToken: ct);
+        state.PipelineStage = PipelineStageType.AwaitingOutline;        await _workspaceManager.SaveWorkspaceStateAsync(state, cancellationToken: ct);
         AnsiConsole.MarkupLine("[green]Premise saved and pipeline stage updated to AwaitingOutline.[/]");
     }
 

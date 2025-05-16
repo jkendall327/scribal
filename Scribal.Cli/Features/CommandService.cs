@@ -239,7 +239,6 @@ public class CommandService(
 
     private async Task StatusCommand(InvocationContext context)
     {
-        // AI: Check if currently in a Scribal workspace
         if (!workspaceManager.InWorkspace)
         {
             AnsiConsole.MarkupLine("[yellow]Not currently in a Scribal workspace. Use '/init' to create one.[/]");
@@ -247,8 +246,6 @@ public class CommandService(
         }
 
         AnsiConsole.MarkupLine($"[green]Current Workspace Path:[/] {workspaceManager.CurrentWorkspacePath ?? "N/A"}");
-
-        // AI: Load the workspace state
         var state = await workspaceManager.LoadWorkspaceStateAsync(cancellationToken: context.GetCancellationToken());
 
         if (state is null)
@@ -256,11 +253,7 @@ public class CommandService(
             AnsiConsole.MarkupLine("[red]Could not load workspace state. The state file might be corrupted or missing.[/]");
             return;
         }
-
-        // AI: Display the current pipeline stage
         AnsiConsole.MarkupLine($"[green]Current Pipeline Stage:[/] {state.PipelineStage.ToString()}");
-
-        // AI: Display the premise if available
         if (!string.IsNullOrWhiteSpace(state.Premise))
         {
             AnsiConsole.MarkupLine($"[green]Premise:[/] {state.Premise}");
@@ -269,8 +262,6 @@ public class CommandService(
         {
             AnsiConsole.MarkupLine("[green]Premise:[/] Not set");
         }
-        
-        // AI: Display plot outline file if available
         if (!string.IsNullOrWhiteSpace(state.PlotOutlineFile))
         {
             AnsiConsole.MarkupLine($"[green]Plot Outline File:[/] {state.PlotOutlineFile}");
@@ -279,9 +270,6 @@ public class CommandService(
         {
             AnsiConsole.MarkupLine("[green]Plot Outline File:[/] Not set");
         }
-
-
-        // AI: Display chapter statuses
         if (state.Chapters is not null && state.Chapters.Any())
         {
             AnsiConsole.MarkupLine("[green]Chapters:[/]");

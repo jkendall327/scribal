@@ -194,7 +194,7 @@ public class WorkspaceManager(
 
         if (string.IsNullOrEmpty(workspacePath))
         {
-            logger.LogWarning("Cannot load workspace state, workspace directory not found.");
+            logger.LogWarning("Cannot load workspace state, workspace directory not found");
 
             return null;
         }
@@ -203,7 +203,7 @@ public class WorkspaceManager(
 
         if (!fileSystem.File.Exists(stateFilePath))
         {
-            logger.LogDebug("Workspace state file not found at {StateFilePath}. Returning new state.", stateFilePath);
+            logger.LogDebug("Workspace state file not found at {StateFilePath}. Returning new state", stateFilePath);
 
             return new(); // Return a new empty state if file doesn't exist
         }
@@ -232,14 +232,14 @@ public class WorkspaceManager(
 
         if (string.IsNullOrEmpty(workspacePath))
         {
-            logger.LogError("Cannot save workspace state, workspace directory not found or not initialized.");
+            logger.LogError("Cannot save workspace state, workspace directory not found or not initialized");
 
             return;
         }
 
         if (!fileSystem.Directory.Exists(workspacePath))
         {
-            logger.LogDebug("Workspace directory {WorkspacePath} does not exist. Creating it.", workspacePath);
+            logger.LogDebug("Workspace directory {WorkspacePath} does not exist. Creating it", workspacePath);
             fileSystem.Directory.CreateDirectory(workspacePath);
         }
 
@@ -264,7 +264,7 @@ public class WorkspaceManager(
 
         if (string.IsNullOrEmpty(workspacePath))
         {
-            logger.LogWarning("Cannot load plot outline, workspace directory not found.");
+            logger.LogWarning("Cannot load plot outline, workspace directory not found");
 
             return null;
         }
@@ -273,7 +273,7 @@ public class WorkspaceManager(
 
         if (!fileSystem.File.Exists(plotOutlineFilePath))
         {
-            logger.LogDebug("Plot outline file not found at {PlotOutlineFilePath}. Returning null.",
+            logger.LogDebug("Plot outline file not found at {PlotOutlineFilePath}. Returning null",
                 plotOutlineFilePath);
 
             return null;
@@ -309,7 +309,7 @@ public class WorkspaceManager(
 
         if (string.IsNullOrEmpty(workspacePath))
         {
-            logger.LogError("Cannot save plot outline, workspace directory not found or not initialized.");
+            logger.LogError("Cannot save plot outline, workspace directory not found or not initialized");
 
             return;
         }
@@ -353,7 +353,7 @@ public class WorkspaceManager(
 
         if (string.IsNullOrEmpty(projectRootPath))
         {
-            logger.LogError("Could not determine project root path to create chapter directories.");
+            logger.LogError("Could not determine project root path to create chapter directories");
 
             return;
         }

@@ -68,7 +68,7 @@ public class ChapterDrafterService
         if (_options.Value.Primary is null)
         {
             _console.MarkupLine("[red]No primary model is configured. Cannot draft chapter.[/]");
-            _logger.LogWarning("Primary model not configured, cannot draft chapter.");
+            _logger.LogWarning("Primary model not configured, cannot draft chapter");
 
             return;
         }

@@ -46,8 +46,10 @@ void IncorporateConfigFromScribalWorkspace(HostApplicationBuilder host)
 
 void SetupLogging(HostApplicationBuilder host)
 {
+    var path = Path.Combine(host.Environment.ContentRootPath, "logs");
+    
     Log.Logger = new LoggerConfiguration().MinimumLevel.Debug()
-                                          .WriteTo.File("logs/log-.txt",
+                                          .WriteTo.File($"{path}/log-.txt",
                                               rollingInterval: RollingInterval.Day,
                                               retainedFileCountLimit: 7,
                                               outputTemplate:

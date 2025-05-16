@@ -1,0 +1,4 @@
+[*.cs]
+dotnet_analyzer_diagnostic.category-Reliability.severity = warning
+dotnet_analyzer_diagnostic.category-Performance.severity = warning
+dotnet_analyzer_diagnostic.category-Maintainability.severity = warning

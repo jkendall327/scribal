@@ -1,0 +1,17 @@
+﻿{
+  FileSystemState: [
+    /,
+    /temp,
+    /test,
+    /test/project,
+    /test/project/.scribal,
+    /test/project/.scribal/config.json,
+    /test/project/.scribal/state.json,
+    /test/project/.scribal/plot_outline.json,
+    /test/project/.scribal/vectors,
+    /test/project/.scribal/vectors/index.ann,
+    /test/project/.git,
+    /test/project/.git/config,
+    /test/project/.git/HEAD
+  ]
+}

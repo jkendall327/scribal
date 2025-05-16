@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
+using Scribal.Agency;
 using Scribal.AI;
 using Scribal.Context;
 using Scribal.Workspace;
@@ -21,6 +22,7 @@ public class ChapterDrafterService
     private readonly IOptions<AiSettings> _options;
     private readonly IFileSystem _fileSystem;
     private readonly WorkspaceManager _workspaceManager;
+    private readonly IGitService _gitService;
     private readonly ILogger<ChapterDrafterService> _logger;
 
     public ChapterDrafterService(IAiChatService chat,
@@ -30,6 +32,7 @@ public class ChapterDrafterService
         IOptions<AiSettings> options,
         IFileSystem fileSystem,
         WorkspaceManager workspaceManager,
+        IGitService gitService,
         ILogger<ChapterDrafterService> logger)
     {
         _chat = chat;
@@ -39,6 +42,7 @@ public class ChapterDrafterService
         _options = options;
         _fileSystem = fileSystem;
         _workspaceManager = workspaceManager;
+        _gitService = gitService;
         _logger = logger;
     }
 
@@ -55,7 +59,7 @@ public class ChapterDrafterService
             _console.MarkupLine("[red]Could not determine current workspace path. Cannot draft chapter.[/]");
 
             _logger.LogWarning(
-                "Current workspace path is not set in WorkspaceManager. Chapter {ChapterNumber} drafting aborted.",
+                "Current workspace path is not set in WorkspaceManager. Chapter {ChapterNumber} drafting aborted",
                 chapter.Number);
 
             return;
@@ -117,7 +121,7 @@ public class ChapterDrafterService
         _console.MarkupLine("[yellow]Final chapter draft:[/]");
         _console.WriteLine(Markup.Escape(finalDraft));
 
-        await SaveDraftToFileAsync(chapter, finalDraft, cancellationToken);
+        await CommitDraftAsync(chapter, finalDraft, cancellationToken);
     }
 
     private async Task<string> GenerateInitialDraft(ChapterState chapter, string sid, CancellationToken ct)
@@ -273,7 +277,7 @@ public class ChapterDrafterService
         }
     }
 
-    private async Task SaveDraftToFileAsync(ChapterState chapter, string content, CancellationToken cancellationToken)
+    private async Task CommitDraftAsync(ChapterState chapter, string content, CancellationToken cancellationToken)
     {
         var workspacePath = _workspaceManager.CurrentWorkspacePath;
 
@@ -332,6 +336,26 @@ public class ChapterDrafterService
             await _fileSystem.File.WriteAllTextAsync(draftFilePath, content, cancellationToken);
             _console.MarkupLine($"[green]Draft saved successfully to: {Markup.Escape(draftFilePath)}[/]");
             _logger.LogInformation("Chapter {ChapterNumber} draft saved to {FilePath}", chapter.Number, draftFilePath);
+
+            if (_gitService.Enabled)
+            {
+                var commitMessage = $"Drafted Chapter {chapter.Number}: {chapter.Title}";
+                var commitSuccess = await _gitService.CreateCommitAsync(draftFilePath, commitMessage, cancellationToken);
+                if (commitSuccess)
+                {
+                    _console.MarkupLine($"[green]Committed draft to git: {Markup.Escape(commitMessage)}[/]");
+                    _logger.LogInformation("Successfully committed draft for chapter {ChapterNumber}", chapter.Number);
+                }
+                else
+                {
+                    _console.MarkupLine($"[red]Failed to commit draft for chapter {chapter.Number} to git.[/]");
+                    _logger.LogWarning("Failed to commit draft for chapter {ChapterNumber}", chapter.Number);
+                }
+            }
+            else
+            {
+                _logger.LogInformation("Git service not enabled. Skipping commit for chapter {ChapterNumber} draft", chapter.Number);
+            }
 
             // Optionally, update ChapterState with the new draft path and save workspace state
             // chapter.DraftFilePath = draftFilePath; // Assuming ChapterState has such a property

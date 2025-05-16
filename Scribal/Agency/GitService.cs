@@ -12,7 +12,7 @@ public interface IGitService
     void Initialise(string path);
     void CreateRepository(string path);
     Task<string> GetCurrentBranch();
-    Task<bool> CreateCommit(string filepath, string message);
+    Task<bool> CreateCommitAsync(string filepath, string message, CancellationToken ct = default);
     Task CreateGitIgnore(string gitignore);
 }
 
@@ -94,22 +94,30 @@ public sealed class GitService(
         throw new NotImplementedException();
     }
 
-    public Task<bool> CreateCommit(string filepath, string message)
+    public Task<bool> CreateCommitAsync(string filepath, string message, CancellationToken ct = default)
     {
         if (config.Value.DryRun)
         {
+            logger.LogInformation("Dry run: Skipping commit for {Filepath}", filepath);
             return Task.FromResult(true);
         }
 
+        ct.ThrowIfCancellationRequested();
         EnsureValidRepository();
 
-        Commands.Stage(_repo, filepath);
-
-        var sig = new Signature($"{_name} (scribal)", _email, time.GetLocalNow());
-
-        _repo.Commit(message, sig, sig);
-
-        return Task.FromResult(true);
+        try
+        {
+            Commands.Stage(_repo, filepath);
+            var sig = new Signature($"{_name} (scribal)", _email, time.GetLocalNow());
+            _repo.Commit(message, sig, sig);
+            logger.LogInformation("Committed changes for {Filepath} with message: {Message}", filepath, message);
+            return Task.FromResult(true);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to create commit for {Filepath}", filepath);
+            return Task.FromResult(false);
+        }
     }
 
     public async Task CreateGitIgnore(string gitignore)

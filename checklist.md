@@ -57,11 +57,11 @@
 - [x] Deleting a chapter: Automatically update the ordinals of subsequent chapters
 
 ## Drafting
-- [ ] When in chapter mode, provide options for drafting content
-- [ ] Drafting: Option to write to a new file (e.g., `chapter_01_draftN.md`)
+- [x] When in chapter mode, provide options for drafting content
+- [x] Drafting: Option to write to a new file (e.g., `chapter_01_draftN.md`)
 - [ ] Drafting: Option to overwrite the existing chapter file
 - [ ] Ensure the latest draft takes priority or is clearly marked
-- [ ] If a git repository is present, make a git commit after any significant drafting action
+- [x] If a git repository is present, make a git commit after any significant drafting action
 - [ ] If a git repository is present and dirty when starting drafting, ask the user if they want to commit changes first
 
 ## Edit Mode

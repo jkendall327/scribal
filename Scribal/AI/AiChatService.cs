@@ -110,6 +110,39 @@ public sealed class AiChatService(
         yield return metadata;
     }
 
+    public async Task<(string AssistantResponse, ChatStreamItem.Metadata Metadata)>
+        GetFullResponseWithExplicitHistoryAsync(string conversationId,
+            ChatHistory history,
+            string userMessage,
+            string sid,
+            CancellationToken ct = default)
+    {
+        var start = time.GetTimestamp();
+        var chat = kernel.GetRequiredService<IChatCompletionService>(sid);
+
+        // Add the current user message to the provided history
+        history.AddUserMessage(userMessage);
+
+        var settings = GetSettings(sid);
+
+        // Get the full response from the AI
+        var finalAssistantMessageContent = await chat.GetChatMessageContentAsync(history, settings, kernel, ct);
+
+        // Extract the assistant's full response text
+        var assistantResponseText = string.Concat(finalAssistantMessageContent).Trim();
+
+        // Update the passed-in ChatHistory object with the assistant's full response
+        history.AddAssistantMessage(assistantResponseText); // This modifies the 'history' instance
+
+        // Save the updated history
+        await store.SaveAsync(conversationId, history, ct);
+
+        // Collect metadata using the MetadataCollector
+        var metadata = metadataCollector.CollectMetadata(sid, start, finalAssistantMessageContent);
+
+        return (assistantResponseText, metadata);
+    }
+
     private PromptExecutionSettings GetSettings(string sid)
     {
         // Gemini requires special treatment to actually use tools.

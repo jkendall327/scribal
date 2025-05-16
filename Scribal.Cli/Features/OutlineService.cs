@@ -243,20 +243,16 @@ public class OutlineService(
         // Let's use a simple instruction.
         var initialUserMessage = "Generate the plot outline based on the premise provided in your instructions.";
 
-        var outlineStream = chat.StreamWithExplicitHistoryAsync(cid, history, initialUserMessage, sid, ct);
+        var task = chat.GetFullResponseWithExplicitHistoryAsync(cid, history, initialUserMessage, sid, ct);
 
-        var outlineBuilder = new StringBuilder();
-
-        await ConsoleChatRenderer.StreamWithSpinnerAsync(CollectWhileStreaming(outlineStream, outlineBuilder, ct), ct);
-
-        var generatedOutlineJson = outlineBuilder.ToString().Trim();
+        await ConsoleChatRenderer.WaitWithSpinnerAsync(task, ct);
 
         AnsiConsole.MarkupLine("[cyan]Initial Plot Outline Generated.[/]");
 
         // Displaying the outline (parsed or raw) will now be handled by the calling method CreateOutlineFromPremise
         AnsiConsole.WriteLine();
 
-        return generatedOutlineJson;
+        return task.Result.AssistantResponse;
     }
 
     private async Task<string> RefineOutline(string refinementCid,

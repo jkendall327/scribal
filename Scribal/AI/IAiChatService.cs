@@ -16,4 +16,11 @@ public interface IAiChatService
         string userMessage,
         string sid,
         CancellationToken ct = default);
+
+    Task<(string AssistantResponse, ChatStreamItem.Metadata Metadata)> GetFullResponseWithExplicitHistoryAsync(
+        string conversationId,
+        ChatHistory history,
+        string userMessage,
+        string sid,
+        CancellationToken ct = default);
 }

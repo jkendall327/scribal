@@ -17,10 +17,10 @@ public class InterfaceManager(
     IGitService gitService,
     WorkspaceManager workspaceManager,
     IOptions<AiSettings> aiSettings,
-    CancellationService cancellationService,
     RepoMapStore repoMapStore)
 {
     private readonly Guid _conversationId = Guid.NewGuid();
+    private CancellationTokenSource _cts = new();
 
     public Task DisplayWelcome()
     {
@@ -89,9 +89,17 @@ public class InterfaceManager(
             }
         }
     }
-
+    
+    private void PerformCancellation(object? sender, ConsoleCancelEventArgs e)
+    {
+        e.Cancel = true;
+        _cts.Cancel();
+    }
+    
     private async Task ProcessConversation(string userInput)
     {
+        Console.CancelKeyPress += PerformCancellation;
+
         AnsiConsole.Write(new Rule());
         AnsiConsole.WriteLine();
 
@@ -116,9 +124,9 @@ public class InterfaceManager(
             var enumerable = aiChatService.StreamAsync(_conversationId.ToString(),
                 userInput,
                 aiSettings.Value.Primary.Provider,
-                cancellationService.Source.Token);
+                _cts.Token);
 
-            await ConsoleChatRenderer.StreamWithSpinnerAsync(enumerable, cancellationService.Source.Token);
+            await ConsoleChatRenderer.StreamWithSpinnerAsync(enumerable, _cts.Token);
         }
         catch (OperationCanceledException)
         {
@@ -127,6 +135,9 @@ public class InterfaceManager(
         }
 
         AnsiConsole.WriteLine();
+        
+        Console.CancelKeyPress -= PerformCancellation;
+        _cts = new();
     }
 
     private async Task DrawStatusLine(string modelId)

@@ -27,9 +27,6 @@ public static class App
         var git = app.Services.GetRequiredService<IGitService>();
         git.Initialise(filesystem.Directory.GetCurrentDirectory());
 
-        var cancellation = app.Services.GetRequiredService<CancellationService>();
-        cancellation.Initialise();
-
         var manager = app.Services.GetRequiredService<InterfaceManager>();
 
         await manager.DisplayWelcome();

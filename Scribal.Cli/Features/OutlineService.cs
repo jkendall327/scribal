@@ -149,12 +149,7 @@ public class OutlineService(
 
         try
         {
-            var options = new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            };
-
-            outline = JsonSerializer.Deserialize<StoryOutline>(actualJson, options);
+            outline = JsonSerializer.Deserialize<StoryOutline>(actualJson, JsonDefaults.Default);
 
             return outline?.Chapters != null && outline.Chapters.Count > 0;
         }

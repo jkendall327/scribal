@@ -50,7 +50,7 @@ public partial class DiffEditor(IFileSystem fileSystem, IOptions<AppConfig> opti
         return newFileContent;
     }
 
-    private class DiffHunk
+    private sealed class DiffHunk
     {
         public int OriginalStart { get; init; }
         public int OriginalCount { get; init; }
@@ -105,7 +105,7 @@ public partial class DiffEditor(IFileSystem fileSystem, IOptions<AppConfig> opti
             // Add the line to the current hunk
             // Only add lines that are part of the hunk body (context, add, remove)
             // This also implicitly ignores "\ No newline at end of file"
-            if (line.StartsWith(" ") || line.StartsWith("+") || line.StartsWith("-"))
+            if (line.StartsWith(' ') || line.StartsWith('+') || line.StartsWith('-'))
             {
                 currentHunk.Lines.Add(line);
             }

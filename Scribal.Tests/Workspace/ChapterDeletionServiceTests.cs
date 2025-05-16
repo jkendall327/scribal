@@ -41,12 +41,7 @@ public class ChapterDeletionServiceTests
 
     private string ToJson<T>(T obj)
     {
-        return JsonSerializer.Serialize(obj,
-            new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true,
-                WriteIndented = true
-            });
+        return JsonSerializer.Serialize(obj, JsonDefaults.Default);
     }
 
     private void SetupTryFindWorkspaceFolderSuccess()

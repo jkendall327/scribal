@@ -1,4 +1,8 @@
 [*.cs]
-dotnet_analyzer_diagnostic.category-Reliability.severity = warning
-dotnet_analyzer_diagnostic.category-Performance.severity = warning
-dotnet_analyzer_diagnostic.category-Maintainability.severity = warning
+dotnet_analyzer_diagnostic.category-Reliability.severity = error
+dotnet_analyzer_diagnostic.category-Performance.severity = error
+dotnet_analyzer_diagnostic.category-Maintainability.severity = error
+
+dotnet_diagnostic.CA1848.severity = none
+dotnet_diagnostic.CA1822.severity = none
+dotnet_diagnostic.CA1860.severity = none

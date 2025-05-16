@@ -69,11 +69,7 @@ public class WorkspaceManager(
         {
             logger.LogDebug("Writing workspace config to {ConfigPath}", configPath);
 
-            var jsonConfig = JsonSerializer.Serialize(config,
-                new JsonSerializerOptions
-                {
-                    WriteIndented = true
-                });
+            var jsonConfig = JsonSerializer.Serialize(config, JsonDefaults.Default);
 
             await fileSystem.File.WriteAllTextAsync(configPath, jsonConfig);
 
@@ -247,11 +243,7 @@ public class WorkspaceManager(
 
         try
         {
-            var json = JsonSerializer.Serialize(state,
-                new JsonSerializerOptions
-                {
-                    WriteIndented = true
-                });
+            var json = JsonSerializer.Serialize(state, JsonDefaults.Default);
 
             await fileSystem.File.WriteAllTextAsync(stateFilePath, json, cancellationToken);
             logger.LogInformation("Workspace state saved to {StateFilePath}", stateFilePath);
@@ -287,11 +279,7 @@ public class WorkspaceManager(
         {
             var json = await fileSystem.File.ReadAllTextAsync(plotOutlineFilePath, cancellationToken);
 
-            var outline = JsonSerializer.Deserialize<StoryOutline>(json,
-                new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                });
+            var outline = JsonSerializer.Deserialize<StoryOutline>(json, JsonDefaults.Default);
 
             logger.LogInformation("Plot outline loaded from {PlotOutlineFilePath}", plotOutlineFilePath);
 
@@ -326,11 +314,7 @@ public class WorkspaceManager(
 
         try
         {
-            var outlineJson = JsonSerializer.Serialize(outline,
-                new JsonSerializerOptions
-                {
-                    WriteIndented = true
-                });
+            var outlineJson = JsonSerializer.Serialize(outline, JsonDefaults.Default);
 
             await fileSystem.File.WriteAllTextAsync(plotOutlineFilePath, outlineJson);
             logger.LogInformation("Plot outline saved to {PlotOutlineFilePath}", plotOutlineFilePath);

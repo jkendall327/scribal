@@ -51,7 +51,7 @@ public sealed class GitCommitFilter(
 
             var message = await generator.GetCommitMessage(ctx.Kernel, [diff], aiSettings.Value.Weak.Provider);
 
-            await git.CreateCommit(file, message);
+            await git.CreateCommitAsync(file, message);
         }
     }
 }

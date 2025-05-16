@@ -43,6 +43,18 @@ public static class ConsoleChatRenderer
         AnsiConsole.WriteLine();
     }
 
+    /// <summary>
+    ///     Displays a spinner while waiting for an async task to complete.
+    ///     Does not write anything else to the console.
+    /// </summary>
+    public static async Task WaitWithSpinnerAsync(Task taskToAwait, CancellationToken ct = default)
+    {
+        await AnsiConsole.Status()
+            .Spinner(Spinner.Known.Dots)
+            .SpinnerStyle(Style.Parse("green"))
+            .StartAsync("Processing …", async _ => await taskToAwait.WaitAsync(ct));
+    }
+
     private static void ProcessChatStreamItem(ChatStreamItem e)
     {
         switch (e)

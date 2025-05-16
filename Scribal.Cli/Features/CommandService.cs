@@ -222,10 +222,10 @@ public class CommandService(
     {
         var cwd = fileSystem.Directory.GetCurrentDirectory();
         
-        // Assuming StickyTreeSelector is available and working as intended.
         var files = StickyTreeSelector.Scan(cwd);
-        repoStore.Paths = files;
-        AnsiConsole.MarkupLine($"[green]Context files updated. {files.Count} files/directories selected.[/]");
+        
+        // Add files, don't replace on multiple /tree invocations.
+        repoStore.Paths = repoStore.Paths.Union(files).ToList();
 
         return Task.FromResult(true);
     }

@@ -3,13 +3,12 @@ using System.CommandLine.Builder;
 using System.CommandLine.Invocation;
 using System.CommandLine.Parsing;
 using System.IO.Abstractions;
+using Scribal.Agency;
 using Scribal.AI;
 using Scribal.Cli.Features;
 using Scribal.Context;
 using Scribal.Workspace;
 using Spectre.Console;
-
-// Required for ChapterManagerService
 
 namespace Scribal.Cli;
 
@@ -21,7 +20,8 @@ public class CommandService(
     OutlineService outlineService,
     WorkspaceDeleter workspaceDeleter,
     WorkspaceManager workspaceManager,
-    ChapterManagerService chapterManagerService)
+    ChapterManagerService chapterManagerService,
+    IGitService gitService)
 {
     private readonly Argument<string> _ideaArgument = new()
     {
@@ -30,11 +30,18 @@ public class CommandService(
         Description = "Your basic idea for the story"
     };
 
-    private readonly Argument<string> _premiseArgument = new() // Added premise argument
+    private readonly Argument<string> _premiseArgument = new()
     {
         Name = "Premise",
         Arity = ArgumentArity.ExactlyOne,
         Description = "The story premise to be turned into an outline"
+    };
+
+    private readonly Argument<string> _commitMessageArgument = new()
+    {
+        Name = "Message",
+        Arity = ArgumentArity.ExactlyOne,
+        Description = "The commit message for all staged files"
     };
 
     public Parser Build()
@@ -66,20 +73,27 @@ public class CommandService(
 
         var chaptersCmd = Create("/chapters",
             "Manage chapters in the workspace",
-            chapterManagerService.ManageChaptersAsync); // Use ChapterManagerService
+            chapterManagerService.ManageChaptersAsync);
 
         var deleteWorkspaceCmd = Create("/delete",
             "Deletes the .scribal workspace and optionally the .git folder",
             workspaceDeleter.DeleteWorkspaceCommandAsync);
+
+        var commitCmd = Create("/commit",
+            "Stages all changes and creates a commit with the given message",
+            CommitAllCommandAsync);
+
+        commitCmd.AddArgument(_commitMessageArgument);
 
         var root = new RootCommand("Scribal interactive shell")
         {
             init,
             clear,
             pitch,
-            outline, // Added outline command to root
-            chaptersCmd, // Added chapters command to root
-            deleteWorkspaceCmd, // Added delete workspace command
+            outline,
+            chaptersCmd,
+            deleteWorkspaceCmd,
+            commitCmd,
             tree,
             quit
         };
@@ -87,7 +101,7 @@ public class CommandService(
         return new CommandLineBuilder(root).UseDefaults().UseHelp("/help").Build();
     }
 
-    private async Task OutlineCommand(InvocationContext arg) // Added OutlineCommand handler
+    private async Task OutlineCommand(InvocationContext arg)
     {
         var premise = arg.ParseResult.GetValueForArgument(_premiseArgument);
         var token = arg.GetCancellationToken();
@@ -105,6 +119,50 @@ public class CommandService(
         }
         catch (Exception e)
         {
+            AnsiConsole.WriteException(e);
+        }
+    }
+
+    private async Task CommitAllCommandAsync(InvocationContext context)
+    {
+        var message = context.ParseResult.GetValueForArgument(_commitMessageArgument);
+        var token = context.GetCancellationToken();
+
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            AnsiConsole.MarkupLine("[red]Commit message cannot be empty.[/]");
+
+            return;
+        }
+
+        if (!gitService.Enabled)
+        {
+            AnsiConsole.MarkupLine("[yellow]Git is not initialized for this workspace. Cannot commit.[/]");
+
+            return;
+        }
+
+        try
+        {
+            AnsiConsole.MarkupLine($"Attempting to commit all changes with message: \"{message}\"...");
+            var success = await gitService.CreateCommitAllAsync(message, token);
+
+            if (success)
+            {
+                AnsiConsole.MarkupLine("[green]Commit operation completed. Check logs for details.[/]");
+            }
+            else
+            {
+                AnsiConsole.MarkupLine("[red]Failed to create commit. Check logs for details.[/]");
+            }
+        }
+        catch (InvalidOperationException ex)
+        {
+            AnsiConsole.MarkupLine($"[red]Git operation failed: {ex.Message}[/]");
+        }
+        catch (Exception e)
+        {
+            AnsiConsole.MarkupLine("[red]An unexpected error occurred while committing.[/]");
             AnsiConsole.WriteException(e);
         }
     }
@@ -163,7 +221,7 @@ public class CommandService(
     private Task TreeCommand(InvocationContext ctx)
     {
         var cwd = fileSystem.Directory.GetCurrentDirectory();
-
+        
         // Assuming StickyTreeSelector is available and working as intended.
         var files = StickyTreeSelector.Scan(cwd);
         repoStore.Paths = files;

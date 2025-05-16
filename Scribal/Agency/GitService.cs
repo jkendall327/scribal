@@ -13,6 +13,7 @@ public interface IGitService
     void CreateRepository(string path);
     Task<string> GetCurrentBranch();
     Task<bool> CreateCommitAsync(string filepath, string message, CancellationToken ct = default);
+    Task<bool> CreateCommitAllAsync(string message, CancellationToken ct = default);
     Task CreateGitIgnore(string gitignore);
 }
 
@@ -116,6 +117,37 @@ public sealed class GitService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to create commit for {Filepath}", filepath);
+            return Task.FromResult(false);
+        }
+    }
+
+    public Task<bool> CreateCommitAllAsync(string message, CancellationToken ct = default)
+    {
+        if (config.Value.DryRun)
+        {
+            logger.LogInformation("Dry run: Skipping commit all with message: {Message}", message);
+            return Task.FromResult(true);
+        }
+
+        ct.ThrowIfCancellationRequested();
+        EnsureValidRepository();
+
+        try
+        {
+            Commands.Stage(_repo, "*"); // Stage all changes
+            var sig = new Signature($"{_name} (scribal)", _email, time.GetLocalNow());
+            _repo.Commit(message, sig, sig);
+            logger.LogInformation("Committed all staged changes with message: {Message}", message);
+            return Task.FromResult(true);
+        }
+        catch (EmptyCommitException)
+        {
+            logger.LogInformation("No changes staged to commit for message: {Message}", message);
+            return Task.FromResult(true); // Not an error, but nothing was committed.
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to create commit all with message: {Message}", message);
             return Task.FromResult(false);
         }
     }

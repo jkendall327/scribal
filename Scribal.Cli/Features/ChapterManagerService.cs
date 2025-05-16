@@ -280,7 +280,7 @@ public class ChapterManagerService
             AnsiConsole.MarkupLine(
                 $"[bold green]{Markup.Escape(deletionResult.OverallMessage ?? "Chapter deleted successfully.")}[/]");
 
-            subMenuCts.Cancel(); // Exit the current chapter's sub-menu
+            await subMenuCts.CancelAsync(); // Exit the current chapter's sub-menu
         }
         else
         {

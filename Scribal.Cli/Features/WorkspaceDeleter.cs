@@ -1,5 +1,7 @@
 using System.CommandLine.Invocation;
 using System.IO.Abstractions;
+using Microsoft.Extensions.Logging;
+using Scribal.Agency;
 using Scribal.Workspace;
 using Spectre.Console;
 
@@ -9,8 +11,13 @@ public class WorkspaceDeleter(
     WorkspaceManager workspaceManager,
     IFileSystem fileSystem,
     IUserInteraction interaction,
-    IAnsiConsole console)
+    IAnsiConsole console,
+    IGitService gitService,
+    ILogger<WorkspaceDeleter> logger)
 {
+    private readonly IGitService _gitService = gitService;
+    private readonly ILogger<WorkspaceDeleter> _logger = logger;
+
     public async Task DeleteWorkspaceCommandAsync(InvocationContext context)
     {
         var workspacePath = workspaceManager.CurrentWorkspacePath;
@@ -37,9 +44,31 @@ public class WorkspaceDeleter(
         try
         {
             fileSystem.Directory.Delete(workspacePath, true);
-
             console.MarkupLine(
                 $"[green].scribal workspace at '{Markup.Escape(workspacePath)}' deleted successfully.[/]");
+            _logger.LogInformation(".scribal workspace at {WorkspacePath} deleted successfully", workspacePath);
+
+            if (_gitService.Enabled)
+            {
+                var cancellationToken = context.GetCancellationToken();
+                var commitMessage = "Deleted .scribal workspace";
+                _logger.LogInformation("Attempting to commit deletion of workspace: {WorkspacePath}", workspacePath);
+                var commitSuccess = await _gitService.CreateCommitAsync(workspacePath, commitMessage, cancellationToken);
+                if (commitSuccess)
+                {
+                    console.MarkupLine($"[green]Committed workspace deletion to git: {Markup.Escape(commitMessage)}[/]");
+                    _logger.LogInformation("Successfully committed deletion of workspace {WorkspacePath}", workspacePath);
+                }
+                else
+                {
+                    console.MarkupLine($"[red]Failed to commit workspace deletion for {Markup.Escape(workspacePath)} to git.[/]");
+                    _logger.LogWarning("Failed to commit deletion of workspace {WorkspacePath}", workspacePath);
+                }
+            }
+            else
+            {
+                _logger.LogInformation("Git service not enabled. Skipping commit for workspace deletion at {WorkspacePath}", workspacePath);
+            }
 
             var projectRootPath = fileSystem.DirectoryInfo.New(workspacePath).Parent?.FullName;
 

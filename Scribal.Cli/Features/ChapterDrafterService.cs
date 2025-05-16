@@ -71,7 +71,7 @@ public class ChapterDrafterService
 
         var sid = _options.Value.Primary.Provider;
 
-        var initialDraft = await GenerateInitialDraft(chapter, cancellationToken, sid);
+        var initialDraft = await GenerateInitialDraft(chapter, sid, cancellationToken);
 
         if (string.IsNullOrWhiteSpace(initialDraft))
         {
@@ -110,7 +110,7 @@ public class ChapterDrafterService
             _console.MarkupLine(
                 "Entering chapter draft refinement chat. Type [blue]/done[/] when finished or [blue]/cancel[/] to abort.");
 
-            finalDraft = await RefineDraft(cancellationToken, refinementCid, refinementHistory, sid, initialDraft);
+            finalDraft = await RefineDraft(refinementCid, refinementHistory, sid, initialDraft, cancellationToken);
             _console.MarkupLine("[yellow]Chapter draft refinement finished.[/]");
         }
 
@@ -120,7 +120,7 @@ public class ChapterDrafterService
         await SaveDraftToFileAsync(chapter, finalDraft, cancellationToken);
     }
 
-    private async Task<string> GenerateInitialDraft(ChapterState chapter, CancellationToken ct, string sid)
+    private async Task<string> GenerateInitialDraft(ChapterState chapter, string sid, CancellationToken ct)
     {
         var arguments = new KernelArguments
         {
@@ -169,11 +169,11 @@ public class ChapterDrafterService
         return generatedDraft;
     }
 
-    private async Task<string> RefineDraft(CancellationToken ct,
-        string refinementCid,
+    private async Task<string> RefineDraft(string refinementCid,
         ChatHistory refinementHistory,
         string sid,
-        string currentDraft)
+        string currentDraft,
+        CancellationToken ct)
     {
         var lastAssistantResponse = currentDraft;
 

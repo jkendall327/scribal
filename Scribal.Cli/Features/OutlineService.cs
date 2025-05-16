@@ -39,7 +39,7 @@ public class OutlineService(
 
         var sid = options.Value.Primary.Provider;
 
-        var generatedOutlineJson = await GenerateInitialOutline(premise, ct, sid);
+        var generatedOutlineJson = await GenerateInitialOutline(premise, sid, ct);
 
         StoryOutline? storyOutline;
 
@@ -98,7 +98,7 @@ public class OutlineService(
         AnsiConsole.MarkupLine(
             "Entering plot outline refinement chat. Type [blue]/done[/] when finished or [blue]/cancel[/] to abort.");
 
-        var finalOutlineJson = await RefineOutline(ct, refinementCid, refinementHistory, sid, generatedOutlineJson);
+        var finalOutlineJson = await RefineOutline(refinementCid, refinementHistory, sid, generatedOutlineJson, ct);
 
         AnsiConsole.MarkupLine("[yellow]Plot outline refinement finished.[/]");
         AnsiConsole.MarkupLine("[yellow]Final plot outline (not saved yet):[/]");
@@ -215,7 +215,7 @@ public class OutlineService(
         AnsiConsole.WriteLine();
     }
 
-    private async Task<string> GenerateInitialOutline(string premise, CancellationToken ct, string sid)
+    private async Task<string> GenerateInitialOutline(string premise, string sid, CancellationToken ct)
     {
         var request = new RenderRequest("Outline",
             "Outline",
@@ -259,11 +259,11 @@ public class OutlineService(
         return generatedOutlineJson;
     }
 
-    private async Task<string> RefineOutline(CancellationToken ct,
-        string refinementCid,
+    private async Task<string> RefineOutline(string refinementCid,
         ChatHistory refinementHistory,
         string sid,
-        string currentOutline)
+        string currentOutline,
+        CancellationToken ct)
     {
         var lastAssistantResponse = currentOutline;
 

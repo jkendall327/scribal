@@ -6,3 +6,6 @@ dotnet_analyzer_diagnostic.category-Maintainability.severity = error
 dotnet_diagnostic.CA1848.severity = none
 dotnet_diagnostic.CA1822.severity = none
 dotnet_diagnostic.CA1860.severity = none
+
+# cancellation tokens must come last
+dotnet_diagnostic.CA1068.severity = error

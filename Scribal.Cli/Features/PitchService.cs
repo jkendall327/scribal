@@ -27,7 +27,7 @@ public class PitchService(IAiChatService chat, PromptRenderer renderer, Kernel k
 
         var sid = options.Value.Primary.Provider;
 
-        var generatedPremise = await GenerateInitialPremise(pitch, ct, sid);
+        var generatedPremise = await GenerateInitialPremise(pitch, sid, ct);
 
         // Refinement loop.
         var ok = await AnsiConsole.ConfirmAsync("Do you want to refine this premise?", cancellationToken: ct);
@@ -53,16 +53,16 @@ public class PitchService(IAiChatService chat, PromptRenderer renderer, Kernel k
         AnsiConsole.MarkupLine(
             "Entering premise refinement chat. Type [blue]/done[/] when finished or [blue]/cancel[/] to abort.");
 
-        await RefinePremise(ct, refinementCid, refinementHistory, sid);
+        await RefinePremise(refinementCid, refinementHistory, sid, ct);
 
         AnsiConsole.MarkupLine("[yellow]Premise refinement finished.[/]");
     }
 
-    private async Task<string> GenerateInitialPremise(string initialPitch, CancellationToken ct, string sid)
+    private async Task<string> GenerateInitialPremise(string initialPitch, string sid, CancellationToken ct)
     {
         var request = new RenderRequest("Premise", "Premise", "Prompt for turning a story pitch into a premise", new());
 
-        var prompt = await renderer.RenderPromptTemplateFromFileAsync(kernel, request);
+        var prompt = await renderer.RenderPromptTemplateFromFileAsync(kernel, request, cancellationToken: ct);
 
         var cid = $"pitch-init-{Guid.NewGuid()}";
 
@@ -86,10 +86,10 @@ public class PitchService(IAiChatService chat, PromptRenderer renderer, Kernel k
         return generatedPremise;
     }
 
-    private async Task RefinePremise(CancellationToken ct,
-        string refinementCid,
+    private async Task RefinePremise(string refinementCid,
         ChatHistory refinementHistory,
-        string sid)
+        string sid,
+        CancellationToken ct)
     {
         while (true)
         {

@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
@@ -151,7 +150,7 @@ public class OutlineService(
         {
             outline = JsonSerializer.Deserialize<StoryOutline>(actualJson, JsonDefaults.Default);
 
-            return outline?.Chapters != null && outline.Chapters.Count > 0;
+            return outline?.Chapters is {Count: > 0};
         }
         catch (JsonException ex)
         {
@@ -295,25 +294,22 @@ public class OutlineService(
             }
 
             AnsiConsole.WriteLine();
-            var responseBuilder = new StringBuilder();
 
             try
             {
                 // Add user's latest message to history for the next turn
                 refinementHistory.AddUserMessage(userInput);
 
-                var refinementStream = chat.StreamWithExplicitHistoryAsync(refinementCid,
+                var refinementStream = chat.GetFullResponseWithExplicitHistoryAsync(refinementCid,
                     refinementHistory,
-                    userInput, // This is somewhat redundant if history is managed correctly
+                    userInput,
                     sid,
                     ct);
 
                 // We need to collect the AI's response to update refinementHistory and lastAssistantResponse
-                await ConsoleChatRenderer.StreamWithSpinnerAsync(
-                    CollectWhileStreaming(refinementStream, responseBuilder, ct),
-                    ct);
+                await ConsoleChatRenderer.WaitWithSpinnerAsync(refinementStream, ct);
 
-                lastAssistantResponse = responseBuilder.ToString().Trim();
+                lastAssistantResponse = refinementStream.Result.AssistantResponse;
 
                 if (!string.IsNullOrWhiteSpace(lastAssistantResponse))
                 {
@@ -338,20 +334,5 @@ public class OutlineService(
         }
 
         return lastAssistantResponse; // Return the latest version of the outline
-    }
-
-    private async IAsyncEnumerable<ChatStreamItem> CollectWhileStreaming(IAsyncEnumerable<ChatStreamItem> stream,
-        StringBuilder collector,
-        [EnumeratorCancellation] CancellationToken ct = default)
-    {
-        await foreach (var item in stream.WithCancellation(ct))
-        {
-            if (item is ChatStreamItem.TokenChunk tc)
-            {
-                collector.Append(tc.Content);
-            }
-
-            yield return item;
-        }
     }
 }

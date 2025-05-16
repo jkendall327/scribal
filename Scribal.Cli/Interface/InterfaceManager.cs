@@ -54,15 +54,7 @@ public class InterfaceManager(
         {
             AnsiConsole.Write(new Rule());
 
-            if (repoMapStore.Paths.Any())
-            {
-                var filenames = repoMapStore.Paths.Select(s => fileSystem.Path.GetFileName(s).ToLowerInvariant())
-                                            .ToList();
-
-                var paths = string.Join(" | ", filenames);
-
-                AnsiConsole.MarkupLine($"[yellow]{paths}[/]");
-            }
+            await DrawStatusLine(aiSettings.Value.Primary?.ModelId);
 
             AnsiConsole.WriteLine();
             AnsiConsole.Markup("[green]> [/]");
@@ -76,26 +68,65 @@ public class InterfaceManager(
 
             AnsiConsole.WriteLine();
 
-            var parsed = parser.Parse(input);
-
-            // If it fails to parse as a command, assume it's a message for the assistant.
-            if (parsed.Errors.Any())
-            {
-                await ProcessConversation(input);
-            }
-            else
-            {
-                await parsed.InvokeAsync();
-            }
+            await ActOnInput(input, parser);
         }
     }
-    
-    private void PerformCancellation(object? sender, ConsoleCancelEventArgs e)
+
+    private async Task ActOnInput(string input, Parser parser)
     {
-        e.Cancel = true;
-        _cts.Cancel();
+        // Normal chat/agentic request.
+        if (!input.StartsWith('/'))
+        {
+            await ProcessConversation(input);
+
+            return;
+        }
+
+        var parsed = parser.Parse(input);
+
+        if (parsed.Errors.Any())
+        {
+            AnsiConsole.MarkupLine("[red]There was an issue parsing that command, sorry.[/]");
+            AnsiConsole.MarkupLine("[yellow](hint: most commands require their arguments to be quoted)[/]");
+            AnsiConsole.MarkupLine("[yellow](hint: for example, '/outline \"a sci-fi epic about a horse\"')[/]");
+        }
+        else
+        {
+            await parsed.InvokeAsync();
+        }
     }
-    
+
+    private async Task DrawStatusLine(string? modelId)
+    {
+        var workspace = workspaceManager.InWorkspace
+            ? WorkspaceManager.TryFindWorkspaceFolder(fileSystem)
+            : "not in workspace";
+
+        var branch = gitService.Enabled ? await gitService.GetCurrentBranch() : "[not in a git repository]";
+
+        var model = modelId is null ? "[yellow]no model![/]" : $"[yellow]{modelId}[/]";
+
+        AnsiConsole.MarkupLine($"{model} | {workspace} | {branch}");
+
+        DrawPathsIfAny();
+    }
+
+    private void DrawPathsIfAny()
+    {
+        if (!repoMapStore.Paths.Any())
+        {
+            return;
+        }
+
+        AnsiConsole.WriteLine();
+
+        var filenames = repoMapStore.Paths.Select(s => fileSystem.Path.GetFileName(s).ToLowerInvariant()).ToList();
+
+        var paths = string.Join(" | ", filenames);
+
+        AnsiConsole.MarkupLine($"[yellow]{paths}[/]");
+    }
+
     private async Task ProcessConversation(string userInput)
     {
         Console.CancelKeyPress += PerformCancellation;
@@ -109,8 +140,6 @@ public class InterfaceManager(
 
             return;
         }
-
-        await DrawStatusLine(aiSettings.Value.Primary.ModelId);
 
         var files = repoMapStore.Paths.ToList();
 
@@ -135,20 +164,14 @@ public class InterfaceManager(
         }
 
         AnsiConsole.WriteLine();
-        
+
         Console.CancelKeyPress -= PerformCancellation;
         _cts = new();
     }
 
-    private async Task DrawStatusLine(string modelId)
+    private void PerformCancellation(object? sender, ConsoleCancelEventArgs e)
     {
-        var workspace = workspaceManager.InWorkspace
-            ? WorkspaceManager.TryFindWorkspaceFolder(fileSystem)
-            : "not in workspace";
-
-        var branch = gitService.Enabled ? await gitService.GetCurrentBranch() : "[not in a git repository]";
-
-        AnsiConsole.MarkupLine($"[yellow]{modelId}[/] | {workspace} | {branch}");
-        AnsiConsole.WriteLine();
+        e.Cancel = true;
+        _cts.Cancel();
     }
 }

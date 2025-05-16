@@ -100,7 +100,6 @@ public class StickyTreeSelector
 
         var selectedPaths = CollectSelectedPaths(_root);
         Console.Clear();
-        AnsiConsole.MarkupLine("[green]Selection complete.[/]");
 
         return selectedPaths;
     }

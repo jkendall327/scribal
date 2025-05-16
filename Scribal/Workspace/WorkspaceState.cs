@@ -1,4 +1,5 @@
 namespace Scribal.Workspace;
+
 public enum PipelineStageType
 {
     AwaitingPremise,
@@ -11,7 +12,8 @@ public class WorkspaceState
     public string? Premise { get; set; }
     public string? PlotOutlineFile { get; set; } // Added to store the path/filename of the plot outline
     public List<ChapterState> Chapters { get; set; } = [];
-    public PipelineStageType PipelineStage { get; set; }}
+    public PipelineStageType PipelineStage { get; set; }
+}
 
 public class ChapterState
 {

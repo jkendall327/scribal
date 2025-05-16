@@ -25,8 +25,6 @@ public class OutlineService(
     IOptions<AiSettings> options,
     WorkspaceManager workspaceManager) // Injected WorkspaceManager
 {
-    private readonly WorkspaceManager _workspaceManager = workspaceManager;
-
     public async Task CreateOutlineFromPremise(string premise, CancellationToken ct = default)
     {
         if (options.Value.Primary is null)
@@ -62,7 +60,7 @@ public class OutlineService(
 
             if (storyOutline != null)
             {
-                await _workspaceManager.SavePlotOutlineAsync(storyOutline, premise);
+                await workspaceManager.SavePlotOutlineAsync(storyOutline, premise);
 
                 AnsiConsole.MarkupLine(
                     $"[green]Initial plot outline saved to workspace: .scribal/{PlotOutlineFileName}[/]");
@@ -113,7 +111,7 @@ public class OutlineService(
         else
         {
             DisplayParsedOutline(finalStoryOutline!);
-            await _workspaceManager.SavePlotOutlineAsync(finalStoryOutline!, premise);
+            await workspaceManager.SavePlotOutlineAsync(finalStoryOutline!, premise);
             AnsiConsole.MarkupLine($"[green]Final plot outline saved to workspace: .scribal/{PlotOutlineFileName}[/]");
         }
     }

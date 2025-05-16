@@ -340,7 +340,10 @@ public class ChapterDrafterService
             if (_gitService.Enabled)
             {
                 var commitMessage = $"Drafted Chapter {chapter.Number}: {chapter.Title}";
-                var commitSuccess = await _gitService.CreateCommitAsync(draftFilePath, commitMessage, cancellationToken);
+
+                var commitSuccess =
+                    await _gitService.CreateCommitAsync(draftFilePath, commitMessage, cancellationToken);
+
                 if (commitSuccess)
                 {
                     _console.MarkupLine($"[green]Committed draft to git: {Markup.Escape(commitMessage)}[/]");
@@ -354,7 +357,8 @@ public class ChapterDrafterService
             }
             else
             {
-                _logger.LogInformation("Git service not enabled. Skipping commit for chapter {ChapterNumber} draft", chapter.Number);
+                _logger.LogInformation("Git service not enabled. Skipping commit for chapter {ChapterNumber} draft",
+                    chapter.Number);
             }
 
             // Optionally, update ChapterState with the new draft path and save workspace state

@@ -18,7 +18,7 @@ public sealed class VectorSearch(ISemanticTextMemory memory)
     {
         var name = await memory.GetCollectionsAsync(cancellationToken: cancellationToken);
 
-        var enumerable = memory.SearchAsync(name.Single(), query, 1, 0.7, cancellationToken: cancellationToken);
+        var enumerable = memory.SearchAsync(name.Single(), query, cancellationToken: cancellationToken);
 
         var sb = new StringBuilder();
 

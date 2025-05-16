@@ -56,22 +56,27 @@ public class ChapterManagerService
 
             // If a workspace is found but not loaded, LoadWorkspaceStateAsync will handle it.
         }
+
         var state = await _workspaceManager.LoadWorkspaceStateAsync(cancellationToken: token);
+
         if (state == null)
         {
             _logger.LogError("Could not load workspace state initially");
             AnsiConsole.MarkupLine("[red]Could not load workspace state. Exiting chapter management.[/]");
+
             return;
         }
 
         if (state.Chapters == null || !state.Chapters.Any())
         {
             _logger.LogInformation("No chapters found in the workspace upon initial load");
+
             AnsiConsole.MarkupLine(
                 "[yellow]No chapters found in the workspace. Generate an outline first using '/outline'.[/]");
+
             return;
         }
-        
+
         _logger.LogInformation("Initially loaded {ChapterCount} chapters", state.Chapters.Count);
 
         while (!token.IsCancellationRequested)
@@ -83,17 +88,20 @@ public class ChapterManagerService
             {
                 _logger.LogError("Could not reload workspace state in loop");
                 AnsiConsole.MarkupLine("[red]Error reloading workspace state. Exiting chapter management.[/]");
-                break; 
+
+                break;
             }
 
             if (state.Chapters == null || !state.Chapters.Any())
             {
                 _logger.LogInformation("No chapters remain in the workspace after potential deletion/update");
+
                 AnsiConsole.MarkupLine(
                     "[yellow]No chapters remain or an error occurred. Returning to the previous menu.[/]");
-                break; 
+
+                break;
             }
-            
+
             _logger.LogDebug("Refreshed chapter list, {ChapterCount} chapters found", state.Chapters.Count);
             AnsiConsole.WriteLine();
 

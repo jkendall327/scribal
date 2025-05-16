@@ -34,7 +34,7 @@ public class GeminiModelProvider : IModelProvider
     public void RegisterServices(IKernelBuilder kb, ModelSlot slot, string serviceSuffix)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(slot.ApiKey);
-        
+
         kb.AddGoogleAIGeminiChatCompletion(slot.ModelId, slot.ApiKey, serviceId: slot.Provider + serviceSuffix);
     }
 }

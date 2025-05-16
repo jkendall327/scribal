@@ -224,16 +224,16 @@ public class CommandService(
     private Task TreeCommand(InvocationContext ctx)
     {
         var cwd = fileSystem.Directory.GetCurrentDirectory();
-        
+
         var files = StickyTreeSelector.Scan(cwd);
-        
+
         // Add files, don't replace on multiple /tree invocations.
         foreach (var file in files)
         {
             // Don't care if duplicates failed to be added.
             _ = repoStore.Paths.Add(file);
         }
-        
+
         return Task.FromResult(true);
     }
 
@@ -242,6 +242,7 @@ public class CommandService(
         if (!workspaceManager.InWorkspace)
         {
             AnsiConsole.MarkupLine("[yellow]Not currently in a Scribal workspace. Use '/init' to create one.[/]");
+
             return;
         }
 
@@ -250,10 +251,14 @@ public class CommandService(
 
         if (state is null)
         {
-            AnsiConsole.MarkupLine("[red]Could not load workspace state. The state file might be corrupted or missing.[/]");
+            AnsiConsole.MarkupLine(
+                "[red]Could not load workspace state. The state file might be corrupted or missing.[/]");
+
             return;
         }
+
         AnsiConsole.MarkupLine($"[green]Current Pipeline Stage:[/] {state.PipelineStage.ToString()}");
+
         if (!string.IsNullOrWhiteSpace(state.Premise))
         {
             AnsiConsole.MarkupLine($"[green]Premise:[/] {state.Premise}");
@@ -262,6 +267,7 @@ public class CommandService(
         {
             AnsiConsole.MarkupLine("[green]Premise:[/] Not set");
         }
+
         if (!string.IsNullOrWhiteSpace(state.PlotOutlineFile))
         {
             AnsiConsole.MarkupLine($"[green]Plot Outline File:[/] {state.PlotOutlineFile}");
@@ -270,6 +276,7 @@ public class CommandService(
         {
             AnsiConsole.MarkupLine("[green]Plot Outline File:[/] Not set");
         }
+
         if (state.Chapters is not null && state.Chapters.Any())
         {
             AnsiConsole.MarkupLine("[green]Chapters:[/]");
@@ -281,13 +288,12 @@ public class CommandService(
 
             foreach (var chapter in state.Chapters.OrderBy(c => c.Number))
             {
-                table.AddRow(
-                    chapter.Number.ToString(),
+                table.AddRow(chapter.Number.ToString(),
                     chapter.Title ?? "N/A",
                     chapter.State.ToString(),
-                    chapter.Summary ?? "N/A"
-                );
+                    chapter.Summary ?? "N/A");
             }
+
             AnsiConsole.Write(table);
         }
         else

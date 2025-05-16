@@ -206,8 +206,7 @@ public class ChapterDeletionService : IChapterDeletionService
 
             // 4. Rename remaining chapter subfolders
             // We use OrderBy to ensure correct directory renaming order.
-            foreach ((var originalNum, var chapterRef) in originalChapterMap.OrderBy(m =>
-                         m.ChapterRef.ChapterNumber))
+            foreach ((var originalNum, var chapterRef) in originalChapterMap.OrderBy(m => m.ChapterRef.ChapterNumber))
             {
                 var currentChapterNewNumber = chapterRef.ChapterNumber;
 

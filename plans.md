@@ -1,4 +1,5 @@
 ## Notes
+
 Regex for removing extraneous comments:
 \s*//\s*AI:.*\r?\n?
 

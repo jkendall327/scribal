@@ -100,6 +100,7 @@ public sealed class GitService(
         if (config.Value.DryRun)
         {
             logger.LogInformation("Dry run: Skipping commit for {Filepath}", filepath);
+
             return Task.FromResult(true);
         }
 
@@ -112,11 +113,13 @@ public sealed class GitService(
             var sig = new Signature($"{_name} (scribal)", _email, time.GetLocalNow());
             _repo.Commit(message, sig, sig);
             logger.LogInformation("Committed changes for {Filepath} with message: {Message}", filepath, message);
+
             return Task.FromResult(true);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to create commit for {Filepath}", filepath);
+
             return Task.FromResult(false);
         }
     }
@@ -126,6 +129,7 @@ public sealed class GitService(
         if (config.Value.DryRun)
         {
             logger.LogInformation("Dry run: Skipping commit all with message: {Message}", message);
+
             return Task.FromResult(true);
         }
 
@@ -138,16 +142,19 @@ public sealed class GitService(
             var sig = new Signature($"{_name} (scribal)", _email, time.GetLocalNow());
             _repo.Commit(message, sig, sig);
             logger.LogInformation("Committed all staged changes with message: {Message}", message);
+
             return Task.FromResult(true);
         }
         catch (EmptyCommitException)
         {
             logger.LogInformation("No changes staged to commit for message: {Message}", message);
+
             return Task.FromResult(true); // Not an error, but nothing was committed.
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to create commit all with message: {Message}", message);
+
             return Task.FromResult(false);
         }
     }

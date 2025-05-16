@@ -50,9 +50,9 @@ public static class ConsoleChatRenderer
     public static async Task WaitWithSpinnerAsync(Task taskToAwait, CancellationToken ct = default)
     {
         await AnsiConsole.Status()
-            .Spinner(Spinner.Known.Dots)
-            .SpinnerStyle(Style.Parse("green"))
-            .StartAsync("Processing …", async _ => await taskToAwait.WaitAsync(ct));
+                         .Spinner(Spinner.Known.Dots)
+                         .SpinnerStyle(Style.Parse("green"))
+                         .StartAsync("Processing …", async _ => await taskToAwait.WaitAsync(ct));
     }
 
     private static void ProcessChatStreamItem(ChatStreamItem e)

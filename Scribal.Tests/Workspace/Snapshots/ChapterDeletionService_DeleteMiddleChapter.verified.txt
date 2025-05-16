@@ -1,0 +1,25 @@
+﻿{
+  DeletionResult: {
+    Status: RanToCompletion,
+    Result: {
+      Success: true,
+      OverallMessage: Chapter 2: 'The Middle Chapter' successfully deleted and workspace updated.,
+      DeletedChapterTitle: The Middle Chapter,
+      DeletedChapterOriginalNumber: 2,
+      ActionsTaken: [
+        Deleted directory: /test/project/chapters/chapter_02,
+        Plot outline updated.,
+        Workspace state updated.,
+        Renamed directory: chapter_03 -> chapter_02,
+        Chapter directories re-organized.
+      ]
+    }
+  },
+  FileSystemState: [
+    /test/project/chapters/chapter_01/content.md,
+    /test/project/.scribal/state.json,
+    /test/project/chapters/chapter_02/outline.md,
+    /test/project/.scribal/plot_outline.json,
+    /test/project/.scribal/project_state.json
+  ]
+}

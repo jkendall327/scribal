@@ -1,0 +1,22 @@
+﻿{
+  DeletionResult: {
+    Status: RanToCompletion,
+    Result: {
+      Success: true,
+      OverallMessage: Chapter 1: 'The Only Chapter' successfully deleted and workspace updated.,
+      DeletedChapterTitle: The Only Chapter,
+      DeletedChapterOriginalNumber: 1,
+      ActionsTaken: [
+        Deleted directory: /test/project/chapters/chapter_01,
+        Plot outline updated.,
+        Workspace state updated.,
+        Chapter directories re-organized.
+      ]
+    }
+  },
+  FileSystemState: [
+    /test/project/.scribal/state.json,
+    /test/project/.scribal/plot_outline.json,
+    /test/project/.scribal/project_state.json
+  ]
+}

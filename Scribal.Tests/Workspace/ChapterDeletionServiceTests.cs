@@ -163,4 +163,172 @@ public class ChapterDeletionServiceTests
         Assert.False(result.Success);
         Assert.Equal("Operation cancelled.", result.OverallMessage);
     }
+
+    [Fact]
+    public Task DeleteChapterAsync_MiddleOfList_ComplexScenario_ShouldUpdateCorrectly()
+    {
+        // Arrange
+        ReInitializeFileSystem();
+        SetupTryFindWorkspaceFolderSuccess();
+
+        var chapterToDelete = new ChapterState
+        {
+            Number = 2,
+            Title = "The Middle Chapter",
+            State = ChapterStateType.Draft
+        };
+
+        // AI: Setup chapter directories
+        _fileSystem.AddDirectory(_fileSystem.Path.Join(TestChaptersDir, "chapter_01"));
+
+        _fileSystem.AddFile(_fileSystem.Path.Join(TestChaptersDir, "chapter_01", "content.md"),
+            new("Chapter 1 content"));
+
+        _fileSystem.AddDirectory(_fileSystem.Path.Join(TestChaptersDir, "chapter_02")); // This one will be deleted
+
+        _fileSystem.AddFile(_fileSystem.Path.Join(TestChaptersDir, "chapter_02", "notes.md"), new("Chapter 2 notes"));
+
+        _fileSystem.AddDirectory(_fileSystem.Path.Join(TestChaptersDir, "chapter_03"));
+
+        _fileSystem.AddFile(_fileSystem.Path.Join(TestChaptersDir, "chapter_03", "outline.md"),
+            new("Chapter 3 outline"));
+
+        var initialOutline = new StoryOutline
+        {
+            Chapters =
+            [
+                new()
+                {
+                    ChapterNumber = 1,
+                    Title = "The Beginning",
+                    Summary = "First part."
+                },
+                new()
+                {
+                    ChapterNumber = 2,
+                    Title = "The Middle Chapter",
+                    Summary = "Second part."
+                },
+                new()
+                {
+                    ChapterNumber = 3,
+                    Title = "The End",
+                    Summary = "Third part."
+                }
+            ]
+        };
+
+        _fileSystem.AddFile(TestPlotOutlineFile, new(ToJson(initialOutline)));
+
+        var initialState = new WorkspaceState
+        {
+            Premise = "A grand adventure.",
+            PlotOutlineFile = "plot_outline.json",
+            Chapters =
+            [
+                new()
+                {
+                    Number = 1,
+                    Title = "The Beginning",
+                    State = ChapterStateType.Draft
+                },
+                new()
+                {
+                    Number = 2,
+                    Title = "The Middle Chapter",
+                    State = ChapterStateType.Draft
+                },
+                new()
+                {
+                    Number = 3,
+                    Title = "The End",
+                    State = ChapterStateType.Unstarted
+                }
+            ],
+            PipelineStage = PipelineStageType.DraftingChapters
+        };
+
+        _fileSystem.AddFile(TestWorkspaceStateFile, new(ToJson(initialState)));
+
+        // Act
+        var result = _sut.DeleteChapterAsync(chapterToDelete, CancellationToken.None);
+
+        // Assert
+        // AI: Verify the entire result object, which includes actions, warnings, errors, etc.
+        // AI: Also verify the state of the file system after the operation.
+        return Verify(new
+               {
+                   DeletionResult = result,
+                   FileSystemState = _fileSystem.AllFiles
+               })
+               .UseDirectory("Snapshots")
+               .UseFileName("ChapterDeletionService_DeleteMiddleChapter");
+    }
+
+    [Fact]
+    public Task DeleteChapterAsync_LastRemainingChapter_ShouldUpdateCorrectly()
+    {
+        // Arrange
+        ReInitializeFileSystem();
+        SetupTryFindWorkspaceFolderSuccess();
+
+        var chapterToDelete = new ChapterState
+        {
+            Number = 1,
+            Title = "The Only Chapter",
+            State = ChapterStateType.Done
+        };
+
+        // AI: Setup chapter directory
+        _fileSystem.AddDirectory(_fileSystem.Path.Join(TestChaptersDir, "chapter_01")); // This one will be deleted
+
+        _fileSystem.AddFile(_fileSystem.Path.Join(TestChaptersDir, "chapter_01", "final.md"),
+            new("The only chapter's content"));
+
+        var initialOutline = new StoryOutline
+        {
+            Chapters =
+            [
+                new()
+                {
+                    ChapterNumber = 1,
+                    Title = "The Only Chapter",
+                    Summary = "The one and only part."
+                }
+            ]
+        };
+
+        _fileSystem.AddFile(TestPlotOutlineFile, new(ToJson(initialOutline)));
+
+        var initialState = new WorkspaceState
+        {
+            Premise = "A short story.",
+            PlotOutlineFile = "plot_outline.json",
+            Chapters =
+            [
+                new()
+                {
+                    Number = 1,
+                    Title = "The Only Chapter",
+                    State = ChapterStateType.Done
+                }
+            ],
+            PipelineStage = PipelineStageType.DraftingChapters
+        };
+
+        _fileSystem.AddFile(TestWorkspaceStateFile, new(ToJson(initialState)));
+
+        // Act
+        var result = _sut.DeleteChapterAsync(chapterToDelete, CancellationToken.None);
+
+        // Assert
+        // AI: Verify the result object and the file system state.
+        return Verify(new
+               {
+                   DeletionResult = result,
+                   FileSystemState = _fileSystem.AllFiles
+               })
+               .UseDirectory("Snapshots")
+               .UseFileName("ChapterDeletionService_DeleteLastChapter");
+    }
 }

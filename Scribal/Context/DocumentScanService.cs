@@ -7,7 +7,7 @@ public class DocumentInfo
     public string FilePath { get; set; } = string.Empty;
     public string FileName => Path.GetFileName(FilePath);
     public string RelativePath { get; set; } = string.Empty;
-    public List<HeaderInfo> Headers { get; set; } = new List<HeaderInfo>();
+    public List<HeaderInfo> Headers { get; set; } = new();
 
     public override string ToString()
     {
@@ -19,13 +19,14 @@ public class DirectoryNode
 {
     public string Name { get; set; } = string.Empty;
     public string Path { get; set; } = string.Empty;
-    public List<DirectoryNode> Subdirectories { get; set; } = new List<DirectoryNode>();
-    public List<DocumentInfo> Documents { get; set; } = new List<DocumentInfo>();
+    public List<DirectoryNode> Subdirectories { get; set; } = new();
+    public List<DocumentInfo> Documents { get; set; } = new();
 
     public DirectoryNode(string path, IFileSystem fileSystem)
     {
         Path = path;
         Name = fileSystem.Path.GetFileName(path);
+
         // If it's the root directory and the name is empty, use the directory name
         if (string.IsNullOrEmpty(Name))
         {
@@ -46,7 +47,10 @@ public interface IDocumentScanService
 
 public class DocumentScanService(IFileSystem fileSystem) : IDocumentScanService
 {
-    private readonly string[] _markdownExtensions = { ".md", ".markdown" };
+    private readonly string[] _markdownExtensions =
+    {
+        ".md", ".markdown"
+    };
 
     public async Task<DirectoryNode> ScanDirectoryForMarkdownAsync(IDirectoryInfo rootDirectory)
     {
@@ -58,25 +62,27 @@ public class DocumentScanService(IFileSystem fileSystem) : IDocumentScanService
         return await BuildDirectoryTreeAsync(rootDirectory, rootDirectory);
     }
 
-    private async Task<DirectoryNode> BuildDirectoryTreeAsync(IDirectoryInfo currentDirectory, IDirectoryInfo rootDirectory)
+    private async Task<DirectoryNode> BuildDirectoryTreeAsync(IDirectoryInfo currentDirectory,
+        IDirectoryInfo rootDirectory)
     {
         var directoryNode = new DirectoryNode(currentDirectory.FullName, fileSystem);
 
         // Process all markdown files in the current directory
         var markdownFiles = currentDirectory.GetFiles()
-            .Where(file =>
-            {
-                // Ignore hidden files.
-                if (file.Name.StartsWith('.'))
-                {
-                    return false;
-                }
+                                            .Where(file =>
+                                            {
+                                                // Ignore hidden files.
+                                                if (file.Name.StartsWith('.'))
+                                                {
+                                                    return false;
+                                                }
 
-                var extension = fileSystem.Path.GetExtension(file.FullName).ToLowerInvariant();
+                                                var extension = fileSystem.Path.GetExtension(file.FullName)
+                                                                          .ToLowerInvariant();
 
-                return _markdownExtensions.Contains(extension);
-            })
-            .ToList();
+                                                return _markdownExtensions.Contains(extension);
+                                            })
+                                            .ToList();
 
         foreach (var file in markdownFiles)
         {
@@ -85,9 +91,7 @@ public class DocumentScanService(IFileSystem fileSystem) : IDocumentScanService
         }
 
         // Process all non-hidden subdirectories
-        var subdirectories = currentDirectory
-            .GetDirectories()
-            .Where(d => !d.Name.StartsWith('.'));
+        var subdirectories = currentDirectory.GetDirectories().Where(d => !d.Name.StartsWith('.'));
 
         foreach (var subdirectory in subdirectories)
         {
@@ -105,7 +109,7 @@ public class DocumentScanService(IFileSystem fileSystem) : IDocumentScanService
 
         var relativePath = fileSystem.Path.GetRelativePath(rootDirectory.FullName, file.FullName);
 
-        return new DocumentInfo
+        return new()
         {
             FilePath = file.FullName,
             RelativePath = relativePath,

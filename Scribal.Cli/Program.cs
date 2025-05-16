@@ -15,7 +15,7 @@ var contentRoot = Path.GetDirectoryName(AppContext.BaseDirectory);
 var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
 {
     Args = args,
-    ContentRootPath = contentRoot,
+    ContentRootPath = contentRoot
 });
 
 IncorporateConfigFromScribalWorkspace(builder);
@@ -41,19 +41,19 @@ void IncorporateConfigFromScribalWorkspace(HostApplicationBuilder host)
         return;
     }
 
-    host.Configuration.AddJsonFile(config, optional: true, reloadOnChange: true);
+    host.Configuration.AddJsonFile(config, true, true);
 }
 
 void SetupLogging(HostApplicationBuilder host)
 {
     Log.Logger = new LoggerConfiguration().MinimumLevel.Debug()
-        .WriteTo.File(
-            path: "logs/log-.txt",
-            rollingInterval: RollingInterval.Day,
-            retainedFileCountLimit: 7,
-            outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
-        .Enrich.FromLogContext()
-        .CreateLogger();
+                                          .WriteTo.File("logs/log-.txt",
+                                              rollingInterval: RollingInterval.Day,
+                                              retainedFileCountLimit: 7,
+                                              outputTemplate:
+                                              "{Timestamp:yyyy-MM-dd HH:mm:ss} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
+                                          .Enrich.FromLogContext()
+                                          .CreateLogger();
 
     host.Logging.ClearProviders();
     host.Logging.AddSerilog();

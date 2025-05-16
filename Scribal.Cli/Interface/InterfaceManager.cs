@@ -57,7 +57,7 @@ public class InterfaceManager(
             if (repoMapStore.Paths.Any())
             {
                 var filenames = repoMapStore.Paths.Select(s => fileSystem.Path.GetFileName(s).ToLowerInvariant())
-                    .ToList();
+                                            .ToList();
 
                 var paths = string.Join(" | ", filenames);
 
@@ -98,6 +98,7 @@ public class InterfaceManager(
         if (aiSettings.Value.Primary is null)
         {
             AnsiConsole.MarkupLine("[red]No model is set. Check '.scribal/scribal.config'.[/]");
+
             return;
         }
 

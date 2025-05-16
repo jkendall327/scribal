@@ -2,6 +2,7 @@ using Anthropic.SDK;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
+
 #pragma warning disable SKEXP0001
 
 #pragma warning disable SKEXP0070
@@ -20,7 +21,7 @@ public class OpenAIModelProvider : IModelProvider
 
     public void RegisterServices(IKernelBuilder kb, ModelSlot slot, string serviceSuffix)
     {
-        kb.AddOpenAIChatCompletion(modelId: slot.ModelId, apiKey: slot.ApiKey, serviceId: slot.Provider + serviceSuffix);
+        kb.AddOpenAIChatCompletion(slot.ModelId, slot.ApiKey, serviceId: slot.Provider + serviceSuffix);
     }
 }
 
@@ -30,7 +31,7 @@ public class GeminiModelProvider : IModelProvider
 
     public void RegisterServices(IKernelBuilder kb, ModelSlot slot, string serviceSuffix)
     {
-        kb.AddGoogleAIGeminiChatCompletion(modelId: slot.ModelId, apiKey: slot.ApiKey, serviceId: slot.Provider + serviceSuffix);
+        kb.AddGoogleAIGeminiChatCompletion(slot.ModelId, slot.ApiKey, serviceId: slot.Provider + serviceSuffix);
     }
 }
 
@@ -40,7 +41,7 @@ public class DeepSeekModelProvider : IModelProvider
 
     public void RegisterServices(IKernelBuilder kb, ModelSlot slot, string serviceSuffix)
     {
-        kb.AddOpenAIChatCompletion(modelId: slot.ModelId,
+        kb.AddOpenAIChatCompletion(slot.ModelId,
             apiKey: slot.ApiKey,
             endpoint: new("https://api.deepseek.com"),
             serviceId: slot.Provider + serviceSuffix);
@@ -53,9 +54,10 @@ public class AnthropicModelProvider : IModelProvider
 
     public void RegisterServices(IKernelBuilder kb, ModelSlot slot, string serviceSuffix)
     {
-        kb.Services.AddTransient<IChatCompletionService>((sp) =>
+        kb.Services.AddTransient<IChatCompletionService>(sp =>
         {
             var anthropicClient = new AnthropicClient(apiKeys: new(slot.ApiKey));
+
             return anthropicClient.Messages.AsChatCompletionService();
         });
     }

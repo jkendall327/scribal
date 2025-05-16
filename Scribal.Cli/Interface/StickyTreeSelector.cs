@@ -1,12 +1,7 @@
 using Scribal.Context;
+using Spectre.Console;
 
 namespace Scribal.Cli;
-
-using Spectre.Console;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 
 public class StickyTreeSelector
 {
@@ -38,6 +33,7 @@ public class StickyTreeSelector
             if (selectedItems.Any())
             {
                 AnsiConsole.MarkupLine("\n[green]You selected:[/]");
+
                 foreach (var item in selectedItems)
                 {
                     AnsiConsole.MarkupLine($"- [blue]{item}[/]");
@@ -53,16 +49,20 @@ public class StickyTreeSelector
         catch (DirectoryNotFoundException ex)
         {
             AnsiConsole.MarkupLine($"[red]Error: {ex.Message}[/]");
+
             return [];
         }
         catch (UnauthorizedAccessException ex)
         {
-            AnsiConsole.MarkupLine($"[red]Error: Insufficient permissions to access parts of the directory tree. {ex.Message}[/]");
+            AnsiConsole.MarkupLine(
+                $"[red]Error: Insufficient permissions to access parts of the directory tree. {ex.Message}[/]");
+
             return [];
         }
         catch (Exception ex)
         {
             AnsiConsole.WriteException(ex);
+
             return [];
         }
     }
@@ -72,40 +72,45 @@ public class StickyTreeSelector
         Console.Clear();
 
         AnsiConsole.Live(new Markup(Markup.Escape(_root.Name)))
-            .Start(ctx =>
-            {
-                while (true)
-                {
-                    _visibleNodes = GetVisibleNodes(_root);
-                    if (_currentNodeIndex >= _visibleNodes.Count)
-                    {
-                        _currentNodeIndex = Math.Max(0, _visibleNodes.Count - 1);
-                    }
+                   .Start(ctx =>
+                   {
+                       while (true)
+                       {
+                           _visibleNodes = GetVisibleNodes(_root);
 
-                    var treeWidget = BuildSpectreTreeWidget();
-                    ctx.UpdateTarget(treeWidget);
-                    ctx.Refresh();
+                           if (_currentNodeIndex >= _visibleNodes.Count)
+                           {
+                               _currentNodeIndex = Math.Max(0, _visibleNodes.Count - 1);
+                           }
 
-                    var keyInfo = Console.ReadKey(true);
+                           var treeWidget = BuildSpectreTreeWidget();
+                           ctx.UpdateTarget(treeWidget);
+                           ctx.Refresh();
 
-                    if (keyInfo.Key == ConsoleKey.Backspace)
-                    {
-                        break;
-                    }
+                           var keyInfo = Console.ReadKey(true);
 
-                    _ = HandleKeyPress(keyInfo);
-                }
-            });
+                           if (keyInfo.Key == ConsoleKey.Backspace)
+                           {
+                               break;
+                           }
+
+                           _ = HandleKeyPress(keyInfo);
+                       }
+                   });
 
         var selectedPaths = CollectSelectedPaths(_root);
         Console.Clear();
         AnsiConsole.MarkupLine("[green]Selection complete.[/]");
+
         return selectedPaths;
     }
 
     private bool HandleKeyPress(ConsoleKeyInfo keyInfo)
     {
-        if (_visibleNodes.Count == 0) return false;
+        if (_visibleNodes.Count == 0)
+        {
+            return false;
+        }
 
         var currentNode = _visibleNodes[_currentNodeIndex];
         var needsRedraw = false;
@@ -115,11 +120,13 @@ public class StickyTreeSelector
             case ConsoleKey.UpArrow:
                 _currentNodeIndex = Math.Max(0, _currentNodeIndex - 1);
                 needsRedraw = true;
+
                 break;
 
             case ConsoleKey.DownArrow:
                 _currentNodeIndex = Math.Min(_visibleNodes.Count - 1, _currentNodeIndex + 1);
                 needsRedraw = true;
+
                 break;
 
             case ConsoleKey.Enter:
@@ -129,21 +136,23 @@ public class StickyTreeSelector
                 SetSelectionRecursive(currentNode, newSelectedState);
 
                 needsRedraw = true;
+
                 break;
 
             case ConsoleKey.RightArrow:
-                {
-                    currentNode.IsExpanded = true;
-                    needsRedraw = true;
-                }
+            {
+                currentNode.IsExpanded = true;
+                needsRedraw = true;
+            }
 
                 break;
 
             case ConsoleKey.LeftArrow:
-                {
-                    currentNode.IsExpanded = false;
-                    needsRedraw = true;
-                }
+            {
+                currentNode.IsExpanded = false;
+                needsRedraw = true;
+            }
+
                 break;
         }
 
@@ -163,10 +172,15 @@ public class StickyTreeSelector
     private FileSystemNode BuildFileSystemTree(string path)
     {
         var dirInfo = new DirectoryInfo(path);
-        if (!dirInfo.Exists) throw new DirectoryNotFoundException($"Directory not found: {path}");
+
+        if (!dirInfo.Exists)
+        {
+            throw new DirectoryNotFoundException($"Directory not found: {path}");
+        }
 
         var rootNode = new FileSystemNode(dirInfo.FullName, true);
         BuildTreeRecursive(rootNode, dirInfo);
+
         return rootNode;
     }
 
@@ -200,13 +214,18 @@ public class StickyTreeSelector
     {
         var list = new List<FileSystemNode>();
         AddVisibleNodesRecursive(node, list);
+
         return list;
     }
 
     private void AddVisibleNodesRecursive(FileSystemNode node, List<FileSystemNode> list)
     {
         list.Add(node);
-        if (!node.IsDirectory || !node.IsExpanded) return;
+
+        if (!node.IsDirectory || !node.IsExpanded)
+        {
+            return;
+        }
 
         var sortedChildren = node.Children.OrderBy(c => !c.IsDirectory).ThenBy(c => c.Name);
 
@@ -218,7 +237,7 @@ public class StickyTreeSelector
 
     private Tree BuildSpectreTreeWidget()
     {
-        var tree = new Tree($"[yellow underline]Select Files/Folders[/]")
+        var tree = new Tree("[yellow underline]Select Files/Folders[/]")
         {
             Guide = TreeGuide.Line
         };
@@ -242,6 +261,7 @@ public class StickyTreeSelector
         var baseLabelText = $"{(node.IsSelected ? selectedMarker : unselectedMarker)} {icon}{name}";
 
         string finalLabelMarkup;
+
         if (isCurrentNode)
         {
             var styledBase = node.IsSelected ? $"[bold]{baseLabelText}[/]" : baseLabelText;
@@ -261,7 +281,10 @@ public class StickyTreeSelector
         var isNodeVisibleInList = globalNodeIndex < _visibleNodes.Count && _visibleNodes[globalNodeIndex] == node;
         globalNodeIndex++;
 
-        if (!node.IsDirectory || !node.IsExpanded || !node.Children.Any() || !isNodeVisibleInList) return;
+        if (!node.IsDirectory || !node.IsExpanded || !node.Children.Any() || !isNodeVisibleInList)
+        {
+            return;
+        }
 
         var sortedChildren = node.Children.OrderBy(c => !c.IsDirectory).ThenBy(c => c.Name);
 
@@ -275,6 +298,7 @@ public class StickyTreeSelector
     {
         var selected = new List<string>();
         CollectSelectedRecursive(node, selected);
+
         return selected;
     }
 

@@ -1,7 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Abstractions;
 using LibGit2Sharp;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -79,6 +78,7 @@ public sealed class GitService(
         EnsureValidRepository();
 
         var name = _repo.Head.FriendlyName;
+
         return Task.FromResult(name);
     }
 
@@ -133,5 +133,8 @@ public sealed class GitService(
         }
     }
 
-    public void Dispose() => _repo?.Dispose();
+    public void Dispose()
+    {
+        _repo?.Dispose();
+    }
 }

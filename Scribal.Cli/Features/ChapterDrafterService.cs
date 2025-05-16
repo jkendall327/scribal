@@ -53,7 +53,7 @@ public class ChapterDrafterService
         if (string.IsNullOrWhiteSpace(workspacePath))
         {
             _console.MarkupLine("[red]Could not determine current workspace path. Cannot draft chapter.[/]");
-            
+
             _logger.LogWarning(
                 "Current workspace path is not set in WorkspaceManager. Chapter {ChapterNumber} drafting aborted.",
                 chapter.Number);
@@ -84,8 +84,7 @@ public class ChapterDrafterService
         _console.MarkupLine("[cyan]Initial Draft Generated:[/]");
         _console.WriteLine(Markup.Escape(initialDraft)); // Display initial draft
 
-        var ok = await _console.ConfirmAsync("Do you want to refine this draft?",
-            cancellationToken: cancellationToken);
+        var ok = await _console.ConfirmAsync("Do you want to refine this draft?", cancellationToken: cancellationToken);
 
         string finalDraft;
 
@@ -280,8 +279,7 @@ public class ChapterDrafterService
 
         if (string.IsNullOrWhiteSpace(workspacePath))
         {
-            _console.MarkupLine(
-                "[red]Could not determine workspace path from WorkspaceManager. Draft not saved.[/]");
+            _console.MarkupLine("[red]Could not determine workspace path from WorkspaceManager. Draft not saved.[/]");
 
             _logger.LogError(
                 "Cannot save draft, workspace path unknown (from WorkspaceManager.CurrentWorkspacePath) for chapter {ChapterNumber}",

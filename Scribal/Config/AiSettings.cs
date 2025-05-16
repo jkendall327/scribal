@@ -2,9 +2,9 @@ namespace Scribal;
 
 public record ModelSlot
 {
-    public string Provider { get; init; } = default!;    // "OpenAI", "Gemini", …
+    public string Provider { get; init; } = default!; // "OpenAI", "Gemini", …
     public string ModelId { get; init; } = default!;
-    public string? ApiKey { get; init; }                 // optional if the provider can share
+    public string? ApiKey { get; init; } // optional if the provider can share
 }
 
 public class AiSettings

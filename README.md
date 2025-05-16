@@ -2,7 +2,8 @@
 
 ![](image.webp)
 
-AI-powered fiction writing assistant for drafting and revising prose. It scans your project's markdown files to understand your story's structure, characters, and plot, then provides contextually relevant assistance.
+AI-powered fiction writing assistant for drafting and revising prose. It scans your project's markdown files to
+understand your story's structure, characters, and plot, then provides contextually relevant assistance.
 
 Made because aider isn't really meant for fiction and its repo-map feature doesn't include Markdown files.
 

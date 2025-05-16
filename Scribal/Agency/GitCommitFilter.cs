@@ -28,7 +28,7 @@ public sealed class GitCommitFilter(
         }
 
         // Was it the edit-file tool?
-        if (ctx.Function is { PluginName: nameof(DiffEditor), Name: DiffEditor.DiffEditorToolName })
+        if (ctx.Function is {PluginName: nameof(DiffEditor), Name: DiffEditor.DiffEditorToolName})
         {
             logger.LogInformation("Creating commit after diff editor tool invocation");
 
@@ -38,12 +38,14 @@ public sealed class GitCommitFilter(
             if (string.IsNullOrEmpty(file))
             {
                 logger.LogWarning("No valid filepath could be provided to the Git service; exiting");
+
                 return;
             }
 
             if (string.IsNullOrEmpty(diff))
             {
                 logger.LogWarning("No valid diff returned from the tool call; exiting");
+
                 return;
             }
 

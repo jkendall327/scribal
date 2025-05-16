@@ -12,8 +12,8 @@ public class MetadataCollector(TimeProvider timeProvider, ILogger<MetadataCollec
     public ChatStreamItem.Metadata CollectMetadata(string? sid, long startTimestamp, ChatMessageContent message)
     {
         var elapsed = timeProvider.GetElapsedTime(startTimestamp);
-        int promptTokens = 0;
-        int completionTokens = 0;
+        var promptTokens = 0;
+        var completionTokens = 0;
 
         if (TryExtractGeminiTokens(message, sid, out var geminiPromptTokens, out var geminiCompletionTokens))
         {
@@ -40,9 +40,7 @@ public class MetadataCollector(TimeProvider timeProvider, ILogger<MetadataCollec
                 message.Metadata);
         }
 
-        var metadata = new ChatStreamItem.Metadata(Elapsed: elapsed,
-            PromptTokens: promptTokens,
-            CompletionTokens: completionTokens);
+        var metadata = new ChatStreamItem.Metadata(elapsed, promptTokens, completionTokens);
 
         logger.LogDebug(
             "Final metadata for SID '{Sid}': Elapsed: {Elapsed}, PromptTokens: {PromptTokens}, CompletionTokens: {CompletionTokens}",
@@ -62,7 +60,10 @@ public class MetadataCollector(TimeProvider timeProvider, ILogger<MetadataCollec
         promptTokens = 0;
         completionTokens = 0;
 
-        if (message.Metadata is not GeminiMetadata geminiMetadata) return false;
+        if (message.Metadata is not GeminiMetadata geminiMetadata)
+        {
+            return false;
+        }
 
         promptTokens = geminiMetadata.PromptTokenCount;
         completionTokens = geminiMetadata.CandidatesTokenCount;
@@ -133,6 +134,7 @@ public class MetadataCollector(TimeProvider timeProvider, ILogger<MetadataCollec
                 sid,
                 promptTokens,
                 completionTokens);
+
             return true;
         }
 

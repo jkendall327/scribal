@@ -4,5 +4,8 @@ namespace Scribal.Cli;
 
 public class SpectreUserInteraction : IUserInteraction
 {
-    public async Task<bool> ConfirmAsync(string prompt) => await AnsiConsole.ConfirmAsync(prompt);
+    public async Task<bool> ConfirmAsync(string prompt)
+    {
+        return await AnsiConsole.ConfirmAsync(prompt);
+    }
 }

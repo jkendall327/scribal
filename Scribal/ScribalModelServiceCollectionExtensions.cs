@@ -21,8 +21,8 @@ public static class ScribalModelServiceCollectionExtensions
     {
         // Register everything that implements IModelProvider.
         var providerTypes = typeof(IModelProvider).Assembly.GetTypes()
-            .Where(t => typeof(IModelProvider).IsAssignableFrom(t))
-            .Where(t => t is { IsClass: true, IsAbstract: false });
+                                                  .Where(t => typeof(IModelProvider).IsAssignableFrom(t))
+                                                  .Where(t => t is {IsClass: true, IsAbstract: false});
 
         foreach (var providerType in providerTypes)
         {
@@ -40,15 +40,16 @@ public static class ScribalModelServiceCollectionExtensions
         var err = string.Empty;
 
         services.AddOptions<AiSettings>()
-            .Bind(cfg.GetSection("AI"))
-            .ValidateDataAnnotations()
-            .Validate(settings =>
-                {
-                    var result = SlotsValidator.ValidateSlots(settings, out var error);
-                    err = error;
-                    return result;
-                },
-                err);
+                .Bind(cfg.GetSection("AI"))
+                .ValidateDataAnnotations()
+                .Validate(settings =>
+                    {
+                        var result = SlotsValidator.ValidateSlots(settings, out var error);
+                        err = error;
+
+                        return result;
+                    },
+                    err);
 
         services.AddSingleton<Kernel>(sp =>
         {
@@ -114,11 +115,11 @@ public static class ScribalModelServiceCollectionExtensions
                 throw new NotImplementedException("Figure out how to make RAG optional again...?");
             }
 
-            var store = appConfig.DryRun ? new VolatileMemoryStore() : new VolatileMemoryStore();
+            var store = appConfig.DryRun ? new() : new VolatileMemoryStore();
 
             var memory = new MemoryBuilder().WithMemoryStore(store)
-                .WithOpenAITextEmbeddingGeneration(embeddings.ModelId, embeddings.ApiKey)
-                .Build();
+                                            .WithOpenAITextEmbeddingGeneration(embeddings.ModelId, embeddings.ApiKey)
+                                            .Build();
 
             return memory;
         });

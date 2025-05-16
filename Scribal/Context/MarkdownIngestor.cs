@@ -1,5 +1,4 @@
 using System.IO.Abstractions;
-using Microsoft.SemanticKernel.Memory;
 using Microsoft.SemanticKernel.Text;
 
 #pragma warning disable SKEXP0050
@@ -8,6 +7,7 @@ using Microsoft.SemanticKernel.Text;
 namespace Scribal.Context;
 
 public class MarkdownIngestor(
+
     //ISemanticTextMemory memoryStore, 
     IFileSystem fileSystem)
 {
@@ -46,8 +46,6 @@ public class MarkdownIngestor(
         }
 
         // Search for all files with .md or .markdown extensions
-        return fileSystem.Directory
-            .EnumerateFiles(rootDirectory, "*.md", searchOption)
-            .Where(f => !f.StartsWith('.'));
+        return fileSystem.Directory.EnumerateFiles(rootDirectory, "*.md", searchOption).Where(f => !f.StartsWith('.'));
     }
 }

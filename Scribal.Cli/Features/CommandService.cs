@@ -27,7 +27,7 @@ public class CommandService(
     {
         Name = "Idea",
         Arity = ArgumentArity.ExactlyOne,
-        Description = "Your basic idea for the story",
+        Description = "Your basic idea for the story"
     };
 
     private readonly Argument<string> _premiseArgument = new() // Added premise argument

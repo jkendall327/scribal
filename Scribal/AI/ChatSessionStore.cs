@@ -17,12 +17,14 @@ public sealed class InMemoryChatSessionStore : IChatSessionStore
     public Task<ChatHistory> LoadAsync(string id, CancellationToken _)
     {
         var history = _store.GetOrAdd(id, _ => []);
+
         return Task.FromResult(history);
     }
 
     public Task SaveAsync(string id, ChatHistory h, CancellationToken _)
     {
         _store[id] = h;
+
         return Task.CompletedTask;
     }
 

@@ -64,6 +64,7 @@ public class PromptBuilder(
             // Find README document
             var readmeDoc = FindReadmeDocument(directoryTree);
             string? readmeContent = null;
+
             if (readmeDoc != null)
             {
                 readmeContent = await fileSystem.File.ReadAllTextAsync(readmeDoc.FilePath);
@@ -71,10 +72,12 @@ public class PromptBuilder(
 
             // Get selected file contents
             var selectedFiles = new List<FileContent>();
+
             foreach (var path in store.Paths)
             {
                 var content = await fileSystem.File.ReadAllTextAsync(path);
                 var filename = fileSystem.Path.GetFileName(path);
+
                 selectedFiles.Add(new()
                 {
                     FileName = filename,
@@ -107,15 +110,17 @@ public class PromptBuilder(
                 },
                 {
                     "UserInput", userInput
-                },
+                }
             };
 
             var request = new RenderRequest("Primer", "Primer", "Main priming prompt", kernelArgs);
+
             return await renderer.RenderPromptTemplateFromFileAsync(kernel, request);
         }
         catch (Exception e)
         {
             Console.WriteLine(e);
+
             throw;
         }
     }
@@ -175,6 +180,7 @@ public class PromptBuilder(
         foreach (var subdir in node.Subdirectories)
         {
             readme = FindReadmeDocument(subdir);
+
             if (readme != null)
             {
                 return readme;
@@ -225,14 +231,16 @@ public class PromptBuilder(
         var charactersDirectory = fileSystem.DirectoryInfo.New(charactersDirectoryPath);
 
         var characterFiles = charactersDirectory.GetFiles()
-            .Where(file =>
-                fileSystem.Path.GetExtension(file.FullName).Equals(".md", StringComparison.OrdinalIgnoreCase))
-            .OrderBy(file => file.Name)
-            .ToList();
+                                                .Where(file =>
+                                                    fileSystem.Path.GetExtension(file.FullName)
+                                                              .Equals(".md", StringComparison.OrdinalIgnoreCase))
+                                                .OrderBy(file => file.Name)
+                                                .ToList();
 
         foreach (var characterFile in characterFiles)
         {
             var characterContent = await fileSystem.File.ReadAllTextAsync(characterFile.FullName);
+
             result.Add(new()
             {
                 FileName = fileSystem.Path.GetFileNameWithoutExtension(characterFile.Name),

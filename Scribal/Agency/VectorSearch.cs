@@ -11,19 +11,14 @@ public sealed class VectorSearch(ISemanticTextMemory memory)
 {
     public const string VectorSearchToolName = "search";
 
-    [KernelFunction(VectorSearchToolName),
-     Description("Searches for similar content. Returns the content as a string.")]
-    public async Task<string> SearchAsync(
-        [Description("The path to the file to edit.")] string query,
+    [KernelFunction(VectorSearchToolName)]
+    [Description("Searches for similar content. Returns the content as a string.")]
+    public async Task<string> SearchAsync([Description("The path to the file to edit.")] string query,
         CancellationToken cancellationToken = default)
     {
         var name = await memory.GetCollectionsAsync(cancellationToken: cancellationToken);
 
-        var enumerable = memory.SearchAsync(name.Single(),
-            query,
-            limit: 1,
-            minRelevanceScore: 0.7,
-            cancellationToken: cancellationToken);
+        var enumerable = memory.SearchAsync(name.Single(), query, 1, 0.7, cancellationToken: cancellationToken);
 
         var sb = new StringBuilder();
 

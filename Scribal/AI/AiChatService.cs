@@ -1,16 +1,12 @@
 using System.IO.Abstractions;
 using System.Runtime.CompilerServices;
-using System.Text;
-using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.Google;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
-using Microsoft.SemanticKernel.Data;
-using Microsoft.SemanticKernel.Memory;
-using OpenAI.Chat;
 using Scribal.Context;
 using ChatMessageContent = Microsoft.SemanticKernel.ChatMessageContent;
+
 #pragma warning disable SKEXP0001
 
 #pragma warning disable SKEXP0070
@@ -18,7 +14,7 @@ using ChatMessageContent = Microsoft.SemanticKernel.ChatMessageContent;
 namespace Scribal.AI;
 
 /// <summary>
-/// Discriminated union between a chunk of the model's streamed output and a metadata record produced when it's done.
+///     Discriminated union between a chunk of the model's streamed output and a metadata record produced when it's done.
 /// </summary>
 public record ChatStreamItem
 {
@@ -28,8 +24,7 @@ public record ChatStreamItem
 
     public sealed record TokenChunk(string Content) : ChatStreamItem;
 
-    public sealed record Metadata(TimeSpan Elapsed, int PromptTokens, int CompletionTokens)
-        : ChatStreamItem;
+    public sealed record Metadata(TimeSpan Elapsed, int PromptTokens, int CompletionTokens) : ChatStreamItem;
 }
 
 public sealed class AiChatService(
@@ -53,20 +48,18 @@ public sealed class AiChatService(
         var settings = GetSettings(sid);
 
         // Stream response back for the UI.
-        var stream = chat
-            .GetStreamingChatMessageContentsAsync(history, settings, kernel, ct);
+        var stream = chat.GetStreamingChatMessageContentsAsync(history, settings, kernel, ct);
 
         await foreach (var chunk in stream.WithCancellation(ct))
         {
-            if (chunk.Content is { Length: > 0 } text)
+            if (chunk.Content is {Length: > 0} text)
             {
                 yield return new ChatStreamItem.TokenChunk(text);
             }
         }
 
         // Collect the full assistant message from streamed chunks.
-        var final = await chat
-            .GetChatMessageContentAsync(history, settings, kernel, ct);
+        var final = await chat.GetChatMessageContentAsync(history, settings, kernel, ct);
 
         await UpdateChatHistoryWithAssistantMessage(cid, final, history, ct);
 
@@ -76,8 +69,7 @@ public sealed class AiChatService(
         yield return metadata;
     }
 
-    public async IAsyncEnumerable<ChatStreamItem> StreamWithExplicitHistoryAsync(
-        string conversationId,
+    public async IAsyncEnumerable<ChatStreamItem> StreamWithExplicitHistoryAsync(string conversationId,
         ChatHistory history,
         string userMessage,
         string sid,
@@ -93,9 +85,10 @@ public sealed class AiChatService(
 
         // Stream response back for the UI.
         var stream = chat.GetStreamingChatMessageContentsAsync(history, settings, kernel, ct);
+
         await foreach (var chunk in stream.WithCancellation(ct))
         {
-            if (chunk.Content is { Length: > 0 } text)
+            if (chunk.Content is {Length: > 0} text)
             {
                 yield return new ChatStreamItem.TokenChunk(text);
             }
@@ -113,6 +106,7 @@ public sealed class AiChatService(
 
         // Collect and yield metadata using the new MetadataCollector
         var metadata = metadataCollector.CollectMetadata(sid, start, finalAssistantMessageContent);
+
         yield return metadata;
     }
 
@@ -125,10 +119,10 @@ public sealed class AiChatService(
             {
                 ToolCallBehavior = GeminiToolCallBehavior.AutoInvokeKernelFunctions
             },
-            _ => new OpenAIPromptExecutionSettings // Default to OpenAI settings
+            var _ => new OpenAIPromptExecutionSettings // Default to OpenAI settings
             {
                 ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions
-            },
+            }
         };
     }
 
@@ -169,6 +163,7 @@ public sealed class AiChatService(
         {
             history.AddUserMessage(user);
         }
+
         return history;
     }
 }

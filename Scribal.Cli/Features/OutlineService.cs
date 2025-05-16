@@ -1,15 +1,22 @@
 using System.Runtime.CompilerServices;
-using Microsoft.Extensions.Options;
-using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.ChatCompletion; // Required for ChatHistory
-using Scribal.AI;
-using Scribal.Cli; // Required for ConsoleChatRenderer and ReadLine
-using Scribal.Context;
-using Scribal.Workspace; // Required for StoryOutline and Chapter
-using Spectre.Console; // Required for AnsiConsole
 using System.Text;
 using System.Text.Json;
-using Scribal; // Required for JsonSerializer
+using Microsoft.Extensions.Options;
+using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.ChatCompletion;
+using Scribal;
+using Scribal.AI;
+using Scribal.Cli;
+using Scribal.Context;
+using Scribal.Workspace;
+using Spectre.Console;
+
+// Required for ChatHistory
+// Required for ConsoleChatRenderer and ReadLine
+// Required for StoryOutline and Chapter
+// Required for AnsiConsole
+
+// Required for JsonSerializer
 // Scribal.Workspace; // This was the duplicate, removed. WorkspaceManager is covered by the other Scribal.Workspace using.
 
 public class OutlineService(
@@ -26,6 +33,7 @@ public class OutlineService(
         if (options.Value.Primary is null)
         {
             AnsiConsole.MarkupLine("[red]No primary model is configured. Cannot generate outline.[/]");
+
             return;
         }
 
@@ -34,6 +42,7 @@ public class OutlineService(
         var generatedOutlineJson = await GenerateInitialOutline(premise, ct, sid);
 
         StoryOutline? storyOutline;
+
         if (!TryParseOutline(generatedOutlineJson, out storyOutline))
         {
             AnsiConsole.MarkupLine("[red]Failed to parse the initial outline JSON.[/]");
@@ -51,25 +60,33 @@ public class OutlineService(
         if (!ok)
         {
             AnsiConsole.MarkupLine("[yellow]Plot outline generation complete.[/]");
+
             if (storyOutline != null)
             {
                 await _workspaceManager.SavePlotOutlineAsync(storyOutline, premise);
-                AnsiConsole.MarkupLine($"[green]Initial plot outline saved to workspace: .scribal/{PlotOutlineFileName}[/]");
+
+                AnsiConsole.MarkupLine(
+                    $"[green]Initial plot outline saved to workspace: .scribal/{PlotOutlineFileName}[/]");
             }
             else
             {
-                AnsiConsole.MarkupLine("[yellow]Initial plot outline was not parsed successfully and therefore not saved.[/]");
+                AnsiConsole.MarkupLine(
+                    "[yellow]Initial plot outline was not parsed successfully and therefore not saved.[/]");
             }
+
             return;
         }
 
         var refinementCid = $"outline-refine-{Guid.NewGuid()}";
         var refinementHistory = new ChatHistory();
 
-        var sb = new StringBuilder("You are an assistant helping to refine a story plot outline. The current outline is:");
+        var sb = new StringBuilder(
+            "You are an assistant helping to refine a story plot outline. The current outline is:");
+
         sb.AppendLine("---");
         sb.AppendLine(generatedOutlineJson); // Use the raw JSON for the refinement prompt
         sb.AppendLine("---");
+
         sb.AppendLine(
             "Focus on improving it based on user feedback. Ensure the chapter breakdown is clear and detailed as per original instructions. Be concise and helpful.");
 
@@ -87,6 +104,7 @@ public class OutlineService(
         AnsiConsole.MarkupLine("[yellow]Final plot outline (not saved yet):[/]");
 
         StoryOutline? finalStoryOutline;
+
         if (!TryParseOutline(finalOutlineJson, out finalStoryOutline))
         {
             AnsiConsole.MarkupLine("[red]Failed to parse the final refined outline JSON.[/]");
@@ -108,9 +126,11 @@ public class OutlineService(
     private bool TryParseOutline(string jsonText, out StoryOutline? outline)
     {
         outline = null;
+
         if (string.IsNullOrWhiteSpace(jsonText))
         {
             AnsiConsole.MarkupLine("[red]Outline JSON is empty.[/]");
+
             return false;
         }
 
@@ -121,6 +141,7 @@ public class OutlineService(
         if (jsonStartIndex == -1 || jsonEndIndex == -1 || jsonEndIndex < jsonStartIndex)
         {
             AnsiConsole.MarkupLine("[red]Could not find valid JSON structure in the output.[/]");
+
             return false;
         }
 
@@ -132,18 +153,22 @@ public class OutlineService(
             {
                 PropertyNameCaseInsensitive = true
             };
+
             outline = JsonSerializer.Deserialize<StoryOutline>(actualJson, options);
+
             return outline?.Chapters != null && outline.Chapters.Count > 0;
         }
         catch (JsonException ex)
         {
             AnsiConsole.MarkupLine($"[red]Error deserializing outline JSON: {ex.Message}[/]");
             AnsiConsole.MarkupLine($"[dim]Path: {ex.Path}, Line: {ex.LineNumber}, BytePos: {ex.BytePositionInLine}[/]");
+
             return false;
         }
         catch (Exception ex)
         {
             AnsiConsole.MarkupLine($"[red]An unexpected error occurred during JSON parsing: {ex.Message}[/]");
+
             return false;
         }
     }
@@ -156,6 +181,7 @@ public class OutlineService(
         if (storyOutline.Chapters == null || !storyOutline.Chapters.Any())
         {
             AnsiConsole.MarkupLine("[yellow]No chapters found in the outline.[/]");
+
             return;
         }
 
@@ -170,6 +196,7 @@ public class OutlineService(
             if (chapter.Beats != null && chapter.Beats.Any())
             {
                 AnsiConsole.MarkupLine("[bold]Beats:[/]");
+
                 foreach (var beat in chapter.Beats)
                 {
                     AnsiConsole.MarkupLine($"  - {Markup.Escape(beat)}");
@@ -183,9 +210,11 @@ public class OutlineService(
 
             if (chapter.KeyCharacters != null && chapter.KeyCharacters.Any())
             {
-                AnsiConsole.MarkupLine($"[bold]Key Characters:[/] {Markup.Escape(string.Join(", ", chapter.KeyCharacters))}");
+                AnsiConsole.MarkupLine(
+                    $"[bold]Key Characters:[/] {Markup.Escape(string.Join(", ", chapter.KeyCharacters))}");
             }
         }
+
         AnsiConsole.WriteLine();
         AnsiConsole.Write(new Rule().RuleStyle("blue"));
         AnsiConsole.WriteLine();
@@ -228,8 +257,10 @@ public class OutlineService(
         var generatedOutlineJson = outlineBuilder.ToString().Trim();
 
         AnsiConsole.MarkupLine("[cyan]Initial Plot Outline Generated.[/]");
+
         // Displaying the outline (parsed or raw) will now be handled by the calling method CreateOutlineFromPremise
         AnsiConsole.WriteLine();
+
         return generatedOutlineJson;
     }
 
@@ -246,6 +277,7 @@ public class OutlineService(
             if (ct.IsCancellationRequested)
             {
                 AnsiConsole.MarkupLine("[yellow]Refinement cancelled by host.[/]");
+
                 break;
             }
 
@@ -266,6 +298,7 @@ public class OutlineService(
             if (userInput.Equals("/cancel", StringComparison.OrdinalIgnoreCase))
             {
                 AnsiConsole.MarkupLine("[yellow]Cancelling refinement...[/]");
+
                 // Optionally revert to the outline before this cancel command
                 return lastAssistantResponse; // Or perhaps the outline before starting refinement
             }
@@ -290,6 +323,7 @@ public class OutlineService(
                     ct);
 
                 lastAssistantResponse = responseBuilder.ToString().Trim();
+
                 if (!string.IsNullOrWhiteSpace(lastAssistantResponse))
                 {
                     refinementHistory.AddAssistantMessage(lastAssistantResponse); // Add AI's response to history
@@ -299,12 +333,14 @@ public class OutlineService(
             {
                 AnsiConsole.WriteLine();
                 AnsiConsole.MarkupLine("[yellow](Refinement cancelled)[/]");
+
                 break;
             }
             catch (Exception e)
             {
                 AnsiConsole.WriteException(e);
                 AnsiConsole.MarkupLine("[red]An error occurred during refinement.[/]");
+
                 // Potentially remove the last user message if the turn failed
                 // Or allow user to retry. For now, just log and continue.
             }

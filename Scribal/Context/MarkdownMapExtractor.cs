@@ -1,4 +1,5 @@
 using Markdig;
+using Markdig.Parsers;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
 
@@ -10,14 +11,17 @@ public class MarkdownMapExtractor
     {
         // Parse the markdown document
         var pipeline = new MarkdownPipelineBuilder().UseAdvancedExtensions().Build();
-        var document = Markdig.Parsers.MarkdownParser.Parse(markdownText, pipeline);
+        var document = MarkdownParser.Parse(markdownText, pipeline);
 
         var headers = new List<HeaderInfo>();
 
         // Traverse the document and find all heading blocks
         foreach (var block in document.Descendants())
         {
-            if (block is not HeadingBlock headingBlock) continue;
+            if (block is not HeadingBlock headingBlock)
+            {
+                continue;
+            }
 
             var headerText = ExtractTextFromHeading(headingBlock);
 
@@ -63,6 +67,6 @@ public class HeaderInfo
 
     public override string ToString()
     {
-        return $"{new string('#', Level)} {Text} (Line {Line})";
+        return $"{new('#', Level)} {Text} (Line {Line})";
     }
 }

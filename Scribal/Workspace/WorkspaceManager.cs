@@ -18,10 +18,14 @@ public class WorkspaceManager(
 {
     private const string WorkspaceDirectoryName = ".scribal";
     private const string ConfigFileName = "config.json";
-    private const string StateFileName = "state.json"; // As per plans.md, this could be project_state.json, sticking to current code
+
+    private const string
+        StateFileName = "state.json"; // As per plans.md, this could be project_state.json, sticking to current code
+
     private const string PlotOutlineFileName = "plot_outline.json";
 
-    public bool InWorkspace => _workspace is not null || !string.IsNullOrEmpty(TryFindWorkspaceFolder(fileSystem, logger));
+    public bool InWorkspace =>
+        _workspace is not null || !string.IsNullOrEmpty(TryFindWorkspaceFolder(fileSystem, logger));
 
     public string? CurrentWorkspacePath => _workspace?.FullName ?? TryFindWorkspaceFolder(fileSystem, logger);
 
@@ -32,6 +36,7 @@ public class WorkspaceManager(
         if (_workspace is not null)
         {
             logger.LogDebug("Workspace already initialized");
+
             return new(false, false);
         }
 
@@ -51,17 +56,25 @@ public class WorkspaceManager(
         }
 
         var config = new WorkspaceConfig();
+
         // Config file path should be inside the workspace directory
         var configPath = fileSystem.Path.Join(workspace.FullName, ConfigFileName);
 
         var state = new WorkspaceState();
+
         // State file path should be inside the workspace directory
         // var statePath = fileSystem.Path.Join(workspace.FullName, StateFileName); // Not directly used, SaveWorkspaceStateAsync handles path
 
         if (!dry)
         {
             logger.LogDebug("Writing workspace config to {ConfigPath}", configPath);
-            var jsonConfig = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
+
+            var jsonConfig = JsonSerializer.Serialize(config,
+                new JsonSerializerOptions
+                {
+                    WriteIndented = true
+                });
+
             await fileSystem.File.WriteAllTextAsync(configPath, jsonConfig);
 
             // Use SaveWorkspaceStateAsync to ensure consistency and save to the correct location
@@ -80,6 +93,7 @@ public class WorkspaceManager(
         if (git.Enabled)
         {
             logger.LogDebug("Git repository already enabled");
+
             return false;
         }
 
@@ -88,6 +102,7 @@ public class WorkspaceManager(
         if (!ok)
         {
             logger.LogInformation("User declined Git repository creation");
+
             return false;
         }
 
@@ -99,14 +114,17 @@ public class WorkspaceManager(
 
         // .gitignore should ignore the config and state files within .scribal directory
         var gitignoreBuilder = new StringBuilder();
+
         // Paths in .gitignore are relative to the .gitignore file itself (which is in cwd)
         gitignoreBuilder.AppendLine($"{WorkspaceDirectoryName}/{ConfigFileName}");
         gitignoreBuilder.AppendLine($"{WorkspaceDirectoryName}/{StateFileName}");
         gitignoreBuilder.AppendLine($"{WorkspaceDirectoryName}/{PlotOutlineFileName}");
+
         // Potentially add other patterns to .gitignore later e.g. .scribal/vectors/
 
         var gitignoreContent = gitignoreBuilder.ToString();
         logger.LogDebug("Creating .gitignore file in {Directory} with content:\n{Content}", cwd, gitignoreContent);
+
         // CreateGitIgnore expects the content of the .gitignore file.
         // It will create/update .gitignore in the root of the repository (cwd).
 
@@ -116,6 +134,7 @@ public class WorkspaceManager(
         }
 
         logger.LogInformation("Git repository successfully initialized");
+
         return true;
     }
 
@@ -131,6 +150,7 @@ public class WorkspaceManager(
             if (fileSystem.Directory.Exists(path))
             {
                 logger?.LogDebug("Found workspace folder at {WorkspacePath}", path);
+
                 return path;
             }
 
@@ -138,6 +158,7 @@ public class WorkspaceManager(
         }
 
         logger?.LogDebug("No workspace folder found");
+
         return null;
     }
 
@@ -148,6 +169,7 @@ public class WorkspaceManager(
         if (dir is null)
         {
             logger?.LogDebug("No workspace folder found, cannot locate config");
+
             return null;
         }
 
@@ -156,10 +178,12 @@ public class WorkspaceManager(
         if (fileSystem.File.Exists(path))
         {
             logger?.LogDebug("Found workspace config at {ConfigPath}", path);
+
             return path;
         }
 
         logger?.LogDebug("Workspace config not found at {ConfigPath}", path);
+
         return null;
     }
 
@@ -171,6 +195,7 @@ public class WorkspaceManager(
         if (string.IsNullOrEmpty(workspacePath))
         {
             logger.LogWarning("Cannot load workspace state, workspace directory not found.");
+
             return null;
         }
 
@@ -179,7 +204,8 @@ public class WorkspaceManager(
         if (!fileSystem.File.Exists(stateFilePath))
         {
             logger.LogDebug("Workspace state file not found at {StateFilePath}. Returning new state.", stateFilePath);
-            return new WorkspaceState(); // Return a new empty state if file doesn't exist
+
+            return new(); // Return a new empty state if file doesn't exist
         }
 
         try
@@ -187,11 +213,13 @@ public class WorkspaceManager(
             var json = await fileSystem.File.ReadAllTextAsync(stateFilePath, cancellationToken);
             var state = JsonSerializer.Deserialize<WorkspaceState>(json);
             logger.LogInformation("Workspace state loaded from {StateFilePath}", stateFilePath);
+
             return state;
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to load or deserialize workspace state from {StateFilePath}", stateFilePath);
+
             return null;
         }
     }
@@ -205,6 +233,7 @@ public class WorkspaceManager(
         if (string.IsNullOrEmpty(workspacePath))
         {
             logger.LogError("Cannot save workspace state, workspace directory not found or not initialized.");
+
             return;
         }
 
@@ -215,9 +244,15 @@ public class WorkspaceManager(
         }
 
         var stateFilePath = fileSystem.Path.Join(workspacePath, StateFileName);
+
         try
         {
-            var json = JsonSerializer.Serialize(state, new JsonSerializerOptions { WriteIndented = true });
+            var json = JsonSerializer.Serialize(state,
+                new JsonSerializerOptions
+                {
+                    WriteIndented = true
+                });
+
             await fileSystem.File.WriteAllTextAsync(stateFilePath, json, cancellationToken);
             logger.LogInformation("Workspace state saved to {StateFilePath}", stateFilePath);
         }
@@ -234,6 +269,7 @@ public class WorkspaceManager(
         if (string.IsNullOrEmpty(workspacePath))
         {
             logger.LogWarning("Cannot load plot outline, workspace directory not found.");
+
             return null;
         }
 
@@ -241,26 +277,36 @@ public class WorkspaceManager(
 
         if (!fileSystem.File.Exists(plotOutlineFilePath))
         {
-            logger.LogDebug("Plot outline file not found at {PlotOutlineFilePath}. Returning null.", plotOutlineFilePath);
+            logger.LogDebug("Plot outline file not found at {PlotOutlineFilePath}. Returning null.",
+                plotOutlineFilePath);
+
             return null;
         }
 
         try
         {
             var json = await fileSystem.File.ReadAllTextAsync(plotOutlineFilePath, cancellationToken);
+
             var outline = JsonSerializer.Deserialize<StoryOutline>(json,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+
             logger.LogInformation("Plot outline loaded from {PlotOutlineFilePath}", plotOutlineFilePath);
+
             return outline;
         }
         catch (JsonException ex)
         {
             logger.LogError(ex, "Failed to deserialize plot outline from {PlotOutlineFilePath}", plotOutlineFilePath);
+
             return null;
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to load plot outline from {PlotOutlineFilePath}", plotOutlineFilePath);
+
             return null;
         }
     }
@@ -268,22 +314,31 @@ public class WorkspaceManager(
     public async Task SavePlotOutlineAsync(StoryOutline outline, string premise)
     {
         var workspacePath = CurrentWorkspacePath;
+
         if (string.IsNullOrEmpty(workspacePath))
         {
             logger.LogError("Cannot save plot outline, workspace directory not found or not initialized.");
+
             return;
         }
 
         var plotOutlineFilePath = fileSystem.Path.Join(workspacePath, PlotOutlineFileName);
+
         try
         {
-            var outlineJson = JsonSerializer.Serialize(outline, new JsonSerializerOptions { WriteIndented = true });
+            var outlineJson = JsonSerializer.Serialize(outline,
+                new JsonSerializerOptions
+                {
+                    WriteIndented = true
+                });
+
             await fileSystem.File.WriteAllTextAsync(plotOutlineFilePath, outlineJson);
             logger.LogInformation("Plot outline saved to {PlotOutlineFilePath}", plotOutlineFilePath);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to save plot outline to {PlotOutlineFilePath}", plotOutlineFilePath);
+
             return;
         }
 
@@ -291,28 +346,35 @@ public class WorkspaceManager(
 
         state.Premise = premise;
         state.PlotOutlineFile = PlotOutlineFileName;
+
         state.Chapters = outline.Chapters.Select(c => new ChapterState
-        {
-            Number = c.ChapterNumber,
-            Title = c.Title,
-            Summary = c.Summary, // Populate Summary from StoryOutline.Chapter
-            State = ChapterStateType.Unstarted
-        }).ToList();
+                                {
+                                    Number = c.ChapterNumber,
+                                    Title = c.Title,
+                                    Summary = c.Summary, // Populate Summary from StoryOutline.Chapter
+                                    State = ChapterStateType.Unstarted
+                                })
+                                .ToList();
 
         await SaveWorkspaceStateAsync(state, workspacePath);
 
         // Create chapter directories
         var projectRootPath = fileSystem.DirectoryInfo.New(workspacePath).Parent?.FullName;
+
         if (string.IsNullOrEmpty(projectRootPath))
         {
             logger.LogError("Could not determine project root path to create chapter directories.");
+
             return;
         }
 
         var mainChaptersDirectoryPath = fileSystem.Path.Join(projectRootPath, "chapters");
+
         if (!fileSystem.Directory.Exists(mainChaptersDirectoryPath))
         {
-            logger.LogInformation("Creating main chapters directory at {MainChaptersDirectoryPath}", mainChaptersDirectoryPath);
+            logger.LogInformation("Creating main chapters directory at {MainChaptersDirectoryPath}",
+                mainChaptersDirectoryPath);
+
             fileSystem.Directory.CreateDirectory(mainChaptersDirectoryPath);
         }
 
@@ -324,7 +386,9 @@ public class WorkspaceManager(
 
             if (!fileSystem.Directory.Exists(chapterSpecificDirectoryPath))
             {
-                logger.LogInformation("Creating chapter directory at {ChapterSpecificDirectoryPath}", chapterSpecificDirectoryPath);
+                logger.LogInformation("Creating chapter directory at {ChapterSpecificDirectoryPath}",
+                    chapterSpecificDirectoryPath);
+
                 fileSystem.Directory.CreateDirectory(chapterSpecificDirectoryPath);
             }
         }

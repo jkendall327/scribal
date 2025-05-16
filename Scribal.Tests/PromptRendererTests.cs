@@ -22,16 +22,13 @@ public class PromptRendererTests
 
         // Create kernel and arguments
         var kernel = Kernel.CreateBuilder().Build();
+
         var arguments = new KernelArguments
         {
             ["name"] = "World"
         };
 
-        var request = new RenderRequest(
-            "TestTemplate",
-            "Test",
-            "A test template",
-            arguments);
+        var request = new RenderRequest("TestTemplate", "Test", "A test template", arguments);
 
         // Act
         var result = await renderer.RenderPromptTemplateFromFileAsync(kernel, request, "/fake/Prompts/");

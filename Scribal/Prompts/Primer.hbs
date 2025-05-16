@@ -6,40 +6,40 @@ The following is a map of markdown documents in this project:
 {{{DirectoryMap}}}
 
 {{#if ReadmeContent}}
-# Project README
+    # Project README
 
-{{ReadmeContent}}
+    {{ReadmeContent}}
 {{/if}}
 
 {{#if SelectedFiles}}
----
-# Selected Files
-The user has selected to provide these files to you in full:
+    ---
+    # Selected Files
+    The user has selected to provide these files to you in full:
 
-{{#each SelectedFiles}}
----
-{{FileName}}
-{{Content}}
----
-{{/each}}
+    {{#each SelectedFiles}}
+        ---
+        {{FileName}}
+        {{Content}}
+        ---
+    {{/each}}
 {{/if}}
 
 {{#if SpecialFiles}}
-{{#each SpecialFiles}}
-{{Title}}
+    {{#each SpecialFiles}}
+        {{Title}}
 
-{{Content}}
-{{/each}}
+        {{Content}}
+    {{/each}}
 {{/if}}
 
 {{#if CharacterFiles}}
-# Character Files
+    # Character Files
 
-{{#each CharacterFiles}}
-## {{FileName}}
-{{Content}}
+    {{#each CharacterFiles}}
+        ## {{FileName}}
+        {{Content}}
 
-{{/each}}
+    {{/each}}
 {{/if}}
 
 You have received all the necessary context to respond to the user. Here is their message:

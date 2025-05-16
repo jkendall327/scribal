@@ -1,9 +1,5 @@
 namespace Scribal;
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
 public static class SlotsValidator
 {
     public static bool ValidateSlots(AiSettings settings, out string? error)
@@ -19,19 +15,24 @@ public static class SlotsValidator
         //------------------------------------------------------------------
         // 2.  Per-slot checks  (provider + model id must exist)
         //------------------------------------------------------------------
-        foreach (var (name, slot) in slots)
+        foreach ((var name, var slot) in slots)
         {
-            if (slot is null) continue; // slot not configured – that’s OK
+            if (slot is null)
+            {
+                continue; // slot not configured – that’s OK
+            }
 
             if (string.IsNullOrWhiteSpace(slot.Provider))
             {
                 error = $"{name} slot is missing Provider.";
+
                 return false;
             }
 
             if (string.IsNullOrWhiteSpace(slot.ModelId))
             {
                 error = $"{name} slot is missing ModelId.";
+
                 return false;
             }
         }
@@ -42,7 +43,7 @@ public static class SlotsValidator
         // Build a map   provider -> first non-null apiKey we see
         var providerKeys = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var (_, slot) in slots.Where(s => s.Slot is not null))
+        foreach ((var _, var slot) in slots.Where(s => s.Slot is not null))
         {
             var p = slot!.Provider;
             providerKeys.TryGetValue(p, out var recordedKey);
@@ -52,9 +53,11 @@ public static class SlotsValidator
 
         // Any provider that appears in ANY slot must have a key somewhere.
         var providerMissingKey = providerKeys.FirstOrDefault(kv => string.IsNullOrWhiteSpace(kv.Value));
+
         if (providerMissingKey.Key is not null)
         {
             error = $"Provider '{providerMissingKey.Key}' is used but no API key was supplied.";
+
             return false;
         }
 
@@ -62,6 +65,7 @@ public static class SlotsValidator
         // 5.  All good 🎉
         //------------------------------------------------------------------
         error = null;
+
         return true;
     }
 }

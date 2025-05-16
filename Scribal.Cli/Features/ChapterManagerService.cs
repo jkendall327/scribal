@@ -3,10 +3,6 @@ using System.CommandLine.Builder;
 using System.CommandLine.Invocation;
 using System.CommandLine.Parsing;
 using System.IO.Abstractions;
-using System.Linq;
-using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Scribal.Workspace;
 using Spectre.Console;
@@ -45,15 +41,19 @@ public class ChapterManagerService
         if (!_workspaceManager.InWorkspace)
         {
             var foundWorkspace = WorkspaceManager.TryFindWorkspaceFolder(_fileSystem);
+
             if (foundWorkspace == null)
             {
                 _logger.LogWarning("Not in a Scribal workspace and no workspace found nearby");
+
                 AnsiConsole.MarkupLine(
                     "[red]You are not currently in a Scribal workspace. Use '/init' to create one.[/]");
+
                 return;
             }
 
             _logger.LogInformation("Workspace found at {WorkspacePath}, attempting to load", foundWorkspace);
+
             // If a workspace is found but not loaded, LoadWorkspaceStateAsync will handle it.
         }
 
@@ -63,14 +63,17 @@ public class ChapterManagerService
         {
             _logger.LogError("Could not load workspace state");
             AnsiConsole.MarkupLine("[red]Could not load workspace state.[/]");
+
             return;
         }
 
         if (state.Chapters == null || !state.Chapters.Any())
         {
             _logger.LogInformation("No chapters found in the workspace");
+
             AnsiConsole.MarkupLine(
                 "[yellow]No chapters found in the workspace. Generate an outline first using '/outline'.[/]");
+
             return;
         }
 
@@ -79,14 +82,15 @@ public class ChapterManagerService
         while (!token.IsCancellationRequested)
         {
             AnsiConsole.WriteLine();
+
             var chapterChoices = state.Chapters.OrderBy(c => c.Number)
-                .Select(c => $"{c.Number}. {Markup.Escape(c.Title)} ({c.State})")
-                .ToList();
+                                      .Select(c => $"{c.Number}. {Markup.Escape(c.Title)} ({c.State})")
+                                      .ToList();
 
             var selectionPrompt = new SelectionPrompt<string>()
-                .Title("Select a chapter to manage or [blue]Back[/] to return:")
-                .PageSize(10)
-                .AddChoices(chapterChoices.Append("Back"));
+                                  .Title("Select a chapter to manage or [blue]Back[/] to return:")
+                                  .PageSize(10)
+                                  .AddChoices(chapterChoices.Append("Back"));
 
             var choice = AnsiConsole.Prompt(selectionPrompt);
 
@@ -97,11 +101,13 @@ public class ChapterManagerService
 
             var selectedChapterState =
                 state.Chapters.FirstOrDefault(c => $"{c.Number}. {Markup.Escape(c.Title)} ({c.State})" == choice);
+
             if (selectedChapterState != null)
             {
                 _logger.LogInformation("Selected chapter {ChapterNumber}: {ChapterTitle}",
                     selectedChapterState.Number,
                     selectedChapterState.Title);
+
                 await ChapterSubMenuAsync(selectedChapterState, token);
             }
         }
@@ -112,9 +118,12 @@ public class ChapterManagerService
     private Parser BuildChapterSubMenuParser(ChapterState chapter, CancellationTokenSource linkedCts)
     {
         var dummyCmd = new Command("/dummy", "A dummy action for the chapter.");
+
         dummyCmd.SetHandler(async () =>
         {
-            AnsiConsole.MarkupLine($"[grey]Executed dummy action for chapter {chapter.Number}: {Markup.Escape(chapter.Title)}.[/]");
+            AnsiConsole.MarkupLine(
+                $"[grey]Executed dummy action for chapter {chapter.Number}: {Markup.Escape(chapter.Title)}.[/]");
+
             try
             {
                 await Task.Delay(100, linkedCts.Token);
@@ -126,6 +135,7 @@ public class ChapterManagerService
         });
 
         var backCmd = new Command("/back", "Return to chapter selection.");
+
         backCmd.SetHandler(() =>
         {
             AnsiConsole.MarkupLine("[blue]Returning to chapter selection...[/]");
@@ -136,6 +146,7 @@ public class ChapterManagerService
         deleteCmd.SetHandler(async () => { await DeleteChapterAsync(chapter, linkedCts); });
 
         var draftCmd = new Command("/draft", "Draft this chapter using AI.");
+
         draftCmd.SetHandler(async () =>
         {
             // We want the draft operation to be cancellable by the parent token (e.g. Ctrl+C)
@@ -144,6 +155,7 @@ public class ChapterManagerService
             // For now, pass the linkedCts.Token. If drafting becomes long and needs independent cancellation,
             // we might need a different token strategy.
             await _chapterDrafterService.DraftChapterAsync(chapter, linkedCts.Token);
+
             // If drafting completes successfully, we might want to stay in the sub-menu.
             // If it's cancelled by /back from within the refinement loop of drafting, linkedCts will be cancelled.
         });
@@ -165,15 +177,20 @@ public class ChapterManagerService
         _logger.LogInformation("Entering sub-menu for chapter {ChapterNumber}: {ChapterTitle}",
             selectedChapter.Number,
             selectedChapter.Title);
+
         using var chapterSubMenuCts = CancellationTokenSource.CreateLinkedTokenSource(parentToken);
         var chapterSubMenuParser = BuildChapterSubMenuParser(selectedChapter, chapterSubMenuCts);
 
         while (!chapterSubMenuCts.IsCancellationRequested && !parentToken.IsCancellationRequested)
         {
             AnsiConsole.WriteLine();
-            AnsiConsole.MarkupLine($"Managing Chapter {selectedChapter.Number}: [yellow]{Markup.Escape(selectedChapter.Title)}[/] ({selectedChapter.State})");
+
+            AnsiConsole.MarkupLine(
+                $"Managing Chapter {selectedChapter.Number}: [yellow]{Markup.Escape(selectedChapter.Title)}[/] ({selectedChapter.State})");
+
             AnsiConsole.MarkupLine(
                 "Enter a command for this chapter ([blue]/help[/] for options, [blue]/back[/] to return to chapter list):");
+
             AnsiConsole.Markup($"Chapter {selectedChapter.Number} > ");
 
             var input = ReadLine.Read();
@@ -181,6 +198,7 @@ public class ChapterManagerService
             if (parentToken.IsCancellationRequested)
             {
                 AnsiConsole.MarkupLine("[yellow]Exiting chapter menu due to external cancellation.[/]");
+
                 break;
             }
 
@@ -198,6 +216,7 @@ public class ChapterManagerService
             {
                 _logger.LogInformation("Chapter action cancelled or /back invoked for chapter {ChapterNumber}",
                     selectedChapter.Number);
+
                 AnsiConsole.MarkupLine("[yellow](Chapter action cancelled or /back invoked)[/]");
             }
             catch (Exception ex)
@@ -206,6 +225,7 @@ public class ChapterManagerService
                     "Error processing chapter command {CommandInput} for chapter {ChapterNumber}",
                     input,
                     selectedChapter.Number);
+
                 AnsiConsole.MarkupLine($"[red]Error processing chapter command: {ex.Message}[/]");
             }
         }
@@ -220,11 +240,15 @@ public class ChapterManagerService
         _logger.LogInformation("Attempting to delete chapter {ChapterNumber}: {ChapterTitle}",
             chapterToDelete.Number,
             chapterToDelete.Title);
-        var confirmPrompt = $"Are you sure you want to delete Chapter {chapterToDelete.Number}: '{Markup.Escape(chapterToDelete.Title)}'? This action cannot be undone.";
+
+        var confirmPrompt =
+            $"Are you sure you want to delete Chapter {chapterToDelete.Number}: '{Markup.Escape(chapterToDelete.Title)}'? This action cannot be undone.";
+
         if (!await _userInteraction.ConfirmAsync(confirmPrompt))
         {
             _logger.LogInformation("User cancelled deletion of chapter {ChapterNumber}", chapterToDelete.Number);
             AnsiConsole.MarkupLine("[yellow]Chapter deletion cancelled.[/]");
+
             return;
         }
 
@@ -252,7 +276,10 @@ public class ChapterManagerService
             _logger.LogInformation("Successfully deleted chapter {ChapterNumber}: {ChapterTitle}",
                 chapterToDelete.Number,
                 chapterToDelete.Title);
-            AnsiConsole.MarkupLine($"[bold green]{Markup.Escape(deletionResult.OverallMessage ?? "Chapter deleted successfully.")}[/]");
+
+            AnsiConsole.MarkupLine(
+                $"[bold green]{Markup.Escape(deletionResult.OverallMessage ?? "Chapter deleted successfully.")}[/]");
+
             subMenuCts.Cancel(); // Exit the current chapter's sub-menu
         }
         else
@@ -262,7 +289,10 @@ public class ChapterManagerService
                 chapterToDelete.Number,
                 chapterToDelete.Title,
                 deletionResult.OverallMessage);
-            AnsiConsole.MarkupLine($"[bold red]{Markup.Escape(deletionResult.OverallMessage ?? "Chapter deletion failed.")}[/]");
+
+            AnsiConsole.MarkupLine(
+                $"[bold red]{Markup.Escape(deletionResult.OverallMessage ?? "Chapter deletion failed.")}[/]");
+
             if (deletionResult.Exception != null && !(deletionResult.Exception is OperationCanceledException))
             {
                 AnsiConsole.WriteException(deletionResult.Exception);

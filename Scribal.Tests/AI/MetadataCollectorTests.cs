@@ -36,18 +36,21 @@ public class MetadataCollectorTests
                 "output_tokens", 40
             }
         };
+
         var anthropicMetadata = new Dictionary<string, object>
         {
             {
                 "usage", anthropicUsage
             }
         };
+
         var metadataDict = new Dictionary<string, object?>
         {
             {
                 "anthropic_metadata", anthropicMetadata
             }
         };
+
         var message = new ChatMessageContent(AuthorRole.Assistant, "content", metadata: metadataDict);
 
         // Act
@@ -64,12 +67,14 @@ public class MetadataCollectorTests
     {
         // Arrange
         var anthropicMetadata = new Dictionary<string, object>(); // Missing "usage"
+
         var metadataDict = new Dictionary<string, object?>
         {
             {
                 "anthropic_metadata", anthropicMetadata
             }
         };
+
         var message = new ChatMessageContent(AuthorRole.Assistant, "content", metadata: metadataDict);
 
         // Act
@@ -89,18 +94,21 @@ public class MetadataCollectorTests
         {
             // Missing "input_tokens" and "output_tokens"
         };
+
         var anthropicMetadata = new Dictionary<string, object>
         {
             {
                 "usage", anthropicUsage
             }
         };
+
         var metadataDict = new Dictionary<string, object?>
         {
             {
                 "anthropic_metadata", anthropicMetadata
             }
         };
+
         var message = new ChatMessageContent(AuthorRole.Assistant, "content", metadata: metadataDict);
 
         // Act
@@ -122,18 +130,21 @@ public class MetadataCollectorTests
                 "input_tokens", 50
             } // "output_tokens" missing
         };
+
         var anthropicMetadata = new Dictionary<string, object>
         {
             {
                 "usage", anthropicUsage
             }
         };
+
         var metadataDict = new Dictionary<string, object?>
         {
             {
                 "anthropic_metadata", anthropicMetadata
             }
         };
+
         var message = new ChatMessageContent(AuthorRole.Assistant, "content", metadata: metadataDict);
 
         // Act
@@ -190,6 +201,7 @@ public class MetadataCollectorTests
                 }
             }
         };
+
         var message = new ChatMessageContent(AuthorRole.Assistant, "content", metadata: metadataDict);
 
         // Act
@@ -211,6 +223,7 @@ public class MetadataCollectorTests
                 "Usage", "not_a_ChatTokenUsage_object"
             }
         };
+
         var message = new ChatMessageContent(AuthorRole.Assistant, "content", metadata: metadataDict);
 
         // Act

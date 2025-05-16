@@ -1,12 +1,16 @@
 using System.Runtime.CompilerServices;
+using System.Text;
 using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.ChatCompletion; // Required for ChatHistory
+using Microsoft.SemanticKernel.ChatCompletion;
 using Scribal.AI;
-using Scribal.Cli; // Required for ConsoleChatRenderer and ReadLine
+using Scribal.Cli;
 using Scribal.Context;
-using Spectre.Console; // Required for AnsiConsole
-using System.Text;
+using Spectre.Console;
+
+// Required for ChatHistory
+// Required for ConsoleChatRenderer and ReadLine
+// Required for AnsiConsole
 
 namespace Scribal;
 
@@ -17,6 +21,7 @@ public class PitchService(IAiChatService chat, PromptRenderer renderer, Kernel k
         if (options.Value.Primary is null)
         {
             AnsiConsole.MarkupLine("[red]No primary model is configured. Cannot generate premise.[/]");
+
             return;
         }
 
@@ -77,6 +82,7 @@ public class PitchService(IAiChatService chat, PromptRenderer renderer, Kernel k
 
         AnsiConsole.MarkupLine("[cyan]Initial Premise Generated.[/]");
         AnsiConsole.WriteLine();
+
         return generatedPremise;
     }
 
@@ -90,6 +96,7 @@ public class PitchService(IAiChatService chat, PromptRenderer renderer, Kernel k
             if (ct.IsCancellationRequested)
             {
                 AnsiConsole.MarkupLine("[yellow]Refinement cancelled by host.[/]");
+
                 break;
             }
 
@@ -110,6 +117,7 @@ public class PitchService(IAiChatService chat, PromptRenderer renderer, Kernel k
             if (userInput.Equals("/cancel", StringComparison.OrdinalIgnoreCase))
             {
                 AnsiConsole.MarkupLine("[yellow]Cancelling...[/]");
+
                 break;
             }
 
@@ -129,6 +137,7 @@ public class PitchService(IAiChatService chat, PromptRenderer renderer, Kernel k
             {
                 AnsiConsole.WriteLine();
                 AnsiConsole.MarkupLine("[yellow](Refinement cancelled)[/]");
+
                 break;
             }
             catch (Exception e)

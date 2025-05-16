@@ -11,12 +11,13 @@ public partial class DiffEditor(IFileSystem fileSystem, IOptions<AppConfig> opti
     public const string DiffEditorToolName = "apply_diff";
 
     /// <summary>
-    /// Applies a unified diff to a file
+    ///     Applies a unified diff to a file
     /// </summary>
     /// <param name="file">The file path to apply the diff to</param>
     /// <param name="diff">The unified diff content as a string</param>
     /// <returns>The unified diff, for further inspection.</returns>
-    [KernelFunction(DiffEditorToolName), Description("Applies an edit to a file.")]
+    [KernelFunction(DiffEditorToolName)]
+    [Description("Applies an edit to a file.")]
     public async Task ApplyUnifiedDiffAsync([Description("The path to the file to edit.")] string file,
         [Description("The edit to apply, in unified diff format.")] string diff)
     {
@@ -79,21 +80,27 @@ public partial class DiffEditor(IFileSystem fileSystem, IOptions<AppConfig> opti
 
             // Check if this is a hunk header
             var match = hunkHeaderRegex.Match(line);
+
             if (match.Success)
             {
                 // Create a new hunk
-                currentHunk = new DiffHunk
+                currentHunk = new()
                 {
                     OriginalStart = int.Parse(match.Groups[1].Value),
                     OriginalCount = match.Groups[2].Success ? int.Parse(match.Groups[2].Value) : 1,
                     NewStart = int.Parse(match.Groups[3].Value),
                     NewCount = match.Groups[4].Success ? int.Parse(match.Groups[4].Value) : 1
                 };
+
                 hunks.Add(currentHunk);
+
                 continue;
             }
 
-            if (currentHunk == null) continue;
+            if (currentHunk == null)
+            {
+                continue;
+            }
 
             // Add the line to the current hunk
             // Only add lines that are part of the hunk body (context, add, remove)
@@ -113,7 +120,7 @@ public partial class DiffEditor(IFileSystem fileSystem, IOptions<AppConfig> opti
         // If OriginalStart is 1, changes apply at index 0.
         // If OriginalStart is 0 (e.g., @@ -0,0 +1,N @@ for adding to empty file),
         // operations effectively start "before" the first line, so insertions go at index 0.
-        var currentPositionInFile = (hunk.OriginalStart == 0) ? 0 : hunk.OriginalStart - 1;
+        var currentPositionInFile = hunk.OriginalStart == 0 ? 0 : hunk.OriginalStart - 1;
 
         foreach (var lineContentFromDiff in hunk.Lines)
         {
@@ -124,7 +131,8 @@ public partial class DiffEditor(IFileSystem fileSystem, IOptions<AppConfig> opti
             {
                 if (currentPositionInFile >= fileContent.Count || fileContent[currentPositionInFile] != lineData)
                 {
-                    throw new InvalidOperationException($"Context mismatch at line {currentPositionInFile + 1}. Expected: '{lineData}', Actual: '{(currentPositionInFile < fileContent.Count
+                    throw new InvalidOperationException(
+                        $"Context mismatch at line {currentPositionInFile + 1}. Expected: '{lineData}', Actual: '{(currentPositionInFile < fileContent.Count
                             ? fileContent[currentPositionInFile]
                             : "Out of bounds/End of file")}'. Hunk: @@ -{hunk.OriginalStart},{hunk.OriginalCount} +{hunk.NewStart},{hunk.NewCount} @@");
                 }
@@ -135,12 +143,14 @@ public partial class DiffEditor(IFileSystem fileSystem, IOptions<AppConfig> opti
             {
                 if (currentPositionInFile >= fileContent.Count || fileContent[currentPositionInFile] != lineData)
                 {
-                    throw new InvalidOperationException($"Deletion mismatch at line {currentPositionInFile + 1}. Expected to delete: '{lineData}', Actual: '{(currentPositionInFile < fileContent.Count
+                    throw new InvalidOperationException(
+                        $"Deletion mismatch at line {currentPositionInFile + 1}. Expected to delete: '{lineData}', Actual: '{(currentPositionInFile < fileContent.Count
                             ? fileContent[currentPositionInFile]
                             : "Out of bounds/End of file")}'. Hunk: @@ -{hunk.OriginalStart},{hunk.OriginalCount} +{hunk.NewStart},{hunk.NewCount} @@");
                 }
 
                 fileContent.RemoveAt(currentPositionInFile);
+
                 // Do not increment currentPositionInFile, as the next line shifts up.
             }
             else if (operation == '+') // Addition line
@@ -148,12 +158,14 @@ public partial class DiffEditor(IFileSystem fileSystem, IOptions<AppConfig> opti
                 // Ensure insertion happens within valid bounds (at Count is okay for end-of-list)
                 if (currentPositionInFile > fileContent.Count)
                 {
-                    throw new InvalidOperationException($"Attempting to insert line at an invalid position {currentPositionInFile} (file size {fileContent.Count}). Hunk: @@ -{hunk.OriginalStart},{hunk.OriginalCount} +{hunk.NewStart},{hunk.NewCount} @@");
+                    throw new InvalidOperationException(
+                        $"Attempting to insert line at an invalid position {currentPositionInFile} (file size {fileContent.Count}). Hunk: @@ -{hunk.OriginalStart},{hunk.OriginalCount} +{hunk.NewStart},{hunk.NewCount} @@");
                 }
 
                 fileContent.Insert(currentPositionInFile, lineData);
                 currentPositionInFile++; // Increment because we've added a line.
             }
+
             // Other lines (like "\ No newline at end of file") are already filtered by ParseUnifiedDiff or ignored here.
         }
     }

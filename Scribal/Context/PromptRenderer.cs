@@ -10,7 +10,10 @@ public class PromptRenderer(IFileSystem fileSystem)
 {
     private readonly HandlebarsPromptTemplateFactory _templateFactory = new();
 
-    public async Task<string> RenderPromptTemplateFromFileAsync(Kernel kernel, RenderRequest request, string? promptsFolder = null, CancellationToken cancellationToken = default)
+    public async Task<string> RenderPromptTemplateFromFileAsync(Kernel kernel,
+        RenderRequest request,
+        string? promptsFolder = null,
+        CancellationToken cancellationToken = default)
     {
         (var promptFilename, var logicalName, var description, var arguments) = request;
 

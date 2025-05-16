@@ -1,5 +1,6 @@
-using Microsoft.SemanticKernel.ChatCompletion; // Required for ChatHistory
-using System.Runtime.CompilerServices;
+using Microsoft.SemanticKernel.ChatCompletion;
+
+// Required for ChatHistory
 
 namespace Scribal.AI;
 
@@ -10,8 +11,7 @@ public interface IAiChatService
         string sid,
         CancellationToken ct = default);
 
-    IAsyncEnumerable<ChatStreamItem> StreamWithExplicitHistoryAsync(
-        string conversationId,
+    IAsyncEnumerable<ChatStreamItem> StreamWithExplicitHistoryAsync(string conversationId,
         ChatHistory history,
         string userMessage,
         string sid,

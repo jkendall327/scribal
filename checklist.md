@@ -9,15 +9,15 @@
 - [ ] Implement functionality to report workspace status, potentially including RAG status
 
 ## Initialisation (`scribal init`)
-- [ ] Implement `scribal init` command
-- [ ] `scribal init`: Create `.scribal/` directory
-- [ ] `scribal init`: Create `config.json` with defaults and prompts
-- [ ] `scribal init`: Create an empty `project_state.json`
+- [x] Implement `scribal init` command
+- [x] `scribal init`: Create `.scribal/` directory
+- [x] `scribal init`: Create `config.json` with defaults and prompts
+- [x] `scribal init`: Create an empty `project_state.json`
 - [ ] `scribal init`: Create an empty `plot_outline.md` template
 - [ ] `scribal init`: Create `characters/` directory
 - [ ] `scribal init`: Create `chapters/` directory
-- [ ] `scribal init`: Set project state to "Initialized" in `project_state.json`
-- [ ] `project_state.json`: Track chapters and their individual states (e.g., unstarted, drafted, locked off)
+- [x] `scribal init`: Set project state to "Initialized" in `project_state.json`
+- [x] `project_state.json`: Track chapters and their individual states (e.g., unstarted, drafted, locked off)
 
 ## Pitch
 - [x] Allow user to supply a core seed idea (pitch)
@@ -38,8 +38,8 @@
 - [ ] Outline: Each chapter entry includes a list of appearing characters (for RAG)
 
 ## User Choice and Interaction
-- [ ] Before AI edits are saved to the filesystem, prompt user with yes/no/refine options
-- [ ] 'Refine' option: Enter a back-and-forth chat with the model to iterate on its work
+- [x] Before AI edits are saved to the filesystem, prompt user with yes/no/refine options
+- [x] 'Refine' option: Enter a back-and-forth chat with the model to iterate on its work
 
 ## Chapter Mode
 - [ ] Implement a tree view menu for chapter selection

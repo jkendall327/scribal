@@ -110,7 +110,7 @@ public static class ScribalModelServiceCollectionExtensions
             var appConfig = sp.GetRequiredService<IOptions<AppConfig>>().Value;
             var embeddings = sp.GetRequiredService<IOptions<AiSettings>>().Value.Embeddings;
 
-            if (embeddings is null)
+            if (embeddings?.ApiKey is null)
             {
                 throw new NotImplementedException("Figure out how to make RAG optional again...?");
             }

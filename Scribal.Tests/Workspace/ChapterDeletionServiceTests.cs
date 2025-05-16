@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.IO.Abstractions.TestingHelpers;
 using System.Text.Json;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -22,9 +23,12 @@ public class ChapterDeletionServiceTests
 
     public ChapterDeletionServiceTests()
     {
-        ReInitializeFileSystem(); // Call common init logic
+        ReInitializeFileSystem();
     }
 
+    [MemberNotNull(nameof(_fileSystem))]
+    [MemberNotNull(nameof(_workspaceManager))]
+    [MemberNotNull(nameof(_sut))]
     private void ReInitializeFileSystem(string currentDirectory = TestProjectRootDir)
     {
         _fileSystem = new();

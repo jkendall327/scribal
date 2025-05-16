@@ -19,6 +19,8 @@
         <PackageReference Include="Spectre.Console" Version="0.50.1-preview.0.5"/>
         <PackageReference Include="Spectre.Console.Cli" Version="0.50.1-preview.0.5"/>
         <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1"/>
+        <!-- Added purely to prevent an annoying warning caused by a NuGet bug. -->
+        <PackageReference Include="System.Private.Uri" Version="4.3.2"/>
     </ItemGroup>
 
     <ItemGroup>

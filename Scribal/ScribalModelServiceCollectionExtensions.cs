@@ -1,5 +1,4 @@
 using System.Text.Json;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel;
@@ -21,7 +20,7 @@ public static class ScribalModelServiceCollectionExtensions
 {
     private const string AiSectionPath = "AI";
     
-    public static void AddScribalAi(this IServiceCollection services, IConfiguration cfg)
+    public static void AddScribalAi(this IServiceCollection services)
     {
         // Register everything that implements IModelProvider.
         IModelProvider.AddModelProviders(services);

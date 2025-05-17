@@ -23,7 +23,7 @@ IncorporateConfigFromScribalWorkspace(builder);
 
 SetupLogging(builder);
 
-builder.Services.AddScribalAi(builder.Configuration);
+builder.Services.AddScribalAi();
 builder.Services.AddScribal(builder.Configuration, new FileSystem(), TimeProvider.System);
 builder.Services.AddScribalInterface();
 

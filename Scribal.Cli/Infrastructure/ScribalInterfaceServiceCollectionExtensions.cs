@@ -19,6 +19,7 @@ public static class ScribalInterfaceServiceCollectionExtensions
         services.AddSingleton<ChapterDrafterService>();
         services.AddSingleton<NewChapterCreator>();
         services.AddSingleton<IChapterDeletionService, ChapterDeletionService>();
+        services.AddSingleton<IChapterSplitterService, ChapterSplitterService>(); // AI: Added ChapterSplitterService registration
         services.AddSingleton<WorkspaceDeleter>();
         services.AddSingleton<ExportService>();
         services.AddSingleton(AnsiConsole.Console);

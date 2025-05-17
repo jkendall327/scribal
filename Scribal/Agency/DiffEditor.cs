@@ -1,13 +1,14 @@
 using System.ComponentModel;
 using System.IO.Abstractions;
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel;
 using Scribal.Config;
 
 namespace Scribal.Agency;
 
-public partial class DiffEditor(IFileSystem fileSystem, IOptions<AppConfig> options)
+public partial class DiffEditor(IFileSystem fileSystem, FileAccessChecker checker, IOptions<AppConfig> options, ILogger<DiffEditor> logger)
 {
     public const string DiffEditorToolName = "apply_diff";
 
@@ -19,9 +20,26 @@ public partial class DiffEditor(IFileSystem fileSystem, IOptions<AppConfig> opti
     /// <returns>The unified diff, for further inspection.</returns>
     [KernelFunction(DiffEditorToolName)]
     [Description("Applies an edit to a file.")]
-    public async Task ApplyUnifiedDiffAsync([Description("The path to the file to edit.")] string file,
+    public async Task<string> ApplyUnifiedDiffAsync([Description("The path to the file to edit.")] string file,
         [Description("The edit to apply, in unified diff format.")] string diff)
     {
+        if (!fileSystem.File.Exists(file))
+        {
+            logger.LogWarning("File not found at path {FilePath}", file);
+
+            return FileAccessChecker.FileNotFoundError;
+        }
+
+        var ok = checker.IsInCurrentWorkingDirectory(file);
+
+        if (!ok)
+        {
+            logger.LogWarning("Access denied for file {FilePath} as it is outside the current working directory",
+                file);
+
+            return FileAccessChecker.AccessDeniedError;
+        }
+        
         // Read the original file content
         var originalLines = await fileSystem.File.ReadAllLinesAsync(file);
 
@@ -32,6 +50,8 @@ public partial class DiffEditor(IFileSystem fileSystem, IOptions<AppConfig> opti
         {
             await fileSystem.File.WriteAllLinesAsync(file, newFileContent);
         }
+        
+        return "File edited successfully.";
     }
 
     public List<string> ApplyUnifiedDiffInner(IEnumerable<string> originalLines, string diff)

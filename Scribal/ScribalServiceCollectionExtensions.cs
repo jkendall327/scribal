@@ -26,6 +26,7 @@ public static class ScribalServiceCollectionExtensions
         // Tools
         services.AddSingleton<FileReader>();
         services.AddSingleton<DiffEditor>();
+        services.AddSingleton<FileAccessChecker>();
 
         // LLM interfacing
         services.AddSingleton<IChatSessionStore, InMemoryChatSessionStore>();

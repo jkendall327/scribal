@@ -1,5 +1,6 @@
 using System.IO.Abstractions;
 using FluentAssertions;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using NSubstitute;
 using Scribal.Agency;
@@ -21,7 +22,7 @@ public class DiffEditorTests
             DryRun = false
         });
 
-        _sut = new(mockFileSystem, mockOptions);
+        _sut = new(mockFileSystem, new(mockFileSystem), mockOptions, NullLogger<DiffEditor>.Instance);
     }
 
     [Fact]

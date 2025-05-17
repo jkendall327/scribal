@@ -2,6 +2,7 @@
 
 using System.IO.Abstractions.TestingHelpers;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using Scribal.Agency;
 
@@ -10,12 +11,11 @@ namespace Scribal.Tests.Agency;
 public class FileReaderTests
 {
     private readonly MockFileSystem _fileSystem = new();
-    private readonly ILogger<FileReader> _logger = Substitute.For<ILogger<FileReader>>();
     private readonly FileReader _fileReader;
 
     public FileReaderTests()
     {
-        _fileReader = new(_fileSystem, _logger);
+        _fileReader = new(_fileSystem, new(_fileSystem), NullLogger<FileReader>.Instance);
     }
 
     [Fact]

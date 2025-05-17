@@ -65,6 +65,10 @@ public class CommandService(
         var outline = Create("/outline", "Generates a plot outline from a premise", OutlineCommand);
         outline.AddArgument(_premiseArgument);
 
+        var drop = Create("/drop",
+            "Drop all selected files from context",
+            DropCommand);
+        
         var chaptersCmd = Create("/chapters",
             "Manage chapters in the workspace",
             chapterManagerService.ManageChaptersAsync);
@@ -96,6 +100,7 @@ public class CommandService(
             commitCmd,
             exportCmd,
             tree,
+            drop,
             quit
         };
 
@@ -114,6 +119,14 @@ public class CommandService(
 
             return cmd;
         }
+    }
+
+    private Task DropCommand(InvocationContext arg)
+    {
+        repoStore.Paths.Clear();
+        AnsiConsole.MarkupLine("[yellow]All files cleared from context.[/]");
+        
+        return Task.CompletedTask;
     }
 
     private async Task ExportCommandAsync(InvocationContext context)

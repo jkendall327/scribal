@@ -236,7 +236,7 @@ public class StickyTreeSelector
 
     private Tree BuildSpectreTreeWidget()
     {
-        var tree = new Tree("[yellow underline]Select Files/Folders[/]")
+        var tree = new Tree("[yellow underline]Select Files/Folders (backspace to exit)[/]")
         {
             Guide = TreeGuide.Line
         };

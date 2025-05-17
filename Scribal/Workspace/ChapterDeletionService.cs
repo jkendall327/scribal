@@ -109,7 +109,7 @@ public class ChapterDeletionService(
             {
                 var outlineJson = await fileSystem.File.ReadAllTextAsync(plotOutlineFilePath, cancellationToken);
 
-                storyOutline = JsonSerializer.Deserialize<StoryOutline>(outlineJson, JsonDefaults.Default);
+                storyOutline = JsonSerializer.Deserialize<StoryOutline>(outlineJson, JsonDefaults.Context.StoryOutline);
             }
 
             storyOutline ??= new();
@@ -135,7 +135,7 @@ public class ChapterDeletionService(
                 ch.ChapterNumber = newChapterNumber++;
             }
 
-            var updatedOutlineJson = JsonSerializer.Serialize(storyOutline, JsonDefaults.Default);
+            var updatedOutlineJson = JsonSerializer.Serialize(storyOutline, JsonDefaults.Context.StoryOutline);
 
             await fileSystem.File.WriteAllTextAsync(plotOutlineFilePath, updatedOutlineJson, cancellationToken);
             logger.LogInformation("Updated and saved plot_outline.json");

@@ -73,7 +73,7 @@ public class WorkspaceManager(
         {
             logger.LogDebug("Writing workspace config to {ConfigPath}", configPath);
 
-            var jsonConfig = JsonSerializer.Serialize(config, JsonDefaults.Default);
+            var jsonConfig = JsonSerializer.Serialize(config, JsonDefaults.Context.WorkspaceConfig);
 
             await fileSystem.File.WriteAllTextAsync(configPath, jsonConfig);
 
@@ -211,7 +211,7 @@ public class WorkspaceManager(
         try
         {
             var json = await fileSystem.File.ReadAllTextAsync(stateFilePath, cancellationToken);
-            var state = JsonSerializer.Deserialize<WorkspaceState>(json);
+            var state = JsonSerializer.Deserialize<WorkspaceState>(json, JsonDefaults.Context.WorkspaceState);
             logger.LogInformation("Workspace state loaded from {StateFilePath}", stateFilePath);
 
             return state;
@@ -247,7 +247,7 @@ public class WorkspaceManager(
 
         try
         {
-            var json = JsonSerializer.Serialize(state, JsonDefaults.Default);
+            var json = JsonSerializer.Serialize(state, JsonDefaults.Context.WorkspaceState);
 
             await fileSystem.File.WriteAllTextAsync(stateFilePath, json, cancellationToken);
             logger.LogInformation("Workspace state saved to {StateFilePath}", stateFilePath);
@@ -283,7 +283,7 @@ public class WorkspaceManager(
         {
             var json = await fileSystem.File.ReadAllTextAsync(plotOutlineFilePath, cancellationToken);
 
-            var outline = JsonSerializer.Deserialize<StoryOutline>(json, JsonDefaults.Default);
+            var outline = JsonSerializer.Deserialize<StoryOutline>(json, JsonDefaults.Context.StoryOutline);
 
             logger.LogInformation("Plot outline loaded from {PlotOutlineFilePath}", plotOutlineFilePath);
 
@@ -318,7 +318,7 @@ public class WorkspaceManager(
 
         try
         {
-            var outlineJson = JsonSerializer.Serialize(outline, JsonDefaults.Default);
+            var outlineJson = JsonSerializer.Serialize(outline, JsonDefaults.Context.StoryOutline);
 
             await fileSystem.File.WriteAllTextAsync(plotOutlineFilePath, outlineJson);
             logger.LogInformation("Plot outline saved to {PlotOutlineFilePath}", plotOutlineFilePath);

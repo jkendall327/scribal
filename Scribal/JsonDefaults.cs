@@ -6,6 +6,8 @@ namespace Scribal;
 
 [JsonSourceGenerationOptions(WriteIndented = true, PropertyNameCaseInsensitive = true)]
 [JsonSerializable(typeof(StoryOutline))]
+[JsonSerializable(typeof(WorkspaceConfig))]
+[JsonSerializable(typeof(WorkspaceState))]
 public partial class ScribalJsonContext : JsonSerializerContext;
 
 public static class JsonDefaults

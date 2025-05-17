@@ -7,12 +7,11 @@ namespace Scribal.Tests.Agency;
 
 public class FileReaderTests
 {
-    private readonly MockFileSystem _fileSystem;
+    private readonly MockFileSystem _fileSystem = new();
     private readonly FileReader _fileReader;
 
     public FileReaderTests()
     {
-        _fileSystem = new();
         _fileReader = new(_fileSystem);
     }
 
@@ -43,17 +42,17 @@ public class FileReaderTests
         var result = await _fileReader.ReadFileContentAsync(filePath);
 
         // AI: Assert
-        Assert.Equal("[ERROR: the file did not exist.]", result);
+        Assert.Equal(FileReader.FileNotFoundError, result);
     }
 
     [Fact]
     public async Task ReadFileContentAsync_FileOutsideCwd_ReturnsAccessDeniedError()
     {
         // AI: Arrange
-        var outsideFilePath = _fileSystem.Path.Combine("..", "outsidetest.txt");
+        var outsideFilePath = "/outsidetest.txt";
 
         // AI: Ensure the mock file system knows about the CWD for path resolution
-        var cwd = _fileSystem.Path.GetFullPath(".");
+        var cwd = "/example";
         _fileSystem.AddDirectory(cwd); // AI: Ensure CWD exists
         _fileSystem.Directory.SetCurrentDirectory(cwd);
 
@@ -65,7 +64,7 @@ public class FileReaderTests
         var result = await _fileReader.ReadFileContentAsync(outsideFilePath);
 
         // AI: Assert
-        Assert.Equal("[ERROR: Access denied. File is outside the current working directory.]", result);
+        Assert.Equal(FileReader.AccessDeniedError, result);
     }
 
     [Fact]
@@ -87,7 +86,7 @@ public class FileReaderTests
         var result = await _fileReader.ReadFileContentAsync(outsideFilePath);
 
         // AI: Assert
-        Assert.Equal("[ERROR: Access denied. File is outside the current working directory.]", result);
+        Assert.Equal(FileReader.AccessDeniedError, result);
     }
 
     [Fact]
@@ -105,7 +104,7 @@ public class FileReaderTests
         // AI: Assert
         // AI: This should be treated as a non-existent file or access denied depending on how File.Exists handles directories.
         // AI: Given the current implementation, it will likely be "file did not exist" because File.Exists(directoryPath) is false.
-        Assert.Equal("[ERROR: the file did not exist.]", result);
+        Assert.Equal(FileReader.FileNotFoundError, result);
     }
 
     [Fact]

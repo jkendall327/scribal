@@ -6,13 +6,16 @@ namespace Scribal.Agency;
 
 public class FileReader(IFileSystem fileSystem)
 {
+    public const string FileNotFoundError = "[ERROR: the file did not exist.]";
+    public const string AccessDeniedError = "[ERROR: Access denied. File is outside the current working directory.]";
+    
     [KernelFunction]
     [Description("Fetches the full content of the file specified by the filepath.")]
     public async Task<string> ReadFileContentAsync(string filepath)
     {
         if (!fileSystem.File.Exists(filepath))
         {
-            return "[ERROR: the file did not exist.]";
+            return FileNotFoundError;
         }
 
         // Get absolute paths
@@ -26,7 +29,7 @@ public class FileReader(IFileSystem fileSystem)
         // Check if the file is inside the CWD
         if (!fileFull.StartsWith(cwdFull, StringComparison.OrdinalIgnoreCase))
         {
-            return "[ERROR: Access denied. File is outside the current working directory.]";
+            return AccessDeniedError;
         }
 
         return await fileSystem.File.ReadAllTextAsync(filepath);

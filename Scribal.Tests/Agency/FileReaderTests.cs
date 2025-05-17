@@ -1,6 +1,8 @@
 // AI: Test suite for the FileReader class
 
 using System.IO.Abstractions.TestingHelpers;
+using Microsoft.Extensions.Logging;
+using NSubstitute;
 using Scribal.Agency;
 
 namespace Scribal.Tests.Agency;
@@ -8,11 +10,12 @@ namespace Scribal.Tests.Agency;
 public class FileReaderTests
 {
     private readonly MockFileSystem _fileSystem = new();
+    private readonly ILogger<FileReader> _logger = Substitute.For<ILogger<FileReader>>();
     private readonly FileReader _fileReader;
 
     public FileReaderTests()
     {
-        _fileReader = new(_fileSystem);
+        _fileReader = new(_fileSystem, _logger);
     }
 
     [Fact]

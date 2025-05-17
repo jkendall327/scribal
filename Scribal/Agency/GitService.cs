@@ -84,11 +84,16 @@ public sealed class GitService(
         return Task.FromResult(name);
     }
 
-    public Task<bool> CreateCommitAsync(string filepath, string message, CancellationToken ct = default)
+    public async Task<bool> CreateCommitAsync(string filepath, string message, CancellationToken ct = default)
+    {
+        return await CreateCommitAsync([filepath], message, ct);
+    }
+    
+    public Task<bool> CreateCommitAsync(List<string> files, string message, CancellationToken ct = default)
     {
         if (config.Value.DryRun)
         {
-            logger.LogInformation("Dry run: Skipping commit for {Filepath}", filepath);
+            logger.LogInformation("Dry run: Skipping commit");
 
             return Task.FromResult(true);
         }
@@ -98,16 +103,23 @@ public sealed class GitService(
 
         try
         {
-            Commands.Stage(_repo, filepath);
+            foreach (var file in files)
+            {
+                Commands.Stage(_repo, file);
+                logger.LogInformation("Staged changes for {Filepath}", file);
+            }
+            
             var sig = new Signature($"{_name} (scribal)", _email, time.GetLocalNow());
+            
             _repo.Commit(message, sig, sig);
-            logger.LogInformation("Committed changes for {Filepath} with message: {Message}", filepath, message);
+            
+            logger.LogInformation("Committed changes with message: {Message}", message);
 
             return Task.FromResult(true);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to create commit for {Filepath}", filepath);
+            logger.LogError(ex, "Failed to create commit");
 
             return Task.FromResult(false);
         }

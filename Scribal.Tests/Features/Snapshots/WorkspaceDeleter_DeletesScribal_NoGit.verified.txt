@@ -1,0 +1,6 @@
+﻿[
+  /,
+  /temp,
+  /test,
+  /test/project
+]

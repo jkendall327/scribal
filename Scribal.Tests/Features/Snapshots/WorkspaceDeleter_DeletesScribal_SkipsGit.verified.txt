@@ -1,0 +1,11 @@
+﻿{
+  FileSystemState: [
+    /,
+    /temp,
+    /test,
+    /test/project,
+    /test/project/.git,
+    /test/project/.git/config,
+    /test/project/.git/HEAD
+  ]
+}

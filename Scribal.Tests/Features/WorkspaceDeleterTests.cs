@@ -98,9 +98,9 @@ public class WorkspaceDeleterTests
         await _sut.DeleteWorkspaceCommandAsync(invocationContext);
 
         // Assert
-        Verify(_fileSystem.AllPaths) // AI: Snapshot the file system paths
-            .UseDirectory("Snapshots")
-            .UseFileName("WorkspaceDeleter_DeletesScribal_NoGit");
+        await Verify(_fileSystem.AllPaths) // AI: Snapshot the file system paths
+              .UseDirectory("Snapshots")
+              .UseFileName("WorkspaceDeleter_DeletesScribal_NoGit");
     }
 
     [Fact]
@@ -124,7 +124,7 @@ public class WorkspaceDeleterTests
         await _sut.DeleteWorkspaceCommandAsync(invocationContext);
 
         // Assert
-        Verify(_fileSystem.AllPaths).UseDirectory("Snapshots").UseFileName("WorkspaceDeleter_DeletesScribalAndGit");
+        await Verify(_fileSystem.AllPaths).UseDirectory("Snapshots").UseFileName("WorkspaceDeleter_DeletesScribalAndGit");
     }
 
     [Fact]
@@ -149,7 +149,10 @@ public class WorkspaceDeleterTests
         await _sut.DeleteWorkspaceCommandAsync(invocationContext);
 
         // Assert
-        Verify(_fileSystem.AllPaths).UseDirectory("Snapshots").UseFileName("WorkspaceDeleter_DeletesScribal_SkipsGit");
+        await Verify(new
+        {
+            FileSystemState = _fileSystem.AllPaths
+        }).UseDirectory("Snapshots").UseFileName("WorkspaceDeleter_DeletesScribal_SkipsGit");
     }
 
     [Fact]

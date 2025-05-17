@@ -96,7 +96,7 @@ public class ChapterManagerService(
                                       .ToList();
             
             // AI: Added option to create a new chapter
-            var commandChoices = new List<string> { "[+] Create New Chapter" };
+            var commandChoices = new List<string> { "+ Create New Chapter" };
             commandChoices.AddRange(chapterChoices);
             commandChoices.Add("Back");
 
@@ -112,7 +112,7 @@ public class ChapterManagerService(
                 break;
             }
 
-            if (choice == "[+] Create New Chapter")
+            if (choice == "+ Create New Chapter")
             {
                 // AI: Call the NewChapterCreatorService
                 await newChapterCreator.CreateNewChapterAsync(token);

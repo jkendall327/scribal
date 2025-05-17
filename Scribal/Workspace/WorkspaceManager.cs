@@ -884,7 +884,7 @@ public class WorkspaceManager(
         // AI: 2. Update target chapter metadata
         targetChapterState.DraftFilePath = newTargetDraftFilePath;
         targetChapterState.Summary = newTargetSummary;
-        targetChapterState.State = ChapterStateType.Draft; // Merged content implies it's a draft
+        targetChapterState.State = DetermineMergedChapterState(sourceChapterState.State, targetChapterState.State);
 
         targetChapterOutline.Summary = newTargetSummary;
 
@@ -991,5 +991,18 @@ public class WorkspaceManager(
             targetChapterNumber);
 
         return true;
+    }
+
+    private ChapterStateType DetermineMergedChapterState(ChapterStateType sourceState, ChapterStateType targetState)
+    {
+        // AI: If both chapters were unstarted, the merged chapter remains unstarted.
+        if (sourceState == ChapterStateType.Unstarted && targetState == ChapterStateType.Unstarted)
+        {
+            return ChapterStateType.Unstarted;
+        }
+
+        // AI: In all other cases (any content, any 'Done' state involved),
+        // AI: the merged chapter is considered a draft requiring review.
+        return ChapterStateType.Draft;
     }
 }

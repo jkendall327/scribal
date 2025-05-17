@@ -21,7 +21,8 @@ public class CommandService(
     WorkspaceDeleter workspaceDeleter,
     WorkspaceManager workspaceManager,
     ChapterManagerService chapterManagerService,
-    IGitService gitService)
+    IGitService gitService,
+    ExportService exportService) // AI: Added ExportService
 {
     private readonly Argument<string> _ideaArgument = new()
     {
@@ -42,6 +43,13 @@ public class CommandService(
         Name = "Message",
         Arity = ArgumentArity.ExactlyOne,
         Description = "The commit message for all staged files"
+    };
+
+    private readonly Option<string> _exportFileNameOption = new(
+        aliases: ["--output", "-o"],
+        description: "The name of the output Markdown file for export. Defaults to 'exported_story.md'.")
+    {
+        Arity = ArgumentArity.ZeroOrOne
     };
 
     public Parser Build()
@@ -73,6 +81,11 @@ public class CommandService(
 
         var statusCmd = Create("/status", "Displays the current project status", StatusCommand);
 
+        var exportCmd = Create("/export",
+            "Exports all chapters into a single Markdown file",
+            ExportCommandAsync);
+        exportCmd.AddOption(_exportFileNameOption);
+
         var root = new RootCommand("Scribal interactive shell")
         {
             init,
@@ -83,6 +96,7 @@ public class CommandService(
             chaptersCmd,
             deleteWorkspaceCmd,
             commitCmd,
+            exportCmd, // AI: Added export command
             tree,
             quit
         };
@@ -101,6 +115,34 @@ public class CommandService(
             cmd.SetHandler(action);
 
             return cmd;
+        }
+    }
+
+    private async Task ExportCommandAsync(InvocationContext context)
+    {
+        var outputFileName = context.ParseResult.GetValueForOption(_exportFileNameOption);
+        var token = context.GetCancellationToken();
+
+        if (!workspaceManager.InWorkspace)
+        {
+            AnsiConsole.MarkupLine("[red]Cannot export: Not currently in a Scribal workspace. Use '/init' to create one.[/]");
+            return;
+        }
+
+        try
+        {
+            AnsiConsole.MarkupLine("Starting export...");
+            await exportService.ExportStoryAsync(outputFileName, token);
+            // AI: Success/failure messages are handled within ExportService
+        }
+        catch (OperationCanceledException)
+        {
+            AnsiConsole.MarkupLine("[yellow]Export operation cancelled.[/]");
+        }
+        catch (Exception e)
+        {
+            AnsiConsole.MarkupLine("[red]An unexpected error occurred during export.[/]");
+            AnsiConsole.WriteException(e);
         }
     }
 

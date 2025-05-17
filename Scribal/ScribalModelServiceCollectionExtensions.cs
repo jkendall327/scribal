@@ -18,6 +18,8 @@ namespace Scribal;
 
 public static class ScribalModelServiceCollectionExtensions
 {
+    private const string AiSectionPath = "AI";
+    
     public static void AddScribalAi(this IServiceCollection services, IConfiguration cfg)
     {
         // Register everything that implements IModelProvider.
@@ -34,8 +36,7 @@ public static class ScribalModelServiceCollectionExtensions
         var err = string.Empty;
 
         services.AddOptions<AiSettings>()
-                .Bind(cfg.GetSection("AI"))
-                .ValidateDataAnnotations()
+                .BindConfiguration(AiSectionPath)
                 .Validate(settings =>
                     {
                         var result = SlotsValidator.ValidateSlots(settings, out var error);

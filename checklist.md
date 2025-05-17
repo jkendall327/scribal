@@ -31,7 +31,7 @@
 
 ## Outline
 
-- [ ] Generate a high-level breakdown of chapters (the outline)
+- [x] Generate a high-level breakdown of chapters (the outline)
 - [ ] Use the outline as seed material for generating chapter content
 - [ ] Implement `scribal draft` command to regenerate chapters from the outline
 - [ ] Implement `scribal check` command to compare a chapter with its outline section
@@ -49,12 +49,12 @@
 ## Chapter Mode
 
 - [x] Implement a tree view menu for chapter selection
-- [ ] Chapter menu: Include an option for creating a 'new' chapter
-- [ ] New chapter: Allow user to specify its ordinal position
-- [ ] New chapter: Allow user to specify its title
-- [ ] New chapter: Allow user to optionally provide an initial draft
-- [ ] New chapter: Allow user to optionally let the AI generate an initial version
-- [x] Existing chapter: Display its current state
+- [x] Chapter menu: Include an option for creating a 'new' chapter
+- [x] New chapter: Allow user to specify its ordinal position
+- [x] New chapter: Allow user to specify its title
+- [x] New chapter: Allow user to optionally provide an initial draft
+- [x] New chapter: Allow user to optionally let the AI generate an initial version
+- [] Existing chapter: Display its current state
 - [x] Existing chapter: Allow deletion
 - [ ] Existing chapter: Allow splitting into multiple chapters
 - [ ] Existing chapter: Allow merging with other chapters

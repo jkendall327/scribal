@@ -27,7 +27,7 @@ public class MarkdownIngestor(
         {
             var chunk = TextChunker.SplitMarkdownParagraphs(task.Result, 1024);
 
-            foreach (var se in chunk)
+            foreach (var _ in chunk)
             {
                 // await memoryStore.SaveInformationAsync(CollectionName,
                 //     se,

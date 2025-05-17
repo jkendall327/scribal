@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using NSubstitute;
 using Scribal.Agency;
+using Scribal.Config;
 using Scribal.Workspace;
 
 namespace Scribal.Tests.Workspace;
@@ -104,26 +105,26 @@ public class ChapterDeletionServiceTests
 
         var initialOutline = new StoryOutline
         {
-            Chapters = new()
-            {
+            Chapters =
+            [
                 new()
                 {
                     ChapterNumber = 1,
                     Title = "One"
                 }
-            }
+            ]
         };
 
         var initialState = new WorkspaceState
         {
-            Chapters = new()
-            {
+            Chapters =
+            [
                 new()
                 {
                     Number = 1,
                     Title = "One"
                 }
-            }
+            ]
         };
 
         _fileSystem.AddFile(TestPlotOutlineFile, new(ToJson(initialOutline)));
@@ -154,7 +155,7 @@ public class ChapterDeletionServiceTests
         };
 
         var cts = new CancellationTokenSource();
-        cts.Cancel(); // Cancel immediately
+        await cts.CancelAsync(); // Cancel immediately
 
         // Act
         var result = await _sut.DeleteChapterAsync(chapterToDelete, cts.Token);

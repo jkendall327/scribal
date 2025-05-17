@@ -9,7 +9,7 @@ namespace Scribal.Agency;
 
 public sealed class VectorSearch(ISemanticTextMemory memory)
 {
-    public const string VectorSearchToolName = "search";
+    private const string VectorSearchToolName = "search";
 
     [KernelFunction(VectorSearchToolName)]
     [Description("Searches for similar content. Returns the content as a string.")]

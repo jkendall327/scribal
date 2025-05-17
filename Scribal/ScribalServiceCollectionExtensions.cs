@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Scribal.Agency;
 using Scribal.AI;
+using Scribal.Config;
 using Scribal.Context;
 using Scribal.Workspace;
 using DiffEditor = Scribal.Agency.DiffEditor;
@@ -11,7 +12,7 @@ namespace Scribal;
 
 public static class ScribalServiceCollectionExtensions
 {
-    public static IServiceCollection AddScribal(this IServiceCollection services,
+    public static void AddScribal(this IServiceCollection services,
         IConfiguration config,
         IFileSystem fileSystem,
         TimeProvider time)
@@ -44,7 +45,5 @@ public static class ScribalServiceCollectionExtensions
         // Other
         services.AddSingleton<CommitGenerator>();
         services.AddSingleton<IGitService, GitService>();
-
-        return services;
     }
 }

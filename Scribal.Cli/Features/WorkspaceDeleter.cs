@@ -5,7 +5,7 @@ using Scribal.Agency;
 using Scribal.Workspace;
 using Spectre.Console;
 
-namespace Scribal.Cli;
+namespace Scribal.Cli.Features;
 
 public class WorkspaceDeleter(
     WorkspaceManager workspaceManager,

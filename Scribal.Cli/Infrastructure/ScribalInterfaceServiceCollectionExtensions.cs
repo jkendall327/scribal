@@ -1,13 +1,14 @@
 using Microsoft.Extensions.DependencyInjection;
 using Scribal.Cli.Features;
+using Scribal.Cli.Interface;
 using Scribal.Workspace;
 using Spectre.Console;
 
-namespace Scribal.Cli;
+namespace Scribal.Cli.Infrastructure;
 
 public static class ScribalInterfaceServiceCollectionExtensions
 {
-    public static IServiceCollection AddScribalInterface(this IServiceCollection services)
+    public static void AddScribalInterface(this IServiceCollection services)
     {
         services.AddSingleton<IUserInteraction, SpectreUserInteraction>();
         services.AddSingleton<CommandService>();
@@ -19,7 +20,5 @@ public static class ScribalInterfaceServiceCollectionExtensions
         services.AddSingleton<IChapterDeletionService, ChapterDeletionService>(); // Added
         services.AddSingleton<WorkspaceDeleter>();
         services.AddSingleton(AnsiConsole.Console);
-
-        return services;
     }
 }

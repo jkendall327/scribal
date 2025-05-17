@@ -3,6 +3,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Options;
 using NSubstitute;
 using Scribal.Agency;
+using Scribal.Config;
 
 namespace Scribal.Tests.Agency;
 
@@ -346,8 +347,6 @@ public class DiffEditorTests
         ApplyUnifiedDiffInner_AddLinesToEmptyFile_UsingZeroZeroHunk_AppliesCorrectly() // Name and assertion updated
     {
         // Arrange
-        var originalLines = new List<string>();
-
         var diff = """
                    @@ -0,0 +1,2 @@
                    +line1
@@ -361,7 +360,7 @@ public class DiffEditorTests
         };
 
         // Act
-        var resultLines = _sut.ApplyUnifiedDiffInner(originalLines, diff);
+        var resultLines = _sut.ApplyUnifiedDiffInner([], diff);
 
         // Assert
         resultLines.Should().Equal(expectedLines);
@@ -617,8 +616,6 @@ public class DiffEditorTests
     public async Task ApplyUnifiedDiffInner_CreateNewFileWithMultipleLines_MatchesSnapshot()
     {
         // Arrange
-        var originalLines = new List<string>(); // Empty original file
-
         var diff = """
                    @@ -0,0 +1,7 @@
                    +Chapter 1: The Beginning
@@ -631,7 +628,7 @@ public class DiffEditorTests
                    """;
 
         // Act
-        var resultLines = _sut.ApplyUnifiedDiffInner(originalLines, diff);
+        var resultLines = _sut.ApplyUnifiedDiffInner([], diff);
 
         var final = string.Join(Environment.NewLine, resultLines);
 

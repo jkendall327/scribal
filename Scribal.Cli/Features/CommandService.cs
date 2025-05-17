@@ -5,12 +5,12 @@ using System.CommandLine.Parsing;
 using System.IO.Abstractions;
 using Scribal.Agency;
 using Scribal.AI;
-using Scribal.Cli.Features;
+using Scribal.Cli.Interface;
 using Scribal.Context;
 using Scribal.Workspace;
 using Spectre.Console;
 
-namespace Scribal.Cli;
+namespace Scribal.Cli.Features;
 
 public class CommandService(
     IFileSystem fileSystem,
@@ -46,20 +46,6 @@ public class CommandService(
 
     public Parser Build()
     {
-        Command Create(string name, string description, Func<InvocationContext, Task> action, string[]? aliases = null)
-        {
-            var cmd = new Command(name, description);
-
-            foreach (var alias in aliases ?? [])
-            {
-                cmd.AddAlias(alias);
-            }
-
-            cmd.SetHandler(action);
-
-            return cmd;
-        }
-
         var quit = Create("/quit", "Exit Scribal", QuitCommand, ["/exit"]);
         var clear = Create("/clear", "Clear conversation history", ClearCommand);
         var tree = Create("/tree", "Set files to be included in context", TreeCommand);
@@ -102,6 +88,20 @@ public class CommandService(
         };
 
         return new CommandLineBuilder(root).UseDefaults().UseHelp("/help").Build();
+
+        Command Create(string name, string description, Func<InvocationContext, Task> action, string[]? aliases = null)
+        {
+            var cmd = new Command(name, description);
+
+            foreach (var alias in aliases ?? [])
+            {
+                cmd.AddAlias(alias);
+            }
+
+            cmd.SetHandler(action);
+
+            return cmd;
+        }
     }
 
     private async Task OutlineCommand(InvocationContext arg)
@@ -150,14 +150,9 @@ public class CommandService(
             AnsiConsole.MarkupLine($"Attempting to commit all changes with message: \"{message}\"...");
             var success = await gitService.CreateCommitAllAsync(message, token);
 
-            if (success)
-            {
-                AnsiConsole.MarkupLine("[green]Commit operation completed. Check logs for details.[/]");
-            }
-            else
-            {
-                AnsiConsole.MarkupLine("[red]Failed to create commit. Check logs for details.[/]");
-            }
+            AnsiConsole.MarkupLine(success
+                ? "[green]Commit operation completed. Check logs for details.[/]"
+                : "[red]Failed to create commit. Check logs for details.[/]");
         }
         catch (InvalidOperationException ex)
         {
@@ -259,25 +254,15 @@ public class CommandService(
 
         AnsiConsole.MarkupLine($"[green]Current Pipeline Stage:[/] {state.PipelineStage.ToString()}");
 
-        if (!string.IsNullOrWhiteSpace(state.Premise))
-        {
-            AnsiConsole.MarkupLine($"[green]Premise:[/] {state.Premise}");
-        }
-        else
-        {
-            AnsiConsole.MarkupLine("[green]Premise:[/] Not set");
-        }
+        AnsiConsole.MarkupLine(!string.IsNullOrWhiteSpace(state.Premise)
+            ? $"[green]Premise:[/] {state.Premise}"
+            : "[green]Premise:[/] Not set");
 
-        if (!string.IsNullOrWhiteSpace(state.PlotOutlineFile))
-        {
-            AnsiConsole.MarkupLine($"[green]Plot Outline File:[/] {state.PlotOutlineFile}");
-        }
-        else
-        {
-            AnsiConsole.MarkupLine("[green]Plot Outline File:[/] Not set");
-        }
+        AnsiConsole.MarkupLine(!string.IsNullOrWhiteSpace(state.PlotOutlineFile)
+            ? $"[green]Plot Outline File:[/] {state.PlotOutlineFile}"
+            : "[green]Plot Outline File:[/] Not set");
 
-        if (state.Chapters is not null && state.Chapters.Any())
+        if (state.Chapters.Any())
         {
             AnsiConsole.MarkupLine("[green]Chapters:[/]");
             var table = new Table().Expand();
@@ -289,7 +274,7 @@ public class CommandService(
             foreach (var chapter in state.Chapters.OrderBy(c => c.Number))
             {
                 table.AddRow(chapter.Number.ToString(),
-                    chapter.Title ?? "N/A",
+                    chapter.Title,
                     chapter.State.ToString(),
                     chapter.Summary ?? "N/A");
             }
@@ -304,11 +289,13 @@ public class CommandService(
 
     private static Task QuitCommand(InvocationContext ctx)
     {
-        if (AnsiConsole.Confirm("Are you sure you want to quit?"))
+        if (!AnsiConsole.Confirm("Are you sure you want to quit?"))
         {
-            AnsiConsole.MarkupLine("[yellow]Thank you for using Scribal. Goodbye![/]");
-            Environment.Exit(0);
+            return Task.CompletedTask;
         }
+
+        AnsiConsole.MarkupLine("[yellow]Thank you for using Scribal. Goodbye![/]");
+        Environment.Exit(0);
 
         return Task.CompletedTask;
     }

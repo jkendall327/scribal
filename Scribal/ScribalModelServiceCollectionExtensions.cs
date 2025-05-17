@@ -5,6 +5,7 @@ using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
 using Microsoft.SemanticKernel.Memory;
 using Scribal.Agency;
+using Scribal.Config;
 using DiffEditor = Scribal.Agency.DiffEditor;
 
 namespace Scribal;
@@ -17,7 +18,7 @@ namespace Scribal;
 
 public static class ScribalModelServiceCollectionExtensions
 {
-    public static IServiceCollection AddScribalAi(this IServiceCollection services, IConfiguration cfg)
+    public static void AddScribalAi(this IServiceCollection services, IConfiguration cfg)
     {
         // Register everything that implements IModelProvider.
         var providerTypes = typeof(IModelProvider).Assembly.GetTypes()
@@ -89,8 +90,6 @@ public static class ScribalModelServiceCollectionExtensions
 
             return kb.Build();
         });
-
-        return services;
     }
 
     private static void Register(IKernelBuilder kb,

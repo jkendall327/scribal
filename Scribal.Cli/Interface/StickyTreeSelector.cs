@@ -1,7 +1,7 @@
 using Scribal.Context;
 using Spectre.Console;
 
-namespace Scribal.Cli;
+namespace Scribal.Cli.Interface;
 
 public class StickyTreeSelector
 {
@@ -13,7 +13,7 @@ public class StickyTreeSelector
     private const string CollapsedPrefix = "> ";
     private const string FileIcon = "  ";
 
-    public StickyTreeSelector(string rootPath)
+    private StickyTreeSelector(string rootPath)
     {
         _root = BuildFileSystemTree(rootPath);
         _root.IsExpanded = true;
@@ -67,7 +67,7 @@ public class StickyTreeSelector
         }
     }
 
-    public List<string> GetSelectedPaths()
+    private List<string> GetSelectedPaths()
     {
         Console.Clear();
 

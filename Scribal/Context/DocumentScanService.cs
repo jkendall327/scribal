@@ -4,10 +4,10 @@ namespace Scribal.Context;
 
 public class DocumentInfo
 {
-    public string FilePath { get; set; } = string.Empty;
+    public string FilePath { get; init; } = string.Empty;
     public string FileName => Path.GetFileName(FilePath);
-    public string RelativePath { get; set; } = string.Empty;
-    public List<HeaderInfo> Headers { get; set; } = new();
+    public string RelativePath { get; init; } = string.Empty;
+    public List<HeaderInfo> Headers { get; init; } = [];
 
     public override string ToString()
     {
@@ -17,10 +17,10 @@ public class DocumentInfo
 
 public class DirectoryNode
 {
-    public string Name { get; set; } = string.Empty;
-    public string Path { get; set; } = string.Empty;
-    public List<DirectoryNode> Subdirectories { get; set; } = new();
-    public List<DocumentInfo> Documents { get; set; } = new();
+    public string Name { get; }
+    public string Path { get; set; }
+    public List<DirectoryNode> Subdirectories { get; } = [];
+    public List<DocumentInfo> Documents { get; } = [];
 
     public DirectoryNode(string path, IFileSystem fileSystem)
     {
@@ -48,9 +48,9 @@ public interface IDocumentScanService
 public class DocumentScanService(IFileSystem fileSystem) : IDocumentScanService
 {
     private readonly string[] _markdownExtensions =
-    {
+    [
         ".md", ".markdown"
-    };
+    ];
 
     public async Task<DirectoryNode> ScanDirectoryForMarkdownAsync(IDirectoryInfo rootDirectory)
     {

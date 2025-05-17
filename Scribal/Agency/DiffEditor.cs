@@ -3,6 +3,7 @@ using System.IO.Abstractions;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel;
+using Scribal.Config;
 
 namespace Scribal.Agency;
 
@@ -125,23 +126,25 @@ public partial class DiffEditor(IFileSystem fileSystem, IOptions<AppConfig> opti
         foreach (var lineContentFromDiff in hunk.Lines)
         {
             var operation = lineContentFromDiff[0];
-            var lineData = lineContentFromDiff.Substring(1);
+            var lineData = lineContentFromDiff[1..];
 
-            if (operation == ' ') // Context line
+            switch (operation)
             {
-                if (currentPositionInFile >= fileContent.Count || fileContent[currentPositionInFile] != lineData)
+                // Context line
+                case ' ' when currentPositionInFile >= fileContent.Count || fileContent[currentPositionInFile] != lineData:
                 {
                     throw new InvalidOperationException(
                         $"Context mismatch at line {currentPositionInFile + 1}. Expected: '{lineData}', Actual: '{(currentPositionInFile < fileContent.Count
                             ? fileContent[currentPositionInFile]
                             : "Out of bounds/End of file")}'. Hunk: @@ -{hunk.OriginalStart},{hunk.OriginalCount} +{hunk.NewStart},{hunk.NewCount} @@");
                 }
+                case ' ':
+                {
+                    currentPositionInFile++; break;
+                }
 
-                currentPositionInFile++;
-            }
-            else if (operation == '-') // Deletion line
-            {
-                if (currentPositionInFile >= fileContent.Count || fileContent[currentPositionInFile] != lineData)
+                // Deletion line
+                case '-' when currentPositionInFile >= fileContent.Count || fileContent[currentPositionInFile] != lineData:
                 {
                     throw new InvalidOperationException(
                         $"Deletion mismatch at line {currentPositionInFile + 1}. Expected to delete: '{lineData}', Actual: '{(currentPositionInFile < fileContent.Count
@@ -149,21 +152,26 @@ public partial class DiffEditor(IFileSystem fileSystem, IOptions<AppConfig> opti
                             : "Out of bounds/End of file")}'. Hunk: @@ -{hunk.OriginalStart},{hunk.OriginalCount} +{hunk.NewStart},{hunk.NewCount} @@");
                 }
 
-                fileContent.RemoveAt(currentPositionInFile);
-
                 // Do not increment currentPositionInFile, as the next line shifts up.
-            }
-            else if (operation == '+') // Addition line
-            {
+                case '-':
+                {
+                    fileContent.RemoveAt(currentPositionInFile); break;
+                }
+
+                // Addition line
                 // Ensure insertion happens within valid bounds (at Count is okay for end-of-list)
-                if (currentPositionInFile > fileContent.Count)
+                case '+' when currentPositionInFile > fileContent.Count:
                 {
                     throw new InvalidOperationException(
                         $"Attempting to insert line at an invalid position {currentPositionInFile} (file size {fileContent.Count}). Hunk: @@ -{hunk.OriginalStart},{hunk.OriginalCount} +{hunk.NewStart},{hunk.NewCount} @@");
                 }
+                case '+':
+                {
+                    fileContent.Insert(currentPositionInFile, lineData);
+                    currentPositionInFile++; // Increment because we've added a line.
 
-                fileContent.Insert(currentPositionInFile, lineData);
-                currentPositionInFile++; // Increment because we've added a line.
+                    break;
+                }
             }
 
             // Other lines (like "\ No newline at end of file") are already filtered by ParseUnifiedDiff or ignored here.

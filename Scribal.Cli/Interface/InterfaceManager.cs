@@ -4,11 +4,13 @@ using System.IO.Abstractions;
 using Microsoft.Extensions.Options;
 using Scribal.Agency;
 using Scribal.AI;
+using Scribal.Cli.Features;
+using Scribal.Config;
 using Scribal.Context;
 using Scribal.Workspace;
 using Spectre.Console;
 
-namespace Scribal.Cli;
+namespace Scribal.Cli.Interface;
 
 public class InterfaceManager(
     CommandService commands,

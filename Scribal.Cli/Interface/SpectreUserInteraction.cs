@@ -1,6 +1,6 @@
 using Spectre.Console;
 
-namespace Scribal.Cli;
+namespace Scribal.Cli.Interface;
 
 public class SpectreUserInteraction : IUserInteraction
 {

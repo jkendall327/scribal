@@ -3,6 +3,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Scribal.Agency;
+using Scribal.Cli.Interface;
+using Scribal.Config;
 using Scribal.Context;
 
 namespace Scribal.Cli;

@@ -4,6 +4,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Scribal.Agency;
+using Scribal.Config;
 
 namespace Scribal.Workspace;
 
@@ -372,13 +373,15 @@ public class WorkspaceManager(
             var chapterDirectoryName = $"chapter_{chapter.ChapterNumber:D2}";
             var chapterSpecificDirectoryPath = fileSystem.Path.Join(mainChaptersDirectoryPath, chapterDirectoryName);
 
-            if (!fileSystem.Directory.Exists(chapterSpecificDirectoryPath))
+            if (fileSystem.Directory.Exists(chapterSpecificDirectoryPath))
             {
-                logger.LogInformation("Creating chapter directory at {ChapterSpecificDirectoryPath}",
-                    chapterSpecificDirectoryPath);
-
-                fileSystem.Directory.CreateDirectory(chapterSpecificDirectoryPath);
+                continue;
             }
+
+            logger.LogInformation("Creating chapter directory at {ChapterSpecificDirectoryPath}",
+                chapterSpecificDirectoryPath);
+
+            fileSystem.Directory.CreateDirectory(chapterSpecificDirectoryPath);
         }
     }
 }

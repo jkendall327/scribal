@@ -7,94 +7,74 @@ using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Scribal.Agency;
 using Scribal.AI;
+using Scribal.Cli.Interface;
+using Scribal.Config;
 using Scribal.Context;
 using Scribal.Workspace;
 using Spectre.Console;
 
 namespace Scribal.Cli.Features;
 
-public class ChapterDrafterService
+public class ChapterDrafterService(
+    IAiChatService chat,
+    PromptRenderer renderer,
+    Kernel kernel,
+    IAnsiConsole console,
+    IOptions<AiSettings> options,
+    IFileSystem fileSystem,
+    WorkspaceManager workspaceManager,
+    IGitService gitService,
+    ILogger<ChapterDrafterService> logger)
 {
-    private readonly IAiChatService _chat;
-    private readonly PromptRenderer _renderer;
-    private readonly Kernel _kernel;
-    private readonly IAnsiConsole _console;
-    private readonly IOptions<AiSettings> _options;
-    private readonly IFileSystem _fileSystem;
-    private readonly WorkspaceManager _workspaceManager;
-    private readonly IGitService _gitService;
-    private readonly ILogger<ChapterDrafterService> _logger;
-
-    public ChapterDrafterService(IAiChatService chat,
-        PromptRenderer renderer,
-        Kernel kernel,
-        IAnsiConsole console,
-        IOptions<AiSettings> options,
-        IFileSystem fileSystem,
-        WorkspaceManager workspaceManager,
-        IGitService gitService,
-        ILogger<ChapterDrafterService> logger)
-    {
-        _chat = chat;
-        _renderer = renderer;
-        _kernel = kernel;
-        _console = console;
-        _options = options;
-        _fileSystem = fileSystem;
-        _workspaceManager = workspaceManager;
-        _gitService = gitService;
-        _logger = logger;
-    }
-
     public async Task DraftChapterAsync(ChapterState chapter, CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Starting draft for Chapter {ChapterNumber}: {ChapterTitle}",
+        logger.LogInformation("Starting draft for Chapter {ChapterNumber}: {ChapterTitle}",
             chapter.Number,
             chapter.Title);
 
-        var workspacePath = _workspaceManager.CurrentWorkspacePath;
+        var workspacePath = workspaceManager.CurrentWorkspacePath;
 
         if (string.IsNullOrWhiteSpace(workspacePath))
         {
-            _console.MarkupLine("[red]Could not determine current workspace path. Cannot draft chapter.[/]");
+            console.MarkupLine("[red]Could not determine current workspace path. Cannot draft chapter.[/]");
 
-            _logger.LogWarning(
+            logger.LogWarning(
                 "Current workspace path is not set in WorkspaceManager. Chapter {ChapterNumber} drafting aborted",
                 chapter.Number);
 
             return;
         }
 
-        if (_options.Value.Primary is null)
+        if (options.Value.Primary is null)
         {
-            _console.MarkupLine("[red]No primary model is configured. Cannot draft chapter.[/]");
-            _logger.LogWarning("Primary model not configured, cannot draft chapter");
+            console.MarkupLine("[red]No primary model is configured. Cannot draft chapter.[/]");
+            logger.LogWarning("Primary model not configured, cannot draft chapter");
 
             return;
         }
 
-        var sid = _options.Value.Primary.Provider;
+        var sid = options.Value.Primary.Provider;
 
         var initialDraft = await GenerateInitialDraft(chapter, sid, cancellationToken);
 
         if (string.IsNullOrWhiteSpace(initialDraft))
         {
-            _console.MarkupLine("[red]Failed to generate an initial draft.[/]");
-            _logger.LogWarning("Initial draft generation failed for chapter {ChapterNumber}", chapter.Number);
+            console.MarkupLine("[red]Failed to generate an initial draft.[/]");
+            logger.LogWarning("Initial draft generation failed for chapter {ChapterNumber}", chapter.Number);
 
             return;
         }
 
-        _console.MarkupLine("[cyan]Initial Draft Generated:[/]");
-        _console.WriteLine(Markup.Escape(initialDraft)); // Display initial draft
+        console.MarkupLine("[cyan]Initial Draft Generated:[/]");
+        console.WriteLine(Markup.Escape(initialDraft)); // Display initial draft
 
-        var ok = await _console.ConfirmAsync("Do you want to refine this draft?", cancellationToken: cancellationToken);
+        var ok = await console.ConfirmAsync("Do you want to refine this draft?", cancellationToken: cancellationToken);
 
         string finalDraft;
 
         if (!ok)
         {
-            _console.MarkupLine("[yellow]Chapter drafting complete (initial draft accepted).[/]");
+            console.MarkupLine("[yellow]Chapter drafting complete (initial draft accepted).[/]");
             finalDraft = initialDraft;
         }
         else
@@ -111,15 +91,15 @@ public class ChapterDrafterService
             refinementHistory.AddSystemMessage(sb.ToString());
             refinementHistory.AddAssistantMessage(initialDraft);
 
-            _console.MarkupLine(
+            console.MarkupLine(
                 "Entering chapter draft refinement chat. Type [blue]/done[/] when finished or [blue]/cancel[/] to abort.");
 
             finalDraft = await RefineDraft(refinementCid, refinementHistory, sid, initialDraft, cancellationToken);
-            _console.MarkupLine("[yellow]Chapter draft refinement finished.[/]");
+            console.MarkupLine("[yellow]Chapter draft refinement finished.[/]");
         }
 
-        _console.MarkupLine("[yellow]Final chapter draft:[/]");
-        _console.WriteLine(Markup.Escape(finalDraft));
+        console.MarkupLine("[yellow]Final chapter draft:[/]");
+        console.WriteLine(Markup.Escape(finalDraft));
 
         await CommitDraftAsync(chapter, finalDraft, cancellationToken);
     }
@@ -149,24 +129,24 @@ public class ChapterDrafterService
             arguments);
 
         // Corrected: Removed 'ct' (CancellationToken) as it's not an argument for this method.
-        var prompt = await _renderer.RenderPromptTemplateFromFileAsync(_kernel, request, cancellationToken: ct);
+        var prompt = await renderer.RenderPromptTemplateFromFileAsync(kernel, request, cancellationToken: ct);
 
         var cid = $"draft-init-{chapter.Number}-{Guid.NewGuid()}";
         var history = new ChatHistory();
         history.AddSystemMessage(prompt);
 
-        _console.MarkupLine(
+        console.MarkupLine(
             $"[yellow]Generating initial draft for Chapter {chapter.Number}: {Markup.Escape(chapter.Title)}...[/]");
 
         var initialUserMessage = "Generate the chapter draft based on the details provided in your instructions.";
-        var draftStream = _chat.StreamWithExplicitHistoryAsync(cid, history, initialUserMessage, sid, ct);
+        var draftStream = chat.StreamWithExplicitHistoryAsync(cid, history, initialUserMessage, sid, ct);
         var draftBuilder = new StringBuilder();
 
         await ConsoleChatRenderer.StreamWithSpinnerAsync(CollectWhileStreaming(draftStream, draftBuilder, ct), ct);
 
         var generatedDraft = draftBuilder.ToString().Trim();
 
-        _logger.LogInformation("Initial draft generated for Chapter {ChapterNumber}, length {Length}",
+        logger.LogInformation("Initial draft generated for Chapter {ChapterNumber}, length {Length}",
             chapter.Number,
             generatedDraft.Length);
 
@@ -185,14 +165,14 @@ public class ChapterDrafterService
         {
             if (ct.IsCancellationRequested)
             {
-                _console.MarkupLine("[yellow]Refinement cancelled by host.[/]");
-                _logger.LogInformation("Draft refinement cancelled by host for {RefinementCid}", refinementCid);
+                console.MarkupLine("[yellow]Refinement cancelled by host.[/]");
+                logger.LogInformation("Draft refinement cancelled by host for {RefinementCid}", refinementCid);
 
                 break;
             }
 
-            _console.WriteLine();
-            _console.Markup("[green]Refine Chapter Draft > [/]");
+            console.WriteLine();
+            console.Markup("[green]Refine Chapter Draft > [/]");
             var userInput = ReadLine.Read(); // Assuming ReadLine is accessible or replace with _console.Ask/Prompt
 
             if (string.IsNullOrWhiteSpace(userInput))
@@ -202,27 +182,27 @@ public class ChapterDrafterService
 
             if (userInput.Equals("/done", StringComparison.OrdinalIgnoreCase))
             {
-                _logger.LogInformation("User finished draft refinement for {RefinementCid}", refinementCid);
+                logger.LogInformation("User finished draft refinement for {RefinementCid}", refinementCid);
 
                 break;
             }
 
             if (userInput.Equals("/cancel", StringComparison.OrdinalIgnoreCase))
             {
-                _console.MarkupLine("[yellow]Cancelling refinement...[/]");
-                _logger.LogInformation("User cancelled draft refinement for {RefinementCid}", refinementCid);
+                console.MarkupLine("[yellow]Cancelling refinement...[/]");
+                logger.LogInformation("User cancelled draft refinement for {RefinementCid}", refinementCid);
 
                 return lastAssistantResponse;
             }
 
-            _console.WriteLine();
+            console.WriteLine();
             var responseBuilder = new StringBuilder();
 
             try
             {
                 refinementHistory.AddUserMessage(userInput);
 
-                var refinementStream = _chat.StreamWithExplicitHistoryAsync(refinementCid,
+                var refinementStream = chat.StreamWithExplicitHistoryAsync(refinementCid,
                     refinementHistory,
                     userInput,
                     sid,
@@ -238,24 +218,24 @@ public class ChapterDrafterService
                 {
                     refinementHistory.AddAssistantMessage(lastAssistantResponse);
 
-                    _logger.LogDebug("Refinement successful for {RefinementCid}, response length {Length}",
+                    logger.LogDebug("Refinement successful for {RefinementCid}, response length {Length}",
                         refinementCid,
                         lastAssistantResponse.Length);
                 }
             }
             catch (OperationCanceledException)
             {
-                _console.WriteLine();
-                _console.MarkupLine("[yellow](Refinement stream cancelled)[/]");
-                _logger.LogInformation("Refinement stream cancelled for {RefinementCid}", refinementCid);
+                console.WriteLine();
+                console.MarkupLine("[yellow](Refinement stream cancelled)[/]");
+                logger.LogInformation("Refinement stream cancelled for {RefinementCid}", refinementCid);
 
                 break;
             }
             catch (Exception e)
             {
-                _console.WriteException(e);
-                _console.MarkupLine("[red]An error occurred during refinement.[/]");
-                _logger.LogError(e, "Error during draft refinement for {RefinementCid}", refinementCid);
+                console.WriteException(e);
+                console.MarkupLine("[red]An error occurred during refinement.[/]");
+                logger.LogError(e, "Error during draft refinement for {RefinementCid}", refinementCid);
             }
         }
 
@@ -279,13 +259,13 @@ public class ChapterDrafterService
 
     private async Task CommitDraftAsync(ChapterState chapter, string content, CancellationToken cancellationToken)
     {
-        var workspacePath = _workspaceManager.CurrentWorkspacePath;
+        var workspacePath = workspaceManager.CurrentWorkspacePath;
 
         if (string.IsNullOrWhiteSpace(workspacePath))
         {
-            _console.MarkupLine("[red]Could not determine workspace path from WorkspaceManager. Draft not saved.[/]");
+            console.MarkupLine("[red]Could not determine workspace path from WorkspaceManager. Draft not saved.[/]");
 
-            _logger.LogError(
+            logger.LogError(
                 "Cannot save draft, workspace path unknown (from WorkspaceManager.CurrentWorkspacePath) for chapter {ChapterNumber}",
                 chapter.Number);
 
@@ -293,13 +273,13 @@ public class ChapterDrafterService
         }
 
         // The project root is the parent of the .scribal workspace directory
-        var projectRootPath = _fileSystem.DirectoryInfo.New(workspacePath).Parent?.FullName;
+        var projectRootPath = fileSystem.DirectoryInfo.New(workspacePath).Parent?.FullName;
 
         if (string.IsNullOrWhiteSpace(projectRootPath))
         {
-            _console.MarkupLine("[red]Could not determine project root path. Draft not saved.[/]");
+            console.MarkupLine("[red]Could not determine project root path. Draft not saved.[/]");
 
-            _logger.LogError(
+            logger.LogError(
                 "Cannot save draft, project root path could not be determined from workspace path {WorkspacePath} for chapter {ChapterNumber}",
                 workspacePath,
                 chapter.Number);
@@ -307,12 +287,12 @@ public class ChapterDrafterService
             return;
         }
 
-        var chaptersDir = _fileSystem.Path.Combine(projectRootPath, "chapters");
-        _fileSystem.Directory.CreateDirectory(chaptersDir); // Ensure directory exists
+        var chaptersDir = fileSystem.Path.Combine(projectRootPath, "chapters");
+        fileSystem.Directory.CreateDirectory(chaptersDir); // Ensure directory exists
 
         // Sanitize title for filename
-        var sanitizedTitle = string.Join("_", chapter.Title.Split(_fileSystem.Path.GetInvalidFileNameChars()));
-        sanitizedTitle = string.Join("_", sanitizedTitle.Split(_fileSystem.Path.GetInvalidPathChars()));
+        var sanitizedTitle = string.Join("_", chapter.Title.Split(fileSystem.Path.GetInvalidFileNameChars()));
+        sanitizedTitle = string.Join("_", sanitizedTitle.Split(fileSystem.Path.GetInvalidPathChars()));
 
         if (string.IsNullOrWhiteSpace(sanitizedTitle))
         {
@@ -324,40 +304,40 @@ public class ChapterDrafterService
 
         if (sanitizedTitle.Length > maxTitleLengthInFilename)
         {
-            sanitizedTitle = sanitizedTitle.Substring(0, maxTitleLengthInFilename);
+            sanitizedTitle = sanitizedTitle[..maxTitleLengthInFilename];
         }
 
         var timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
         var draftFileName = $"chapter_{chapter.Number:D2}_{sanitizedTitle}_draft_{timestamp}.md";
-        var draftFilePath = _fileSystem.Path.Combine(chaptersDir, draftFileName);
+        var draftFilePath = fileSystem.Path.Combine(chaptersDir, draftFileName);
 
         try
         {
-            await _fileSystem.File.WriteAllTextAsync(draftFilePath, content, cancellationToken);
-            _console.MarkupLine($"[green]Draft saved successfully to: {Markup.Escape(draftFilePath)}[/]");
-            _logger.LogInformation("Chapter {ChapterNumber} draft saved to {FilePath}", chapter.Number, draftFilePath);
+            await fileSystem.File.WriteAllTextAsync(draftFilePath, content, cancellationToken);
+            console.MarkupLine($"[green]Draft saved successfully to: {Markup.Escape(draftFilePath)}[/]");
+            logger.LogInformation("Chapter {ChapterNumber} draft saved to {FilePath}", chapter.Number, draftFilePath);
 
-            if (_gitService.Enabled)
+            if (gitService.Enabled)
             {
                 var commitMessage = $"Drafted Chapter {chapter.Number}: {chapter.Title}";
 
                 var commitSuccess =
-                    await _gitService.CreateCommitAsync(draftFilePath, commitMessage, cancellationToken);
+                    await gitService.CreateCommitAsync(draftFilePath, commitMessage, cancellationToken);
 
                 if (commitSuccess)
                 {
-                    _console.MarkupLine($"[green]Committed draft to git: {Markup.Escape(commitMessage)}[/]");
-                    _logger.LogInformation("Successfully committed draft for chapter {ChapterNumber}", chapter.Number);
+                    console.MarkupLine($"[green]Committed draft to git: {Markup.Escape(commitMessage)}[/]");
+                    logger.LogInformation("Successfully committed draft for chapter {ChapterNumber}", chapter.Number);
                 }
                 else
                 {
-                    _console.MarkupLine($"[red]Failed to commit draft for chapter {chapter.Number} to git.[/]");
-                    _logger.LogWarning("Failed to commit draft for chapter {ChapterNumber}", chapter.Number);
+                    console.MarkupLine($"[red]Failed to commit draft for chapter {chapter.Number} to git.[/]");
+                    logger.LogWarning("Failed to commit draft for chapter {ChapterNumber}", chapter.Number);
                 }
             }
             else
             {
-                _logger.LogInformation("Git service not enabled. Skipping commit for chapter {ChapterNumber} draft",
+                logger.LogInformation("Git service not enabled. Skipping commit for chapter {ChapterNumber} draft",
                     chapter.Number);
             }
 
@@ -369,9 +349,9 @@ public class ChapterDrafterService
         }
         catch (Exception ex)
         {
-            _console.MarkupLine($"[red]Failed to save draft: {Markup.Escape(ex.Message)}[/]");
+            console.MarkupLine($"[red]Failed to save draft: {Markup.Escape(ex.Message)}[/]");
 
-            _logger.LogError(ex,
+            logger.LogError(ex,
                 "Failed to save draft for chapter {ChapterNumber} to {FilePath}",
                 chapter.Number,
                 draftFilePath);

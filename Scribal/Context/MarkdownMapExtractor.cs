@@ -61,9 +61,9 @@ public class MarkdownMapExtractor
 // Simple class to store header information
 public class HeaderInfo
 {
-    public int Level { get; set; } // H1, H2, etc. (1, 2, etc.)
-    public required string Text { get; set; } // The header text
-    public int Line { get; set; } // Line number in the document
+    public int Level { get; init; } // H1, H2, etc. (1, 2, etc.)
+    public required string Text { get; init; } // The header text
+    public int Line { get; init; } // Line number in the document
 
     public override string ToString()
     {

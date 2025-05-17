@@ -3,6 +3,7 @@ using System.IO.Abstractions;
 using LibGit2Sharp;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Scribal.Config;
 
 namespace Scribal.Agency;
 
@@ -81,18 +82,6 @@ public sealed class GitService(
         var name = _repo.Head.FriendlyName;
 
         return Task.FromResult(name);
-    }
-
-    public Task<string> GetCurrentCommit()
-    {
-        EnsureValidRepository();
-
-        return Task.FromResult(_repo.Head.Tip.MessageShort);
-    }
-
-    public Task<bool> StageChange()
-    {
-        throw new NotImplementedException();
     }
 
     public Task<bool> CreateCommitAsync(string filepath, string message, CancellationToken ct = default)

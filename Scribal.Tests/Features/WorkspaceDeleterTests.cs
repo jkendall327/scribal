@@ -5,7 +5,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using NSubstitute;
 using Scribal.Agency;
-using Scribal.Cli;
+using Scribal.Cli.Features;
+using Scribal.Config;
 using Scribal.Workspace;
 using Spectre.Console;
 
@@ -63,7 +64,7 @@ public class WorkspaceDeleterTests
         _fileSystem.AddFile(Path.Combine(TestGitDir, "HEAD"), new("ref: refs/heads/main"));
     }
 
-    private InvocationContext CreateTestInvocationContext(CancellationToken cancellationToken = default)
+    private InvocationContext CreateTestInvocationContext()
     {
         var command = new RootCommand();
         var parseResult = command.Parse("");

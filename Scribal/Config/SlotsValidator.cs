@@ -1,4 +1,4 @@
-namespace Scribal;
+namespace Scribal.Config;
 
 public static class SlotsValidator
 {
@@ -29,12 +29,14 @@ public static class SlotsValidator
                 return false;
             }
 
-            if (string.IsNullOrWhiteSpace(slot.ModelId))
+            if (!string.IsNullOrWhiteSpace(slot.ModelId))
             {
-                error = $"{name} slot is missing ModelId.";
-
-                return false;
+                continue;
             }
+
+            error = $"{name} slot is missing ModelId.";
+
+            return false;
         }
 
         //------------------------------------------------------------------

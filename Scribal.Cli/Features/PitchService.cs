@@ -4,7 +4,8 @@ using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Scribal.AI;
-using Scribal.Cli;
+using Scribal.Cli.Interface;
+using Scribal.Config;
 using Scribal.Context;
 using Scribal.Workspace;
 using Spectre.Console;
@@ -13,7 +14,7 @@ using Spectre.Console;
 // Required for ConsoleChatRenderer and ReadLine
 // Required for AnsiConsole
 
-namespace Scribal;
+namespace Scribal.Cli.Features;
 
 public class PitchService(
     IAiChatService chat,

@@ -4,6 +4,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Scribal;
 using Scribal.Cli;
+using Scribal.Cli.Infrastructure;
 using Scribal.Workspace;
 using Serilog;
 

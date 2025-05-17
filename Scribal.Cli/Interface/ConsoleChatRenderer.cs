@@ -1,7 +1,7 @@
 using Scribal.AI;
 using Spectre.Console;
 
-namespace Scribal.Cli;
+namespace Scribal.Cli.Interface;
 
 public static class ConsoleChatRenderer
 {

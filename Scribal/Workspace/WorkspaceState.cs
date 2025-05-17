@@ -18,9 +18,9 @@ public class WorkspaceState
 public class ChapterState
 {
     public int Number { get; set; }
-    public required string Title { get; set; }
-    public string? Summary { get; set; } // Added Summary
-    public ChapterStateType State { get; set; }
+    public required string Title { get; init; }
+    public string? Summary { get; init; }
+    public ChapterStateType State { get; init; }
 }
 
 public enum ChapterStateType

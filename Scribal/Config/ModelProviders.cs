@@ -7,7 +7,7 @@ using Microsoft.SemanticKernel.ChatCompletion;
 
 #pragma warning disable SKEXP0070
 
-namespace Scribal;
+namespace Scribal.Config;
 
 public interface IModelProvider
 {
@@ -58,7 +58,7 @@ public class AnthropicModelProvider : IModelProvider
 
     public void RegisterServices(IKernelBuilder kb, ModelSlot slot, string serviceSuffix)
     {
-        kb.Services.AddTransient<IChatCompletionService>(sp =>
+        kb.Services.AddTransient<IChatCompletionService>(_ =>
         {
             var anthropicClient = new AnthropicClient(apiKeys: new(slot.ApiKey));
 

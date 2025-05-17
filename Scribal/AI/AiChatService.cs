@@ -50,7 +50,7 @@ public sealed class AiChatService(
         // Stream response back for the UI.
         var stream = chat.GetStreamingChatMessageContentsAsync(history, settings, kernel, ct);
 
-        await foreach (var chunk in stream.WithCancellation(ct))
+        await foreach (var chunk in stream)
         {
             if (chunk.Content is {Length: > 0} text)
             {
@@ -86,7 +86,7 @@ public sealed class AiChatService(
         // Stream response back for the UI.
         var stream = chat.GetStreamingChatMessageContentsAsync(history, settings, kernel, ct);
 
-        await foreach (var chunk in stream.WithCancellation(ct))
+        await foreach (var chunk in stream)
         {
             if (chunk.Content is {Length: > 0} text)
             {

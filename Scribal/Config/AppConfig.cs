@@ -1,4 +1,4 @@
-namespace Scribal;
+namespace Scribal.Config;
 
 public class AppConfig
 {

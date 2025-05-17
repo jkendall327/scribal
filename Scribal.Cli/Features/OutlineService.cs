@@ -3,9 +3,9 @@ using System.Text.Json;
 using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
-using Scribal;
 using Scribal.AI;
-using Scribal.Cli;
+using Scribal.Cli.Interface;
+using Scribal.Config;
 using Scribal.Context;
 using Scribal.Workspace;
 using Spectre.Console;
@@ -17,6 +17,8 @@ using Spectre.Console;
 
 // Required for JsonSerializer
 // Scribal.Workspace; // This was the duplicate, removed. WorkspaceManager is covered by the other Scribal.Workspace using.
+
+namespace Scribal.Cli.Features;
 
 public class OutlineService(
     IAiChatService chat,
@@ -38,9 +40,7 @@ public class OutlineService(
 
         var generatedOutlineJson = await GenerateInitialOutline(premise, sid, ct);
 
-        StoryOutline? storyOutline;
-
-        if (!TryParseOutline(generatedOutlineJson, out storyOutline))
+        if (!TryParseOutline(generatedOutlineJson, out var storyOutline))
         {
             AnsiConsole.MarkupLine("[red]Failed to parse the initial outline JSON.[/]");
             AnsiConsole.MarkupLine("[yellow]Displaying raw output:[/]");
@@ -100,9 +100,7 @@ public class OutlineService(
         AnsiConsole.MarkupLine("[yellow]Plot outline refinement finished.[/]");
         AnsiConsole.MarkupLine("[yellow]Final plot outline (not saved yet):[/]");
 
-        StoryOutline? finalStoryOutline;
-
-        if (!TryParseOutline(finalOutlineJson, out finalStoryOutline))
+        if (!TryParseOutline(finalOutlineJson, out var finalStoryOutline))
         {
             AnsiConsole.MarkupLine("[red]Failed to parse the final refined outline JSON.[/]");
             AnsiConsole.MarkupLine("[yellow]Displaying raw output:[/]");
@@ -170,7 +168,7 @@ public class OutlineService(
         AnsiConsole.WriteLine();
         AnsiConsole.Write(new Rule("[bold cyan]Story Outline[/]").RuleStyle("blue").LeftJustified());
 
-        if (storyOutline.Chapters == null || !storyOutline.Chapters.Any())
+        if (!storyOutline.Chapters.Any())
         {
             AnsiConsole.MarkupLine("[yellow]No chapters found in the outline.[/]");
 
@@ -185,7 +183,7 @@ public class OutlineService(
 
             AnsiConsole.MarkupLine($"[bold]Summary:[/] {Markup.Escape(chapter.Summary)}");
 
-            if (chapter.Beats != null && chapter.Beats.Any())
+            if (chapter.Beats.Any())
             {
                 AnsiConsole.MarkupLine("[bold]Beats:[/]");
 
@@ -200,7 +198,7 @@ public class OutlineService(
                 AnsiConsole.MarkupLine($"[bold]Estimated Word Count:[/] {chapter.EstimatedWordCount.Value}");
             }
 
-            if (chapter.KeyCharacters != null && chapter.KeyCharacters.Any())
+            if (chapter.KeyCharacters.Any())
             {
                 AnsiConsole.MarkupLine(
                     $"[bold]Key Characters:[/] {Markup.Escape(string.Join(", ", chapter.KeyCharacters))}");

@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel;
 using Scribal.AI;
+using Scribal.Config;
 
 namespace Scribal.Agency;
 

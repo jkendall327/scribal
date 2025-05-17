@@ -321,7 +321,7 @@ public class OutlineService(
             }
             catch (Exception e)
             {
-                AnsiConsole.WriteException(e);
+                ExceptionDisplay.DisplayException(e);
                 AnsiConsole.MarkupLine("[red]An error occurred during refinement.[/]");
 
                 // Potentially remove the last user message if the turn failed

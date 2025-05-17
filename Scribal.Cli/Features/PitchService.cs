@@ -168,7 +168,7 @@ public class PitchService(
             }
             catch (Exception e)
             {
-                console.WriteException(e);
+                ExceptionDisplay.DisplayException(e, console);
                 console.MarkupLine("[red]An error occurred during refinement.[/]");
 
                 return false;

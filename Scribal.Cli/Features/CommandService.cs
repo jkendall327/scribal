@@ -141,7 +141,7 @@ public class CommandService(
         catch (Exception e)
         {
             AnsiConsole.MarkupLine("[red]An unexpected error occurred during export.[/]");
-            AnsiConsole.WriteException(e);
+            ExceptionDisplay.DisplayException(e);
         }
     }
 
@@ -163,7 +163,7 @@ public class CommandService(
         }
         catch (Exception e)
         {
-            AnsiConsole.WriteException(e);
+            ExceptionDisplay.DisplayException(e);
         }
     }
 
@@ -202,7 +202,7 @@ public class CommandService(
         catch (Exception e)
         {
             AnsiConsole.MarkupLine("[red]An unexpected error occurred while committing.[/]");
-            AnsiConsole.WriteException(e);
+            ExceptionDisplay.DisplayException(e);
         }
     }
 
@@ -224,7 +224,7 @@ public class CommandService(
         }
         catch (Exception e)
         {
-            AnsiConsole.WriteException(e);
+            ExceptionDisplay.DisplayException(e);
         }
     }
 
@@ -245,7 +245,7 @@ public class CommandService(
         }
         catch (Exception e)
         {
-            AnsiConsole.WriteException(e);
+            ExceptionDisplay.DisplayException(e);
         }
     }
 

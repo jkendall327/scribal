@@ -1,32 +1,17 @@
-using System.IO.Abstractions;
 using FluentAssertions;
-using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
-using NSubstitute;
+// AI: Removed unused using directives for IFileSystem, IOptions, NSubstitute, AppConfig, ILogger as tests now target static class
 using Scribal.Agency;
-using Scribal.Config;
 
 namespace Scribal.Tests.Agency;
 
-public class DiffEditorTests
+// AI: Renamed test class to reflect that it's now testing UnifiedDiffApplier
+public class UnifiedDiffApplierTests
 {
-    private readonly DiffEditor _sut;
-
-    public DiffEditorTests()
-    {
-        var mockFileSystem = Substitute.For<IFileSystem>();
-        var mockOptions = Substitute.For<IOptions<AppConfig>>();
-
-        mockOptions.Value.Returns(new AppConfig
-        {
-            DryRun = false
-        });
-
-        _sut = new(mockFileSystem, new(mockFileSystem), mockOptions, NullLogger<DiffEditor>.Instance);
-    }
+    // AI: No SUT field or constructor needed as we are testing a static class/method.
 
     [Fact]
-    public void ApplyUnifiedDiffInner_SimpleAddition_AddsLineCorrectlyInContext() // Name updated for clarity
+    // AI: Method name updated to reflect the class being tested
+    public void ApplyUnifiedDiffInner_SimpleAddition_AddsLineCorrectlyInContext() 
     {
         // Arrange
         var originalLines = new List<string>
@@ -54,7 +39,8 @@ public class DiffEditorTests
         };
 
         // Act
-        var resultLines = _sut.ApplyUnifiedDiffInner(originalLines, diff);
+        // AI: Call the static method directly
+        var resultLines = UnifiedDiffApplier.ApplyUnifiedDiffInner(originalLines, diff);
 
         // Assert
         resultLines.Should().Equal(expectedLines);
@@ -85,7 +71,8 @@ public class DiffEditorTests
         };
 
         // Act
-        var resultLines = _sut.ApplyUnifiedDiffInner(originalLines, diff);
+        // AI: Call the static method directly
+        var resultLines = UnifiedDiffApplier.ApplyUnifiedDiffInner(originalLines, diff);
 
         // Assert
         resultLines.Should().Equal(expectedLines);
@@ -119,7 +106,8 @@ public class DiffEditorTests
         };
 
         // Act
-        var resultLines = _sut.ApplyUnifiedDiffInner(originalLines, diff);
+        // AI: Call the static method directly
+        var resultLines = UnifiedDiffApplier.ApplyUnifiedDiffInner(originalLines, diff);
 
         // Assert
         resultLines.Should().Equal(expectedLines);
@@ -150,7 +138,8 @@ public class DiffEditorTests
         };
 
         // Act
-        var resultLines = _sut.ApplyUnifiedDiffInner(originalLines, diff);
+        // AI: Call the static method directly
+        var resultLines = UnifiedDiffApplier.ApplyUnifiedDiffInner(originalLines, diff);
 
         // Assert
         resultLines.Should().Equal(expectedLines);
@@ -179,7 +168,8 @@ public class DiffEditorTests
         };
 
         // Act
-        var resultLines = _sut.ApplyUnifiedDiffInner(originalLines, diff);
+        // AI: Call the static method directly
+        var resultLines = UnifiedDiffApplier.ApplyUnifiedDiffInner(originalLines, diff);
 
         // Assert
         resultLines.Should().Equal(expectedLines);
@@ -210,7 +200,8 @@ public class DiffEditorTests
         };
 
         // Act
-        var resultLines = _sut.ApplyUnifiedDiffInner(originalLines, diff);
+        // AI: Call the static method directly
+        var resultLines = UnifiedDiffApplier.ApplyUnifiedDiffInner(originalLines, diff);
 
         // Assert
         resultLines.Should().Equal(expectedLines);
@@ -239,7 +230,8 @@ public class DiffEditorTests
         };
 
         // Act
-        var resultLines = _sut.ApplyUnifiedDiffInner(originalLines, diff);
+        // AI: Call the static method directly
+        var resultLines = UnifiedDiffApplier.ApplyUnifiedDiffInner(originalLines, diff);
 
         // Assert
         resultLines.Should().Equal(expectedLines);
@@ -268,7 +260,8 @@ public class DiffEditorTests
         };
 
         // Act
-        var resultLines = _sut.ApplyUnifiedDiffInner(originalLines, diff);
+        // AI: Call the static method directly
+        var resultLines = UnifiedDiffApplier.ApplyUnifiedDiffInner(originalLines, diff);
 
         // Assert
         resultLines.Should().Equal(expectedLines);
@@ -297,7 +290,8 @@ public class DiffEditorTests
         };
 
         // Act
-        var resultLines = _sut.ApplyUnifiedDiffInner(originalLines, diff);
+        // AI: Call the static method directly
+        var resultLines = UnifiedDiffApplier.ApplyUnifiedDiffInner(originalLines, diff);
 
         // Assert
         resultLines.Should().Equal(expectedLines);
@@ -337,7 +331,8 @@ public class DiffEditorTests
         };
 
         // Act
-        var resultLines = _sut.ApplyUnifiedDiffInner(originalLines, diff);
+        // AI: Call the static method directly
+        var resultLines = UnifiedDiffApplier.ApplyUnifiedDiffInner(originalLines, diff);
 
         // Assert
         resultLines.Should().Equal(expectedLines);
@@ -361,7 +356,8 @@ public class DiffEditorTests
         };
 
         // Act
-        var resultLines = _sut.ApplyUnifiedDiffInner([], diff);
+        // AI: Call the static method directly
+        var resultLines = UnifiedDiffApplier.ApplyUnifiedDiffInner([], diff);
 
         // Assert
         resultLines.Should().Equal(expectedLines);
@@ -386,7 +382,8 @@ public class DiffEditorTests
         };
 
         // Act
-        var resultLines = _sut.ApplyUnifiedDiffInner(originalLines, diff);
+        // AI: Call the static method directly
+        var resultLines = UnifiedDiffApplier.ApplyUnifiedDiffInner(originalLines, diff);
 
         // Assert
         resultLines.Should().Equal(expectedLines);
@@ -415,7 +412,8 @@ public class DiffEditorTests
         };
 
         // Act
-        var resultLines = _sut.ApplyUnifiedDiffInner(originalLines, diff);
+        // AI: Call the static method directly
+        var resultLines = UnifiedDiffApplier.ApplyUnifiedDiffInner(originalLines, diff);
 
         // Assert
         resultLines.Should().Equal(expectedLines);
@@ -446,7 +444,8 @@ public class DiffEditorTests
         };
 
         // Act
-        var resultLines = _sut.ApplyUnifiedDiffInner(originalLines, diff);
+        // AI: Call the static method directly
+        var resultLines = UnifiedDiffApplier.ApplyUnifiedDiffInner(originalLines, diff);
 
         // Assert
         resultLines.Should().Equal(expectedLines);
@@ -477,7 +476,8 @@ public class DiffEditorTests
         };
 
         // Act
-        var resultLines = _sut.ApplyUnifiedDiffInner(originalLines, diff);
+        // AI: Call the static method directly
+        var resultLines = UnifiedDiffApplier.ApplyUnifiedDiffInner(originalLines, diff);
 
         // Assert
         resultLines.Should().Equal(expectedLines);
@@ -503,7 +503,8 @@ public class DiffEditorTests
                    """; // Diff expects 'b' but file has 'different_b'
 
         // Act
-        Action act = () => _sut.ApplyUnifiedDiffInner(originalLines, diff);
+        // AI: Call the static method directly
+        Action act = () => UnifiedDiffApplier.ApplyUnifiedDiffInner(originalLines, diff);
 
         // Assert
         act.Should()
@@ -531,7 +532,8 @@ public class DiffEditorTests
                    """; // Diff expects to delete 'unexpected_line_content' at line 2
 
         // Act
-        Action act = () => _sut.ApplyUnifiedDiffInner(originalLines, diff);
+        // AI: Call the static method directly
+        Action act = () => UnifiedDiffApplier.ApplyUnifiedDiffInner(originalLines, diff);
 
         // Assert
         act.Should()
@@ -556,7 +558,8 @@ public class DiffEditorTests
                    """;
 
         // Act
-        Action act = () => _sut.ApplyUnifiedDiffInner(originalLines, diff);
+        // AI: Call the static method directly
+        Action act = () => UnifiedDiffApplier.ApplyUnifiedDiffInner(originalLines, diff);
 
         // Assert
         act.Should()
@@ -605,7 +608,8 @@ public class DiffEditorTests
                    """;
 
         // Act
-        var resultLines = _sut.ApplyUnifiedDiffInner(originalLines, diff);
+        // AI: Call the static method directly
+        var resultLines = UnifiedDiffApplier.ApplyUnifiedDiffInner(originalLines, diff);
 
         var final = string.Join(Environment.NewLine, resultLines);
 
@@ -629,7 +633,8 @@ public class DiffEditorTests
                    """;
 
         // Act
-        var resultLines = _sut.ApplyUnifiedDiffInner([], diff);
+        // AI: Call the static method directly
+        var resultLines = UnifiedDiffApplier.ApplyUnifiedDiffInner([], diff);
 
         var final = string.Join(Environment.NewLine, resultLines);
 

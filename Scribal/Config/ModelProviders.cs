@@ -13,6 +13,15 @@ public interface IModelProvider
 {
     string Name { get; }
     void RegisterServices(IKernelBuilder kb, ModelSlot slot, string serviceSuffix);
+
+    public static void AddModelProviders(IServiceCollection serviceCollection)
+    {
+        // Just do this manually to make it AOT friendly.
+        serviceCollection.AddSingleton<IModelProvider, OpenAIModelProvider>();
+        serviceCollection.AddSingleton<IModelProvider, GeminiModelProvider>();
+        serviceCollection.AddSingleton<IModelProvider, DeepSeekModelProvider>();
+        serviceCollection.AddSingleton<IModelProvider, AnthropicModelProvider>();
+    }
 }
 
 public class OpenAIModelProvider : IModelProvider

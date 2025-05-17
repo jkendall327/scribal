@@ -21,14 +21,7 @@ public static class ScribalModelServiceCollectionExtensions
     public static void AddScribalAi(this IServiceCollection services, IConfiguration cfg)
     {
         // Register everything that implements IModelProvider.
-        var providerTypes = typeof(IModelProvider).Assembly.GetTypes()
-                                                  .Where(t => typeof(IModelProvider).IsAssignableFrom(t))
-                                                  .Where(t => t is {IsClass: true, IsAbstract: false});
-
-        foreach (var providerType in providerTypes)
-        {
-            services.AddSingleton(typeof(IModelProvider), providerType);
-        }
+        IModelProvider.AddModelProviders(services);
 
         // Register services in the main DI container that the kernel will pull back later.
         services.AddSingleton<FileReader>();

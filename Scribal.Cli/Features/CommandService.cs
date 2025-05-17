@@ -332,11 +332,6 @@ public class CommandService(
 
     private static Task QuitCommand(InvocationContext ctx)
     {
-        if (!AnsiConsole.Confirm("Are you sure you want to quit?"))
-        {
-            return Task.CompletedTask;
-        }
-
         AnsiConsole.MarkupLine("[yellow]Thank you for using Scribal. Goodbye![/]");
         Environment.Exit(0);
 

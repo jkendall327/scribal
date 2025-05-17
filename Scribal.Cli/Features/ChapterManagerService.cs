@@ -91,8 +91,9 @@ public class ChapterManagerService(
             logger.LogDebug("Refreshed chapter list, {ChapterCount} chapters found", state.Chapters.Count);
             AnsiConsole.WriteLine();
 
+            // AI: Use helper to format chapter display string with color
             var chapterChoices = state.Chapters.OrderBy(c => c.Number)
-                                      .Select(c => $"{c.Number}. {Markup.Escape(c.Title)} ({c.State})")
+                                      .Select(FormatChapterDisplayString)
                                       .ToList();
             
             // AI: Added option to create a new chapter
@@ -120,8 +121,9 @@ public class ChapterManagerService(
                 continue;
             }
 
+            // AI: Find chapter based on the formatted display string
             var selectedChapterState =
-                state.Chapters.FirstOrDefault(c => $"{c.Number}. {Markup.Escape(c.Title)} ({c.State})" == choice);
+                state.Chapters.FirstOrDefault(c => FormatChapterDisplayString(c) == choice);
 
             if (selectedChapterState == null)
             {
@@ -210,8 +212,9 @@ public class ChapterManagerService(
         {
             AnsiConsole.WriteLine();
 
+            // AI: Use helper to format chapter display string with color
             AnsiConsole.MarkupLine(
-                $"Managing Chapter {selectedChapter.Number}: [yellow]{Markup.Escape(selectedChapter.Title)}[/] ({selectedChapter.State})");
+                $"Managing Chapter: {FormatChapterDisplayString(selectedChapter)}");
 
             AnsiConsole.MarkupLine(
                 "Enter a command for this chapter ([blue]/help[/] for options, [blue]/back[/] to return to chapter list):");
@@ -323,5 +326,18 @@ public class ChapterManagerService(
                 AnsiConsole.WriteException(deletionResult.Exception);
             }
         }
+    }
+
+    // AI: Helper method to format chapter display string with colored state
+    private string FormatChapterDisplayString(ChapterState chapter)
+    {
+        var stateColor = chapter.State switch
+        {
+            ChapterStateType.Unstarted => "red",
+            ChapterStateType.Draft => "yellow",
+            ChapterStateType.Done => "green",
+            _ => "grey"
+        };
+        return $"{chapter.Number}. {Markup.Escape(chapter.Title)} ([{stateColor}]{chapter.State}[/])";
     }
 }

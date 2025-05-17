@@ -6,8 +6,6 @@ using Microsoft.Extensions.Options;
 using Scribal.Agency;
 using Scribal.Config;
 
-// AI: Added for LINQ operations
-
 namespace Scribal.Workspace;
 
 public record WorkspaceCreation(bool Created, bool GitRepoInitialised);
@@ -562,8 +560,6 @@ public class WorkspaceManager(
         }
 
         var plotOutline = await LoadPlotOutlineAsync(cancellationToken) ?? new StoryOutline();
-
-        // AI: Update source chapter's summary in WorkspaceState
         var sourceChapterInState = state.Chapters.FirstOrDefault(c => c.Number == sourceChapterNumber);
 
         if (sourceChapterInState is null)
@@ -579,7 +575,6 @@ public class WorkspaceManager(
         logger.LogInformation("Updated summary for source chapter {SourceChapterNumber} in WorkspaceState",
             sourceChapterNumber);
 
-        // AI: Update source chapter's summary in StoryOutline
         var sourceChapterInOutline = plotOutline.Chapters.FirstOrDefault(c => c.ChapterNumber == sourceChapterNumber);
 
         if (sourceChapterInOutline is null)
@@ -596,23 +591,18 @@ public class WorkspaceManager(
                 sourceChapterNumber);
         }
 
-        // AI: Adjust ordinals for chapters in WorkspaceState that will be shifted
-        foreach (var chapter in
-                 state.Chapters.Where(c => c.Number >= newChapterOrdinal)
-                      .ToList()) // AI: Added ToList() to avoid modification during iteration issues
+        // Adjust ordinals for chapters in WorkspaceState that will be shifted
+        foreach (var chapter in state.Chapters.Where(c => c.Number >= newChapterOrdinal).ToList())
         {
             chapter.Number++;
         }
 
         // AI: Adjust ordinals for chapters in StoryOutline that will be shifted
-        foreach (var chapter in
-                 plotOutline.Chapters.Where(c => c.ChapterNumber >= newChapterOrdinal)
-                            .ToList()) // AI: Added ToList() to avoid modification during iteration issues
+        foreach (var chapter in plotOutline.Chapters.Where(c => c.ChapterNumber >= newChapterOrdinal).ToList())
         {
             chapter.ChapterNumber++;
         }
 
-        // AI: Create new chapter state
         var newChapterState = new ChapterState
         {
             Number = newChapterOrdinal,
@@ -628,7 +618,6 @@ public class WorkspaceManager(
             newChapterOrdinal,
             newChapterTitle);
 
-        // AI: Create new chapter for plot outline
         var newChapterForOutline = new Chapter
         {
             ChapterNumber = newChapterOrdinal,
@@ -672,23 +661,23 @@ public class WorkspaceManager(
                 fileSystem.Directory.CreateDirectory(mainChaptersDirectoryPath);
             }
 
-            // AI: Rename directories for chapters that were shifted *down* by the new chapter insertion.
-            // AI: Iterate from highest number downwards to avoid overwriting.
+            // Rename directories for chapters that were shifted *down* by the new chapter insertion.
+            // Iterate from highest number downwards to avoid overwriting.
             var chaptersToRenameDirsFor = state
                                           .Chapters
                                           .Where(c => c.Number >
-                                                      newChapterOrdinal) // AI: Only chapters whose numbers actually changed and are *after* the new one
+                                                      newChapterOrdinal) // Only chapters whose numbers actually changed and are *after* the new one
                                           .OrderByDescending(c => c.Number)
                                           .ToList();
 
             foreach (var chapToRename in chaptersToRenameDirsFor)
             {
-                // AI: The directory number *before* it was incremented due to the new chapter insertion.
+                // The directory number *before* it was incremented due to the new chapter insertion.
                 var oldChapterDirNumber = chapToRename.Number - 1;
                 var oldChapterDirName = $"chapter_{oldChapterDirNumber:D2}";
                 var oldChapterDirPath = fileSystem.Path.Combine(mainChaptersDirectoryPath, oldChapterDirName);
 
-                // AI: The directory name corresponding to its *new* (incremented) number.
+                // The directory name corresponding to its *new* (incremented) number.
                 var newChapterDirNameForRename = $"chapter_{chapToRename.Number:D2}";
 
                 var newChapterDirPathForRename =
@@ -704,7 +693,6 @@ public class WorkspaceManager(
                 }
             }
 
-            // AI: Create the directory for the new chapter itself.
             if (!fileSystem.Directory.Exists(newChapterSpecificDirectoryPath))
             {
                 logger.LogInformation("Creating new chapter directory at {ChapterSpecificDirectoryPath}",
@@ -725,7 +713,7 @@ public class WorkspaceManager(
                 var commitMessage =
                     $"Split chapter {sourceChapterNumber}, created new chapter {newChapterOrdinal}: {newChapterTitle}";
 
-                // AI: Using CommitAllAsync to capture directory renames and creations along with file changes.
+                // Using CommitAllAsync to capture directory renames and creations along with file changes.
                 var commitSuccess = await git.CreateCommitAllAsync(commitMessage, cancellationToken);
 
                 if (commitSuccess)
@@ -748,7 +736,6 @@ public class WorkspaceManager(
                 newChapterOrdinal,
                 newChapterTitle);
 
-            // AI: Consider rolling back state changes if filesystem operations fail. For now, logging the error.
             return false;
         }
     }
@@ -804,8 +791,6 @@ public class WorkspaceManager(
         }
 
         var mainChaptersDirectoryPath = fileSystem.Path.Combine(projectRootPath, "chapters");
-
-        // AI: 1. Merge content
         var sourceContent = string.Empty;
 
         if (!string.IsNullOrWhiteSpace(sourceChapterState.DraftFilePath) &&
@@ -881,20 +866,13 @@ public class WorkspaceManager(
             targetChapterState.Number,
             newTargetDraftFilePath);
 
-        // AI: 2. Update target chapter metadata
         targetChapterState.DraftFilePath = newTargetDraftFilePath;
         targetChapterState.Summary = newTargetSummary;
         targetChapterState.State = DetermineMergedChapterState(sourceChapterState.State, targetChapterState.State);
 
         targetChapterOutline.Summary = newTargetSummary;
-
-        // AI: Potentially merge beats or other fields if necessary in the future
-
-        // AI: 3. Remove source chapter from state and outline
         state.Chapters.Remove(sourceChapterState);
         plotOutline.Chapters.Remove(sourceChapterOutline);
-
-        // AI: 4. Delete source chapter directory
         var sourceChapterDirectoryName = $"chapter_{sourceChapterState.Number:D2}";
 
         var sourceChapterSpecificDirectoryPath =
@@ -913,17 +891,15 @@ public class WorkspaceManager(
                 sourceChapterSpecificDirectoryPath);
         }
 
-        // AI: 5. Update ordinals and rename directories for subsequent chapters
         var chaptersToAdjust = state.Chapters.Where(c => c.Number > sourceChapterNumber)
-                                    .OrderBy(c => c.Number) // AI: Process in increasing order for directory renaming
+                                    .OrderBy(c => c.Number) // Process in increasing order for directory renaming
                                     .ToList();
 
         foreach (var chapterToAdjust in chaptersToAdjust)
         {
             var oldChapterNumberForDir = chapterToAdjust.Number;
-            chapterToAdjust.Number--; // AI: Decrement state chapter number
+            chapterToAdjust.Number--;
 
-            // AI: Find corresponding outline chapter and decrement its number
             var outlineChapterToAdjust =
                 plotOutline.Chapters.FirstOrDefault(oc => oc.ChapterNumber == oldChapterNumberForDir);
 
@@ -938,10 +914,9 @@ public class WorkspaceManager(
                     oldChapterNumberForDir);
             }
 
-            // AI: Rename directory
             var oldChapterDirName = $"chapter_{oldChapterNumberForDir:D2}";
             var oldChapterDirPath = fileSystem.Path.Combine(mainChaptersDirectoryPath, oldChapterDirName);
-            var newChapterDirName = $"chapter_{chapterToAdjust.Number:D2}"; // AI: Use the new, decremented number
+            var newChapterDirName = $"chapter_{chapterToAdjust.Number:D2}";
             var newChapterDirPath = fileSystem.Path.Combine(mainChaptersDirectoryPath, newChapterDirName);
 
             if (fileSystem.Directory.Exists(oldChapterDirPath) && oldChapterDirPath != newChapterDirPath)
@@ -954,24 +929,19 @@ public class WorkspaceManager(
             }
         }
 
-        // AI: Ensure lists are sorted after modifications
         state.Chapters = state.Chapters.OrderBy(c => c.Number).ToList();
         plotOutline.Chapters = plotOutline.Chapters.OrderBy(c => c.ChapterNumber).ToList();
-
-        // AI: 6. Save state and outline
         await SaveWorkspaceStateAsync(state, workspacePath, cancellationToken);
         var plotOutlineFilePath = fileSystem.Path.Join(workspacePath, PlotOutlineFileName);
         var outlineJson = JsonSerializer.Serialize(plotOutline, JsonDefaults.Context.StoryOutline);
         await fileSystem.File.WriteAllTextAsync(plotOutlineFilePath, outlineJson, cancellationToken);
         logger.LogInformation("Plot outline saved to {PlotOutlineFilePath} after merge", plotOutlineFilePath);
 
-        // AI: 7. Commit changes
         if (git.Enabled)
         {
             var commitMessage =
                 $"Merged Chapter {sourceChapterNumber} ('{sourceChapterState.Title}') into Chapter {targetChapterState.Number} ('{targetChapterState.Title}')";
 
-            // AI: Using CommitAllAsync to capture directory renames/deletions and file changes.
             var commitSuccess = await git.CreateCommitAllAsync(commitMessage, cancellationToken);
 
             if (commitSuccess)
@@ -995,14 +965,14 @@ public class WorkspaceManager(
 
     private ChapterStateType DetermineMergedChapterState(ChapterStateType sourceState, ChapterStateType targetState)
     {
-        // AI: If both chapters were unstarted, the merged chapter remains unstarted.
+        // If both chapters were unstarted, the merged chapter remains unstarted.
         if (sourceState == ChapterStateType.Unstarted && targetState == ChapterStateType.Unstarted)
         {
             return ChapterStateType.Unstarted;
         }
 
-        // AI: In all other cases (any content, any 'Done' state involved),
-        // AI: the merged chapter is considered a draft requiring review.
+        // In all other cases (any content, any 'Done' state involved),
+        // the merged chapter is considered a draft requiring review.
         return ChapterStateType.Draft;
     }
 }

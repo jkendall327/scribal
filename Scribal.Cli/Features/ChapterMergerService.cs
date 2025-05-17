@@ -1,5 +1,3 @@
-// AI: New file for Chapter Merger Service Implementation
-
 using Microsoft.Extensions.Logging;
 using Scribal.Workspace;
 using Spectre.Console;
@@ -150,10 +148,12 @@ public class ChapterMergerService : IChapterMergerService
         }
 
         var confirmMessage =
-            $"Confirm merge: Chapter {sourceChapter.Number} ('{Markup.Escape(sourceChapter.Title)}') " + Environment.NewLine +
-            $"will be merged into Chapter {selectedTargetChapterState.Number} ('{Markup.Escape(selectedTargetChapterState.Title)}'). " + Environment.NewLine +
-            $"The source chapter will be deleted. The target chapter's summary will be '{Markup.Escape(newTargetSummary)}'." + Environment.NewLine + 
-            "Proceed?";
+            $"Confirm merge: Chapter {sourceChapter.Number} ('{Markup.Escape(sourceChapter.Title)}') " +
+            Environment.NewLine +
+            $"will be merged into Chapter {selectedTargetChapterState.Number} ('{Markup.Escape(selectedTargetChapterState.Title)}'). " +
+            Environment.NewLine +
+            $"The source chapter will be deleted. The target chapter's summary will be '{Markup.Escape(newTargetSummary)}'." +
+            Environment.NewLine + "Proceed?";
 
         var confirmed = await _userInteraction.ConfirmAsync(confirmMessage);
 

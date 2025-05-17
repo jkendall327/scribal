@@ -1,11 +1,6 @@
-// AI: New file for Chapter Splitter Service Implementation (moved from Scribal.Workspace)
-
 using Microsoft.Extensions.Logging;
 using Scribal.Workspace;
 using Spectre.Console;
-
-// AI: For IUserInteraction
-// AI: For IAnsiConsole and prompts
 
 namespace Scribal.Cli.Features;
 
@@ -46,7 +41,6 @@ public class ChapterSplitterService : IChapterSplitterService
                              return ValidationResult.Error("[red]Ordinal must be a positive number.[/]");
                          }
 
-                         // AI: Potentially add validation against existing chapter numbers if needed, though WorkspaceManager handles shifts.
                          return ValidationResult.Success();
                      });
 

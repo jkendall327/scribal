@@ -1,5 +1,3 @@
-// AI: New file for Chapter Merger Service Interface
-
 using Scribal.Workspace;
 
 namespace Scribal.Cli.Features;

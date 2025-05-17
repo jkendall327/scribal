@@ -41,7 +41,7 @@ public class WorkspaceDeleter(
 
         try
         {
-            fileSystem.Directory.Delete(workspacePath, true);
+            await workspaceManager.DeleteWorkspaceAsync();
 
             console.MarkupLine(
                 $"[green].scribal workspace at '{Markup.Escape(workspacePath)}' deleted successfully.[/]");
@@ -101,8 +101,8 @@ public class WorkspaceDeleter(
 
                     try
                     {
-                        fileSystem.Directory.Delete(gitFolderPath, true);
-
+                        gitService.DeleteRepository();
+                        
                         console.MarkupLine(
                             $"[green].git folder at '{Markup.Escape(gitFolderPath)}' deleted successfully.[/]");
                     }

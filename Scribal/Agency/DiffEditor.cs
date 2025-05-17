@@ -1,6 +1,5 @@
 using System.ComponentModel;
 using System.IO.Abstractions;
-// AI: Removed System.Text.RegularExpressions as it's now in UnifiedDiffApplier
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel;
@@ -8,8 +7,11 @@ using Scribal.Config;
 
 namespace Scribal.Agency;
 
-// AI: Regex generation moved to UnifiedDiffApplier
-public class DiffEditor(IFileSystem fileSystem, FileAccessChecker checker, IOptions<AppConfig> options, ILogger<DiffEditor> logger)
+public class DiffEditor(
+    IFileSystem fileSystem,
+    FileAccessChecker checker,
+    IOptions<AppConfig> options,
+    ILogger<DiffEditor> logger)
 {
     public const string DiffEditorToolName = "apply_diff";
 
@@ -35,16 +37,13 @@ public class DiffEditor(IFileSystem fileSystem, FileAccessChecker checker, IOpti
 
         if (!ok)
         {
-            logger.LogWarning("Access denied for file {FilePath} as it is outside the current working directory",
-                file);
+            logger.LogWarning("Access denied for file {FilePath} as it is outside the current working directory", file);
 
             return FileAccessChecker.AccessDeniedError;
         }
-        
+
         // Read the original file content
         var originalLines = await fileSystem.File.ReadAllLinesAsync(file);
-
-        // AI: Call the static method from the new UnifiedDiffApplier class
         var newFileContent = UnifiedDiffApplier.ApplyUnifiedDiffInner(originalLines, diff);
 
         // Write the modified content back to the file
@@ -52,10 +51,7 @@ public class DiffEditor(IFileSystem fileSystem, FileAccessChecker checker, IOpti
         {
             await fileSystem.File.WriteAllLinesAsync(file, newFileContent);
         }
-        
+
         return "File edited successfully.";
     }
-
-    // AI: All diff application logic, including ApplyUnifiedDiffInner, DiffHunk, ParseUnifiedDiff, ApplyHunk, and HunkHeaderRegex,
-    // AI: has been moved to the new UnifiedDiffApplier class.
 }

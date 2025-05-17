@@ -385,7 +385,6 @@ public class WorkspaceManager(
         }
     }
 
-    // AI: Added method to create a new chapter, save it, and update workspace state
     public async Task<bool> AddNewChapterAsync(int ordinal,
         string title,
         string content,
@@ -409,7 +408,6 @@ public class WorkspaceManager(
             return false;
         }
 
-        // AI: Adjust ordinals of existing chapters
         foreach (var existingChapter in state.Chapters.Where(c => c.Number >= ordinal))
         {
             existingChapter.Number++;
@@ -419,16 +417,12 @@ public class WorkspaceManager(
         {
             Number = ordinal,
             Title = title,
-            Summary = string.Empty, // AI: New chapters start with an empty summary; can be populated later
+            Summary = string.Empty,
             State = string.IsNullOrWhiteSpace(content) ? ChapterStateType.Unstarted : ChapterStateType.Draft
-
-            // AI: DraftFilePath will be set after saving the file
         };
 
         state.Chapters.Add(newChapterState);
         state.Chapters = state.Chapters.OrderBy(c => c.Number).ToList();
-
-        // AI: Create chapter directory and save content
         var projectRootPath = fileSystem.DirectoryInfo.New(workspacePath).Parent?.FullName;
 
         if (string.IsNullOrWhiteSpace(projectRootPath))
@@ -441,7 +435,7 @@ public class WorkspaceManager(
         }
 
         var mainChaptersDirectoryPath = fileSystem.Path.Combine(projectRootPath, "chapters");
-        var chapterDirectoryName = $"chapter_{ordinal:D2}"; // AI: Using only ordinal for directory name for consistency
+        var chapterDirectoryName = $"chapter_{ordinal:D2}";
         var chapterSpecificDirectoryPath = fileSystem.Path.Combine(mainChaptersDirectoryPath, chapterDirectoryName);
 
         try
@@ -454,7 +448,6 @@ public class WorkspaceManager(
                 fileSystem.Directory.CreateDirectory(chapterSpecificDirectoryPath);
             }
 
-            // AI: Sanitize title for filename
             var sanitizedTitle = string.Join("_", title.Split(fileSystem.Path.GetInvalidFileNameChars()));
             sanitizedTitle = string.Join("_", sanitizedTitle.Split(fileSystem.Path.GetInvalidPathChars()));
 
@@ -476,14 +469,13 @@ public class WorkspaceManager(
 
             await fileSystem.File.WriteAllTextAsync(draftFilePath, content, cancellationToken);
             logger.LogInformation("New chapter {Ordinal} content saved to {FilePath}", ordinal, draftFilePath);
-            newChapterState.DraftFilePath = draftFilePath; // AI: Store the path to the draft file
+            newChapterState.DraftFilePath = draftFilePath;
 
             if (!string.IsNullOrWhiteSpace(content))
             {
                 newChapterState.State = ChapterStateType.Draft;
             }
 
-            // AI: Save the updated workspace state
             await SaveWorkspaceStateAsync(state, workspacePath, cancellationToken);
 
             if (!git.Enabled)
@@ -500,7 +492,6 @@ public class WorkspaceManager(
                 stateFilePath
             };
 
-            // AI: Use the new overload to commit both the chapter file and the state file
             var commitSuccess = await git.CreateCommitAsync(filesToCommit, commitMessage, cancellationToken);
 
             if (commitSuccess)
@@ -524,7 +515,6 @@ public class WorkspaceManager(
         {
             logger.LogError(ex, "Failed to save new chapter {Ordinal}: {Title} content or directory", ordinal, title);
 
-            // AI: Attempt to revert state changes if file saving fails? Complex, for now log and return false.
             return false;
         }
     }

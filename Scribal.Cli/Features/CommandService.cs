@@ -22,7 +22,8 @@ public class CommandService(
     WorkspaceManager workspaceManager,
     ChapterManagerService chapterManagerService,
     IGitService gitService,
-    ExportService exportService){
+    ExportService exportService)
+{
     private readonly Argument<string> _ideaArgument = new()
     {
         Name = "Idea",
@@ -93,7 +94,8 @@ public class CommandService(
             chaptersCmd,
             deleteWorkspaceCmd,
             commitCmd,
-            exportCmd,            tree,
+            exportCmd,
+            tree,
             quit
         };
 

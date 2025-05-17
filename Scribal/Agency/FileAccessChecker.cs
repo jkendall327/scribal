@@ -6,7 +6,7 @@ public class FileAccessChecker(IFileSystem fileSystem)
 {
     public const string FileNotFoundError = "[ERROR: the file did not exist.]";
     public const string AccessDeniedError = "[ERROR: Access denied. File is outside the current working directory.]";
-    
+
     public bool IsInCurrentWorkingDirectory(string filepath)
     {
         var fileFullPath = fileSystem.Path.GetFullPath(filepath);

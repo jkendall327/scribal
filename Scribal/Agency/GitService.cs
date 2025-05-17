@@ -90,7 +90,7 @@ public sealed class GitService(
     {
         return await CreateCommitAsync([filepath], message, ct);
     }
-    
+
     public Task<bool> CreateCommitAsync(List<string> files, string message, CancellationToken ct = default)
     {
         if (config.Value.DryRun)
@@ -110,11 +110,11 @@ public sealed class GitService(
                 Commands.Stage(_repo, file);
                 logger.LogInformation("Staged changes for {Filepath}", file);
             }
-            
+
             var sig = new Signature($"{_name} (scribal)", _email, time.GetLocalNow());
-            
+
             _repo.Commit(message, sig, sig);
-            
+
             logger.LogInformation("Committed changes with message: {Message}", message);
 
             return Task.FromResult(true);
@@ -186,7 +186,7 @@ public sealed class GitService(
     public void DisableRepository()
     {
         EnsureValidRepository();
-        
+
         _repo = null;
     }
 

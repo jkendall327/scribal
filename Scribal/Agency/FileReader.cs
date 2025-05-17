@@ -27,8 +27,7 @@ public class FileReader(IFileSystem fileSystem, FileAccessChecker checker, ILogg
 
         if (!ok)
         {
-            logger.LogWarning("Access denied for file {FilePath} as it is outside the current working directory",
-                full);
+            logger.LogWarning("Access denied for file {FilePath} as it is outside the current working directory", full);
 
             return AccessDeniedError;
         }

@@ -17,6 +17,6 @@ public static class JsonDefaults
         WriteIndented = true,
         PropertyNameCaseInsensitive = true
     };
-    
+
     public static ScribalJsonContext Context { get; } = new(Default);
 }

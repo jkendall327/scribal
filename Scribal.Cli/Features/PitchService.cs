@@ -19,7 +19,8 @@ public class PitchService(
     IAnsiConsole console,
     IOptions<AiSettings> options,
     WorkspaceManager workspaceManager,
-    ConsoleChatRenderer consoleChatRenderer){
+    ConsoleChatRenderer consoleChatRenderer)
+{
     public async Task CreatePremiseFromPitch(string pitch, CancellationToken ct = default)
     {
         if (options.Value.Primary is null)
@@ -157,7 +158,8 @@ public class PitchService(
             {
                 var request = new ChatRequest(userInput, refinementCid, sid);
 
-                var refinementStream = chat.StreamAsync(request, refinementHistory, ct);                await consoleChatRenderer.StreamWithSpinnerAsync(refinementStream, ct);
+                var refinementStream = chat.StreamAsync(request, refinementHistory, ct);
+                await consoleChatRenderer.StreamWithSpinnerAsync(refinementStream, ct);
             }
             catch (OperationCanceledException)
             {

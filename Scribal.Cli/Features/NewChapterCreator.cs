@@ -1,5 +1,3 @@
-// AI: New service for creating chapters
-
 using System.Runtime.CompilerServices;
 using System.Text;
 using Microsoft.Extensions.Logging;

@@ -13,7 +13,7 @@ public static class ExceptionDisplay
     public static void DisplayException(Exception ex, IAnsiConsole? console = null)
     {
         console ??= AnsiConsole.Console;
-        
+
         console.MarkupLine("[bold red]An error occurred:[/]");
 
         var panel = new Panel(GetExceptionMarkup(ex)).Header("[yellow]Exception Details[/]")

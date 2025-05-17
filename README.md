@@ -70,7 +70,8 @@ When you download Scribal, open the `appsettings.json` file to find slots for ea
 
 You can use different providers and models for each of these slots.
 
-Scribal relies on .NET's native `IConfiguration` system. That means you have a lot of flexibility in how to set your config.
+Scribal relies on .NET's native `IConfiguration` system. That means you have a lot of flexibility in how to set your
+config.
 
 You can freely mix settings between the `appsettings.json` file, environment variables and command-line arguments.
 
@@ -114,7 +115,8 @@ It then provides the model with a high-level map of their names and place in the
 
 Use the `/tree` command can select files to send to the model in full, if you know they are important.
 
-When in a free chat (i.e. not executing a `/command`), the model also has the ability to directly read files from the filesystem.
+When in a free chat (i.e. not executing a `/command`), the model also has the ability to directly read files from the
+filesystem.
 
 It is only allowed to read content from within the current working directory.
 

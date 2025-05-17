@@ -19,7 +19,7 @@ namespace Scribal;
 public static class ScribalModelServiceCollectionExtensions
 {
     private const string AiSectionPath = "AI";
-    
+
     public static void AddScribalAi(this IServiceCollection services)
     {
         // Register everything that implements IModelProvider.
@@ -46,11 +46,10 @@ public static class ScribalModelServiceCollectionExtensions
                     {
                         var result = SlotsValidator.ValidateSlots(settings, out var error);
                         err = error;
-                
+
                         return result;
                     },
-                    err)
-                ;
+                    err);
 
         services.AddSingleton<Kernel>(sp =>
         {
@@ -81,23 +80,20 @@ public static class ScribalModelServiceCollectionExtensions
             var diffEditor = sp.GetRequiredService<DiffEditor>();
             var fileReader = sp.GetRequiredService<FileReader>();
 
-            kb.Plugins.AddFromFunctions(nameof(FileReader), [KernelFunctionFactory.CreateFromMethod(
-                method: fileReader.ReadFileContentAsync,
-                jsonSerializerOptions: options)]);
-            
-            kb.Plugins.AddFromFunctions(nameof(DiffEditor), [KernelFunctionFactory.CreateFromMethod(
-                method: diffEditor.ApplyUnifiedDiffAsync,
-                jsonSerializerOptions: options)]);
-            
+            kb.Plugins.AddFromFunctions(nameof(FileReader),
+                [KernelFunctionFactory.CreateFromMethod(fileReader.ReadFileContentAsync, options)]);
+
+            kb.Plugins.AddFromFunctions(nameof(DiffEditor),
+                [KernelFunctionFactory.CreateFromMethod(diffEditor.ApplyUnifiedDiffAsync, options)]);
+
             var appConfig = sp.GetRequiredService<IOptions<AppConfig>>().Value;
 
             if (appConfig.IngestContent)
             {
                 var vectorSearch = sp.GetRequiredService<VectorSearch>();
-                
-                kb.Plugins.AddFromFunctions(nameof(VectorSearch), [KernelFunctionFactory.CreateFromMethod(
-                    method: vectorSearch.SearchAsync,
-                    jsonSerializerOptions: options)]);
+
+                kb.Plugins.AddFromFunctions(nameof(VectorSearch),
+                    [KernelFunctionFactory.CreateFromMethod(vectorSearch.SearchAsync, options)]);
             }
 
             kb.Services.AddSingleton<IFunctionInvocationFilter>(sp.GetRequiredService<GitCommitFilter>());

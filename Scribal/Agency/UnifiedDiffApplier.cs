@@ -2,10 +2,8 @@ using System.Text.RegularExpressions;
 
 namespace Scribal.Agency;
 
-// AI: New class to encapsulate the logic for applying unified diffs.
 public static partial class UnifiedDiffApplier
 {
-    // AI: Moved from DiffEditor.cs
     public static List<string> ApplyUnifiedDiffInner(IEnumerable<string> originalLines, string diff)
     {
         var newFileContent = new List<string>(originalLines);
@@ -23,7 +21,6 @@ public static partial class UnifiedDiffApplier
         return newFileContent;
     }
 
-    // AI: Moved from DiffEditor.cs
     private sealed class DiffHunk
     {
         public int OriginalStart { get; init; }
@@ -33,7 +30,6 @@ public static partial class UnifiedDiffApplier
         public List<string> Lines { get; } = [];
     }
 
-    // AI: Moved from DiffEditor.cs
     private static List<DiffHunk> ParseUnifiedDiff(string diff)
     {
         var hunks = new List<DiffHunk>();
@@ -89,7 +85,6 @@ public static partial class UnifiedDiffApplier
         return hunks;
     }
 
-    // AI: Moved from DiffEditor.cs
     private static void ApplyHunk(List<string> fileContent, DiffHunk hunk)
     {
         // currentPositionInFile is the 0-based index in fileContent where the hunk's changes start.
@@ -159,7 +154,6 @@ public static partial class UnifiedDiffApplier
         }
     }
 
-    // AI: Moved from DiffEditor.cs and made static
     [GeneratedRegex(@"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")]
     private static partial Regex HunkHeaderRegex();
 }

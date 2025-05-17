@@ -17,7 +17,6 @@ public class ChapterManagerService(
     ILogger<ChapterManagerService> logger,
     IChapterDeletionService chapterDeletionService,
     ChapterDrafterService chapterDrafterService,
-    // AI: Added NewChapterCreatorService
     NewChapterCreator newChapterCreator)
 {
     public async Task ManageChaptersAsync(InvocationContext context)
@@ -91,14 +90,13 @@ public class ChapterManagerService(
 
             logger.LogDebug("Refreshed chapter list, {ChapterCount} chapters found", state.Chapters.Count);
             AnsiConsole.WriteLine();
+            var chapterChoices = state.Chapters.OrderBy(c => c.Number).Select(FormatChapterDisplayString).ToList();
 
-            // AI: Use helper to format chapter display string with color
-            var chapterChoices = state.Chapters.OrderBy(c => c.Number)
-                                      .Select(FormatChapterDisplayString)
-                                      .ToList();
-            
-            // AI: Added option to create a new chapter
-            var commandChoices = new List<string> { "+ Create New Chapter" };
+            var commandChoices = new List<string>
+            {
+                "+ Create New Chapter"
+            };
+
             commandChoices.AddRange(chapterChoices);
             commandChoices.Add("Back");
 
@@ -116,20 +114,17 @@ public class ChapterManagerService(
 
             if (choice == "+ Create New Chapter")
             {
-                // AI: Call the NewChapterCreatorService
                 await newChapterCreator.CreateNewChapterAsync(token);
-                // AI: State will be reloaded at the start of the loop
+
                 continue;
             }
 
-            // AI: Find chapter based on the formatted display string
-            var selectedChapterState =
-                state.Chapters.FirstOrDefault(c => FormatChapterDisplayString(c) == choice);
+            var selectedChapterState = state.Chapters.FirstOrDefault(c => FormatChapterDisplayString(c) == choice);
 
             if (selectedChapterState == null)
             {
-                // AI: This case should ideally not be hit if choice is not Back or Create New
                 logger.LogWarning("Invalid chapter selection choice: {Choice}", choice);
+
                 continue;
             }
 
@@ -212,10 +207,7 @@ public class ChapterManagerService(
         while (!chapterSubMenuCts.IsCancellationRequested && !parentToken.IsCancellationRequested)
         {
             AnsiConsole.WriteLine();
-
-            // AI: Use helper to format chapter display string with color
-            AnsiConsole.MarkupLine(
-                $"Managing Chapter: {FormatChapterDisplayString(selectedChapter)}");
+            AnsiConsole.MarkupLine($"Managing Chapter: {FormatChapterDisplayString(selectedChapter)}");
 
             AnsiConsole.MarkupLine(
                 "Enter a command for this chapter ([blue]/help[/] for options, [blue]/back[/] to return to chapter list):");
@@ -329,7 +321,6 @@ public class ChapterManagerService(
         }
     }
 
-    // AI: Helper method to format chapter display string with colored state
     private string FormatChapterDisplayString(ChapterState chapter)
     {
         var stateColor = chapter.State switch
@@ -337,8 +328,9 @@ public class ChapterManagerService(
             ChapterStateType.Unstarted => "red",
             ChapterStateType.Draft => "yellow",
             ChapterStateType.Done => "green",
-            _ => "grey"
+            var _ => "grey"
         };
+
         return $"{chapter.Number}. {Markup.Escape(chapter.Title)} ([{stateColor}]{chapter.State}[/])";
     }
 }

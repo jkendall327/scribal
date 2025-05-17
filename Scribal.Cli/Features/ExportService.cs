@@ -1,4 +1,3 @@
-
 using System.IO.Abstractions;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -49,7 +48,8 @@ public partial class ExportService(
         var mainChaptersDirectoryPath = fileSystem.Path.Join(projectRootPath, ChaptersDirectoryName);
 
         if (!fileSystem.Directory.Exists(mainChaptersDirectoryPath))
-        {            logger.LogInformation("Main chapters directory {Path} does not exist, creating it",
+        {
+            logger.LogInformation("Main chapters directory {Path} does not exist, creating it",
                 mainChaptersDirectoryPath);
 
             fileSystem.Directory.CreateDirectory(mainChaptersDirectoryPath);
@@ -116,8 +116,8 @@ public partial class ExportService(
         var finalFiles = chapterFiles
                          .Where(f => fileSystem.Path.GetFileNameWithoutExtension(f)
                                                .EndsWith("_final", StringComparison.OrdinalIgnoreCase))
-                         .OrderByDescending(f =>
-                             fileSystem.FileInfo.New(f).LastWriteTimeUtc)                         .ToList();
+                         .OrderByDescending(f => fileSystem.FileInfo.New(f).LastWriteTimeUtc)
+                         .ToList();
 
         if (finalFiles.Any())
         {
@@ -141,8 +141,8 @@ public partial class ExportService(
                                              LastWriteTime = fileSystem.FileInfo.New(x.Path).LastWriteTimeUtc
                                          })
                                          .OrderByDescending(x => x.DraftNumber)
-                                         .ThenByDescending(x =>
-                                             x.LastWriteTime)                                         .ToList();
+                                         .ThenByDescending(x => x.LastWriteTime)
+                                         .ToList();
 
             if (draftFiles.Any())
             {
@@ -161,7 +161,8 @@ public partial class ExportService(
             storyContentBuilder.AppendLine();
             storyContentBuilder.AppendLine(chapterContent.Trim());
             storyContentBuilder.AppendLine();
-            storyContentBuilder.AppendLine("---");            storyContentBuilder.AppendLine();
+            storyContentBuilder.AppendLine("---");
+            storyContentBuilder.AppendLine();
         }
         else
         {

@@ -14,11 +14,12 @@ public static class ScribalInterfaceServiceCollectionExtensions
         services.AddSingleton<CommandService>();
         services.AddSingleton<InterfaceManager>();
         services.AddSingleton<PitchService>();
-        services.AddSingleton<OutlineService>(); // Added OutlineService
+        services.AddSingleton<OutlineService>();
         services.AddSingleton<ChapterManagerService>();
-        services.AddSingleton<ChapterDrafterService>(); // Added
-        services.AddSingleton<IChapterDeletionService, ChapterDeletionService>(); // Added
+        services.AddSingleton<ChapterDrafterService>();
+        services.AddSingleton<IChapterDeletionService, ChapterDeletionService>();
         services.AddSingleton<WorkspaceDeleter>();
         services.AddSingleton(AnsiConsole.Console);
+        services.AddSingleton<ConsoleChatRenderer>();
     }
 }

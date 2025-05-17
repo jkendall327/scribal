@@ -23,6 +23,7 @@ namespace Scribal.Cli.Features;
 public class OutlineService(
     IAiChatService chat,
     PromptRenderer renderer,
+    ConsoleChatRenderer consoleRenderer,
     Kernel kernel,
     IOptions<AiSettings> options,
     WorkspaceManager workspaceManager) // Injected WorkspaceManager
@@ -240,7 +241,7 @@ public class OutlineService(
 
         var task = chat.GetFullResponseWithExplicitHistoryAsync(cid, history, initialUserMessage, sid, ct);
 
-        await ConsoleChatRenderer.WaitWithSpinnerAsync(task, ct);
+        await consoleRenderer.WaitWithSpinnerAsync(task, ct);
 
         AnsiConsole.MarkupLine("[cyan]Initial Plot Outline Generated.[/]");
 
@@ -303,7 +304,7 @@ public class OutlineService(
                     ct);
 
                 // We need to collect the AI's response to update refinementHistory and lastAssistantResponse
-                await ConsoleChatRenderer.WaitWithSpinnerAsync(refinementStream, ct);
+                await consoleRenderer.WaitWithSpinnerAsync(refinementStream, ct);
 
                 lastAssistantResponse = refinementStream.Result.AssistantResponse;
 

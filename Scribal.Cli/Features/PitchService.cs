@@ -10,10 +10,6 @@ using Scribal.Context;
 using Scribal.Workspace;
 using Spectre.Console;
 
-// Required for ChatHistory
-// Required for ConsoleChatRenderer and ReadLine
-// Required for AnsiConsole
-
 namespace Scribal.Cli.Features;
 
 public class PitchService(
@@ -22,7 +18,8 @@ public class PitchService(
     Kernel kernel,
     IAnsiConsole console,
     IOptions<AiSettings> options,
-    WorkspaceManager workspaceManager)
+    WorkspaceManager workspaceManager,
+    ConsoleChatRenderer consoleChatRenderer) // AI: Added ConsoleChatRenderer
 {
     public async Task CreatePremiseFromPitch(string pitch, CancellationToken ct = default)
     {
@@ -109,7 +106,8 @@ public class PitchService(
         var premiseBuilder = new StringBuilder();
 
         // Stream the initial premise generation.
-        await ConsoleChatRenderer.StreamWithSpinnerAsync(CollectWhileStreaming(premiseStream, premiseBuilder, ct), ct);
+        // AI: Use injected ConsoleChatRenderer instance
+        await consoleChatRenderer.StreamWithSpinnerAsync(CollectWhileStreaming(premiseStream, premiseBuilder, ct), ct);
 
         var generatedPremise = premiseBuilder.ToString().Trim();
 
@@ -164,7 +162,8 @@ public class PitchService(
                     sid,
                     ct);
 
-                await ConsoleChatRenderer.StreamWithSpinnerAsync(refinementStream, ct);
+                // AI: Use injected ConsoleChatRenderer instance
+                await consoleChatRenderer.StreamWithSpinnerAsync(refinementStream, ct);
             }
             catch (OperationCanceledException)
             {

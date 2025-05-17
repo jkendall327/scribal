@@ -19,8 +19,10 @@ public class InterfaceManager(
     IGitService gitService,
     WorkspaceManager workspaceManager,
     IOptions<AiSettings> aiSettings,
-    RepoMapStore repoMapStore)
+    RepoMapStore repoMapStore,
+    ConsoleChatRenderer consoleChatRenderer) // AI: Added ConsoleChatRenderer
 {
+    private readonly ConsoleChatRenderer _consoleChatRenderer = consoleChatRenderer; // AI: Added ConsoleChatRenderer instance
     private readonly Guid _conversationId = Guid.NewGuid();
     private CancellationTokenSource _cts = new();
 
@@ -157,7 +159,8 @@ public class InterfaceManager(
                 aiSettings.Value.Primary.Provider,
                 _cts.Token);
 
-            await ConsoleChatRenderer.StreamWithSpinnerAsync(enumerable, _cts.Token);
+            // AI: Use injected ConsoleChatRenderer instance
+            await _consoleChatRenderer.StreamWithSpinnerAsync(enumerable, _cts.Token);
         }
         catch (OperationCanceledException)
         {

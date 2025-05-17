@@ -20,6 +20,7 @@ public class PitchService(
     IAiChatService chat,
     PromptRenderer renderer,
     Kernel kernel,
+    IAnsiConsole console,
     IOptions<AiSettings> options,
     WorkspaceManager workspaceManager)
 {
@@ -27,7 +28,7 @@ public class PitchService(
     {
         if (options.Value.Primary is null)
         {
-            AnsiConsole.MarkupLine("[red]No primary model is configured. Cannot generate premise.[/]");
+            console.MarkupLine("[red]No primary model is configured. Cannot generate premise.[/]");
 
             return;
         }
@@ -38,7 +39,7 @@ public class PitchService(
         var finalPremiseToSave = initialGeneratedPremise;
 
         // Refinement loop.
-        var okToRefine = await AnsiConsole.ConfirmAsync("Do you want to refine this premise?", cancellationToken: ct);
+        var okToRefine = await console.ConfirmAsync("Do you want to refine this premise?", cancellationToken: ct);
 
         if (okToRefine)
         {
@@ -56,7 +57,7 @@ public class PitchService(
             refinementHistory.AddSystemMessage(sb.ToString());
             refinementHistory.AddAssistantMessage(initialGeneratedPremise);
 
-            AnsiConsole.MarkupLine(
+            console.MarkupLine(
                 "Entering premise refinement chat. Type [blue]/done[/] when finished or [blue]/cancel[/] to abort.");
 
             var refinementCompletedSuccessfully = await RefinePremise(refinementCid, refinementHistory, sid, ct);
@@ -68,23 +69,23 @@ public class PitchService(
                 if (lastAssistantMessage?.Content is not null)
                 {
                     finalPremiseToSave = lastAssistantMessage.Content.Trim();
-                    AnsiConsole.MarkupLine("[green]Premise successfully refined.[/]");
+                    console.MarkupLine("[green]Premise successfully refined.[/]");
                 }
                 else
                 {
-                    AnsiConsole.MarkupLine(
+                    console.MarkupLine(
                         "[yellow]Refinement marked complete, but no refined premise found. Using initial premise.[/]");
                 }
             }
             else
             {
-                AnsiConsole.MarkupLine(
+                console.MarkupLine(
                     "[yellow]Premise refinement was cancelled or not completed. Using initial premise.[/]");
             }
         }
         else
         {
-            AnsiConsole.MarkupLine("[yellow]Initial premise accepted without refinement.[/]");
+            console.MarkupLine("[yellow]Initial premise accepted without refinement.[/]");
         }
 
         await UpdateWorkspaceAfterPremiseFinalizedAsync(finalPremiseToSave, ct);
@@ -101,7 +102,7 @@ public class PitchService(
         var history = new ChatHistory();
         history.AddSystemMessage(prompt);
 
-        AnsiConsole.MarkupLine("[yellow]Generating initial premise...[/]");
+        console.MarkupLine("[yellow]Generating initial premise...[/]");
 
         var premiseStream = chat.StreamWithExplicitHistoryAsync(cid, history, initialPitch, sid, ct);
 
@@ -112,8 +113,8 @@ public class PitchService(
 
         var generatedPremise = premiseBuilder.ToString().Trim();
 
-        AnsiConsole.MarkupLine("[cyan]Initial Premise Generated.[/]");
-        AnsiConsole.WriteLine();
+        console.MarkupLine("[cyan]Initial Premise Generated.[/]");
+        console.WriteLine();
 
         return generatedPremise;
     }
@@ -127,13 +128,13 @@ public class PitchService(
         {
             if (ct.IsCancellationRequested)
             {
-                AnsiConsole.MarkupLine("[yellow]Refinement cancelled by host.[/]");
+                console.MarkupLine("[yellow]Refinement cancelled by host.[/]");
 
                 return false;
             }
 
-            AnsiConsole.WriteLine();
-            AnsiConsole.Markup("[green]Refine Premise > [/]");
+            console.WriteLine();
+            console.Markup("[green]Refine Premise > [/]");
             var userInput = ReadLine.Read();
 
             if (string.IsNullOrWhiteSpace(userInput))
@@ -148,12 +149,12 @@ public class PitchService(
 
             if (userInput.Equals("/cancel", StringComparison.OrdinalIgnoreCase))
             {
-                AnsiConsole.MarkupLine("[yellow]Cancelling refinement...[/]");
+                console.MarkupLine("[yellow]Cancelling refinement...[/]");
 
                 return false;
             }
 
-            AnsiConsole.WriteLine();
+            console.WriteLine();
 
             try
             {
@@ -167,15 +168,15 @@ public class PitchService(
             }
             catch (OperationCanceledException)
             {
-                AnsiConsole.WriteLine();
-                AnsiConsole.MarkupLine("[yellow](Refinement stream cancelled)[/]");
+                console.WriteLine();
+                console.MarkupLine("[yellow](Refinement stream cancelled)[/]");
 
                 return false;
             }
             catch (Exception e)
             {
-                AnsiConsole.WriteException(e);
-                AnsiConsole.MarkupLine("[red]An error occurred during refinement.[/]");
+                console.WriteException(e);
+                console.MarkupLine("[red]An error occurred during refinement.[/]");
 
                 return false;
             }
@@ -186,7 +187,7 @@ public class PitchService(
     {
         if (!workspaceManager.InWorkspace)
         {
-            AnsiConsole.MarkupLine("[yellow]Not in a Scribal workspace. Premise not saved to workspace state.[/]");
+            console.MarkupLine("[yellow]Not in a Scribal workspace. Premise not saved to workspace state.[/]");
 
             return;
         }
@@ -195,7 +196,7 @@ public class PitchService(
 
         if (state is null)
         {
-            AnsiConsole.MarkupLine("[red]Could not load workspace state. Premise not saved.[/]");
+            console.MarkupLine("[red]Could not load workspace state. Premise not saved.[/]");
 
             return;
         }
@@ -203,7 +204,7 @@ public class PitchService(
         state.Premise = premise;
         state.PipelineStage = PipelineStageType.AwaitingOutline;
         await workspaceManager.SaveWorkspaceStateAsync(state, cancellationToken: ct);
-        AnsiConsole.MarkupLine("[green]Premise saved and pipeline stage updated to AwaitingOutline.[/]");
+        console.MarkupLine("[green]Premise saved and pipeline stage updated to AwaitingOutline.[/]");
     }
 
     // Helper to collect content while streaming for the initial premise

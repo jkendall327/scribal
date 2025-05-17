@@ -486,29 +486,25 @@ public class WorkspaceManager(
             // AI: Save the updated workspace state
             await SaveWorkspaceStateAsync(state, workspacePath, cancellationToken);
 
-            if (git.Enabled)
+            if (!git.Enabled)
             {
-                var commitMessage = $"Added new Chapter {ordinal}: {title}";
+                return true;
+            }
 
-                // AI: Commit both the new chapter file and the state file
-                // AI: GitService might need adjustment if it only takes one file path, or we commit twice.
-                // AI: For now, assume CreateCommitAsync can handle the new file, and state is implicitly part of a broader commit strategy or needs explicit handling.
-                // AI: Let's commit the chapter file first. The state file is trickier as it changes often.
-                // AI: A better approach might be to have a "CommitWorkspaceChanges" that stages state + new file.
-                // AI: For now, just commit the new chapter file. State will be committed by other operations or a dedicated commit all.
-                var chapterCommitSuccess = await git.CreateCommitAsync(draftFilePath, commitMessage, cancellationToken);
+            var commitMessage = $"Added new Chapter {ordinal}: {title}";
+            var stateFilePath = fileSystem.Path.Join(workspacePath, StateFileName);
+            var filesToCommit = new List<string> { draftFilePath, stateFilePath };
 
-                if (chapterCommitSuccess)
-                {
-                    logger.LogInformation("Successfully committed new chapter file {FilePath} to git", draftFilePath);
-                }
-                else
-                {
-                    logger.LogWarning("Failed to commit new chapter file {FilePath} to git", draftFilePath);
-                }
+            // AI: Use the new overload to commit both the chapter file and the state file
+            var commitSuccess = await git.CreateCommitAsync(filesToCommit, commitMessage, cancellationToken);
 
-                // AI: Consider committing workspace state file separately or as part of a larger operation.
-                // AI: For now, we'll rely on other mechanisms or manual commits for the state file.
+            if (commitSuccess)
+            {
+                logger.LogInformation("Successfully committed new chapter file ({ChapterFile}) and state file ({StateFile}) to git", draftFilePath, stateFilePath);
+            }
+            else
+            {
+                logger.LogWarning("Failed to commit new chapter file ({ChapterFile}) and/or state file ({StateFile}) to git", draftFilePath, stateFilePath);
             }
 
             return true;

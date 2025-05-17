@@ -17,7 +17,7 @@ public class ChapterManagerService(
     IChapterDeletionService chapterDeletionService,
     ChapterDrafterService chapterDrafterService,
     // AI: Added NewChapterCreatorService
-    NewChapterCreatorService newChapterCreatorService)
+    NewChapterCreator newChapterCreator)
 {
     public async Task ManageChaptersAsync(InvocationContext context)
     {
@@ -115,7 +115,7 @@ public class ChapterManagerService(
             if (choice == "[+] Create New Chapter")
             {
                 // AI: Call the NewChapterCreatorService
-                await newChapterCreatorService.CreateNewChapterAsync(token);
+                await newChapterCreator.CreateNewChapterAsync(token);
                 // AI: State will be reloaded at the start of the loop
                 continue;
             }

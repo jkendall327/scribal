@@ -15,14 +15,14 @@ using Spectre.Console;
 
 namespace Scribal.Cli.Features;
 
-public class NewChapterCreatorService(
+public class NewChapterCreator(
     IAnsiConsole console,
     WorkspaceManager workspaceManager,
     IAiChatService chat,
     PromptRenderer renderer,
     Kernel kernel,
     IOptions<AiSettings> options,
-    ILogger<NewChapterCreatorService> logger,
+    ILogger<NewChapterCreator> logger,
     ConsoleChatRenderer consoleChatRenderer,
     IUserInteraction userInteraction)
 {
@@ -61,6 +61,24 @@ public class NewChapterCreatorService(
             return;
         }
 
+        var initialContent = await GetInitialContent(title, ordinal, cancellationToken);
+
+        var success = await workspaceManager.AddNewChapterAsync(ordinal, title, initialContent, cancellationToken);
+
+        if (success)
+        {
+            console.MarkupLine($"[green]Successfully created new chapter: {ordinal}. {Markup.Escape(title)}[/]");
+            logger.LogInformation("Successfully created and saved new chapter {Ordinal}: {Title}", ordinal, title);
+        }
+        else
+        {
+            console.MarkupLine($"[red]Failed to create new chapter: {ordinal}. {Markup.Escape(title)}[/]");
+            logger.LogError("Failed to save new chapter {Ordinal}: {Title} via WorkspaceManager", ordinal, title);
+        }
+    }
+
+    private async Task<string> GetInitialContent(string title, int ordinal, CancellationToken cancellationToken)
+    {
         var initialContent = string.Empty;
 
         var provideDraftYourself =
@@ -72,11 +90,9 @@ public class NewChapterCreatorService(
                 "[yellow]Enter your initial draft content. Press Ctrl+D (Unix) or Ctrl+Z then Enter (Windows) on a new line when done.[/]");
 
             var sb = new StringBuilder();
-            string? line;
 
-            while
-                ((line = ReadLine.Read()) !=
-                 null) // ReadLine.Read() handles multi-line input better than console.Ask for this
+            // ReadLine.Read() handles multi-line input better than console.Ask for this
+            while (ReadLine.Read() is { } line)
             {
                 sb.AppendLine(line);
             }
@@ -95,17 +111,19 @@ public class NewChapterCreatorService(
 
                 initialContent = await GenerateAiDraftAsync(ordinal, title, summary, cancellationToken);
 
-                if (string.IsNullOrWhiteSpace(initialContent))
+                if (!string.IsNullOrWhiteSpace(initialContent))
                 {
-                    console.MarkupLine(
-                        "[yellow]AI draft generation was cancelled or resulted in empty content. Chapter will be created empty.[/]");
-
-                    logger.LogWarning(
-                        "AI draft generation for new chapter '{Title}' resulted in empty content or was cancelled",
-                        title);
-
-                    initialContent = string.Empty; // Ensure it's empty
+                    return initialContent;
                 }
+
+                console.MarkupLine(
+                    "[yellow]AI draft generation was cancelled or resulted in empty content. Chapter will be created empty.[/]");
+
+                logger.LogWarning(
+                    "AI draft generation for new chapter '{Title}' resulted in empty content or was cancelled",
+                    title);
+
+                initialContent = string.Empty; // Ensure it's empty
             }
             else
             {
@@ -114,18 +132,7 @@ public class NewChapterCreatorService(
             }
         }
 
-        var success = await workspaceManager.AddNewChapterAsync(ordinal, title, initialContent, cancellationToken);
-
-        if (success)
-        {
-            console.MarkupLine($"[green]Successfully created new chapter: {ordinal}. {Markup.Escape(title)}[/]");
-            logger.LogInformation("Successfully created and saved new chapter {Ordinal}: {Title}", ordinal, title);
-        }
-        else
-        {
-            console.MarkupLine($"[red]Failed to create new chapter: {ordinal}. {Markup.Escape(title)}[/]");
-            logger.LogError("Failed to save new chapter {Ordinal}: {Title} via WorkspaceManager", ordinal, title);
-        }
+        return initialContent;
     }
 
     private async Task<string> GenerateAiDraftAsync(int chapterNumber,

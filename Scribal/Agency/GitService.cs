@@ -14,6 +14,7 @@ public interface IGitService
     void CreateRepository(string path);
     Task<string> GetCurrentBranch();
     Task<bool> CreateCommitAsync(string filepath, string message, CancellationToken ct = default);
+    Task<bool> CreateCommitAsync(List<string> files, string message, CancellationToken ct = default);
     Task<bool> CreateCommitAllAsync(string message, CancellationToken ct = default);
     Task CreateGitIgnore(string gitignore);
 }

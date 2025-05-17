@@ -19,8 +19,7 @@ public class PitchService(
     IAnsiConsole console,
     IOptions<AiSettings> options,
     WorkspaceManager workspaceManager,
-    ConsoleChatRenderer consoleChatRenderer) // AI: Added ConsoleChatRenderer
-{
+    ConsoleChatRenderer consoleChatRenderer){
     public async Task CreatePremiseFromPitch(string pitch, CancellationToken ct = default)
     {
         if (options.Value.Primary is null)
@@ -107,9 +106,7 @@ public class PitchService(
 
         var premiseBuilder = new StringBuilder();
 
-        // Stream the initial premise generation.
-        // AI: Use injected ConsoleChatRenderer instance
-        await consoleChatRenderer.StreamWithSpinnerAsync(CollectWhileStreaming(premiseStream, premiseBuilder, ct), ct);
+        // Stream the initial premise generation.        await consoleChatRenderer.StreamWithSpinnerAsync(CollectWhileStreaming(premiseStream, premiseBuilder, ct), ct);
 
         var generatedPremise = premiseBuilder.ToString().Trim();
 
@@ -160,10 +157,7 @@ public class PitchService(
             {
                 var request = new ChatRequest(userInput, refinementCid, sid);
 
-                var refinementStream = chat.StreamAsync(request, refinementHistory, ct);
-
-                // AI: Use injected ConsoleChatRenderer instance
-                await consoleChatRenderer.StreamWithSpinnerAsync(refinementStream, ct);
+                var refinementStream = chat.StreamAsync(request, refinementHistory, ct);                await consoleChatRenderer.StreamWithSpinnerAsync(refinementStream, ct);
             }
             catch (OperationCanceledException)
             {

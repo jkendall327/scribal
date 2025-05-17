@@ -25,11 +25,9 @@ public class ChapterDrafterService(
     WorkspaceManager workspaceManager,
     IGitService gitService,
     ILogger<ChapterDrafterService> logger,
-    ConsoleChatRenderer consoleChatRenderer) // AI: Added ConsoleChatRenderer
-{
+    ConsoleChatRenderer consoleChatRenderer){
     private readonly ConsoleChatRenderer
-        _consoleChatRenderer = consoleChatRenderer; // AI: Added ConsoleChatRenderer instance
-
+        _consoleChatRenderer = consoleChatRenderer;
     public async Task DraftChapterAsync(ChapterState chapter, CancellationToken cancellationToken = default)
     {
         logger.LogInformation("Starting draft for Chapter {ChapterNumber}: {ChapterTitle}",
@@ -147,10 +145,7 @@ public class ChapterDrafterService(
         var chatRequest = new ChatRequest(initialUserMessage, cid, sid);
 
         var draftStream = chat.StreamAsync(chatRequest, history, ct);
-        var draftBuilder = new StringBuilder();
-
-        // AI: Use injected ConsoleChatRenderer instance
-        await _consoleChatRenderer.StreamWithSpinnerAsync(CollectWhileStreaming(draftStream, draftBuilder, ct), ct);
+        var draftBuilder = new StringBuilder();        await _consoleChatRenderer.StreamWithSpinnerAsync(CollectWhileStreaming(draftStream, draftBuilder, ct), ct);
 
         var generatedDraft = draftBuilder.ToString().Trim();
 
@@ -212,10 +207,7 @@ public class ChapterDrafterService(
 
                 var chatRequest = new ChatRequest(userInput, refinementCid, sid);
 
-                var refinementStream = chat.StreamAsync(chatRequest, refinementHistory, ct);
-
-                // AI: Use injected ConsoleChatRenderer instance
-                await _consoleChatRenderer.StreamWithSpinnerAsync(
+                var refinementStream = chat.StreamAsync(chatRequest, refinementHistory, ct);                await _consoleChatRenderer.StreamWithSpinnerAsync(
                     CollectWhileStreaming(refinementStream, responseBuilder, ct),
                     ct);
 

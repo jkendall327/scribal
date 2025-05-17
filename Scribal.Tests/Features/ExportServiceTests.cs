@@ -8,12 +8,6 @@ using Scribal.Cli.Features;
 using Scribal.Config;
 using Scribal.Workspace;
 using Spectre.Console;
-
-// AI: Added for DateTime
-// AI: Added for CancellationToken
-
-// AI: Added for Task
-
 namespace Scribal.Tests.Features;
 
 public class ExportServiceTests
@@ -39,8 +33,8 @@ public class ExportServiceTests
 
         _sut = new(_fileSystem, workspaceManager, _console, NullLogger<ExportService>.Instance);
 
-        // AI: Set current directory and ensure .scribal dir for most tests
-        // AI: Specific tests (like NotInWorkspace) might override this.
+        // Set current directory and ensure .scribal dir for most tests
+        // Specific tests (like NotInWorkspace) might override this.
         _fileSystem.Directory.SetCurrentDirectory(TestProjectRootDir);
         _fileSystem.AddDirectory(TestScribalDir);
     }
@@ -56,8 +50,7 @@ public class ExportServiceTests
     {
         var chapterDirName = $"chapter_{chapterNumber:D2}";
         var chapterDirPath = _fileSystem.Path.Join(TestChaptersDir, chapterDirName);
-        _fileSystem.AddDirectory(chapterDirPath); // AI: Ensure chapter directory exists
-
+        _fileSystem.AddDirectory(chapterDirPath);
         var filePath = _fileSystem.Path.Join(chapterDirPath, fileName);
         var fileData = new MockFileData(content);
 
@@ -97,8 +90,7 @@ public class ExportServiceTests
 
         SetupWorkspaceState(state);
 
-        _fileSystem.AddDirectory(TestChaptersDir); // AI: Ensure main chapters directory exists
-        AddChapterFile(1, "chapter_01_final.md", "Content for chapter 1.");
+        _fileSystem.AddDirectory(TestChaptersDir);        AddChapterFile(1, "chapter_01_final.md", "Content for chapter 1.");
         AddChapterFile(2, "chapter_02_final.md", "Content for chapter 2.");
 
         // Act
@@ -126,22 +118,19 @@ public class ExportServiceTests
                     Title = "Chapter One",
                     State = ChapterStateType.Draft,
                     Summary = "Summary 1"
-                }, // AI: Has final and draft
-                new ChapterState
+                },                new ChapterState
                 {
                     Number = 2,
                     Title = "Chapter Two",
                     State = ChapterStateType.Draft,
                     Summary = "Summary 2"
-                }, // AI: Has only drafts, latest number wins
-                new ChapterState
+                },                new ChapterState
                 {
                     Number = 3,
                     Title = "Chapter Three",
                     State = ChapterStateType.Draft,
                     Summary = "Summary 3"
-                } // AI: Has drafts, higher number wins over newer time
-            ],
+                }            ],
             PipelineStage = PipelineStageType.DraftingChapters
         };
 
@@ -149,27 +138,15 @@ public class ExportServiceTests
         _fileSystem.AddDirectory(TestChaptersDir);
 
         var time1 = new DateTime(2023, 1, 1, 10, 0, 0, DateTimeKind.Utc);
-        var time2 = new DateTime(2023, 1, 1, 12, 0, 0, DateTimeKind.Utc);
-
-        // AI: Chapter 1: final should be chosen
-        AddChapterFile(1, "chapter_01_draft1.md", "Content for chapter 1 draft 1.");
-        AddChapterFile(1, "chapter_01_final.md", "Final content for chapter 1.");
-
-        // AI: Chapter 2: latest draft (draft2) should be chosen by number
-        AddChapterFile(2,
+        var time2 = new DateTime(2023, 1, 1, 12, 0, 0, DateTimeKind.Utc);        AddChapterFile(1, "chapter_01_draft1.md", "Content for chapter 1 draft 1.");
+        AddChapterFile(1, "chapter_01_final.md", "Final content for chapter 1.");        AddChapterFile(2,
             "chapter_02_draft1.md",
             "Content for chapter 2 draft 1.",
-            time2); // AI: Newer time, but lower draft number
-
+            time2);
         AddChapterFile(2,
             "chapter_02_draft2.md",
             "Content for chapter 2 draft 2.",
-            time1); // AI: Older time, but higher draft number
-
-        // AI: Chapter 3: draft3 (higher number) should be chosen over draft2 (newer time but lower number)
-        AddChapterFile(3, "chapter_03_draft3.md", "Content for chapter 3 draft 3.", time1); // AI: Draft 3, older
-        AddChapterFile(3, "chapter_03_draft2.md", "Content for chapter 3 draft 2.", time2); // AI: Draft 2, newer
-
+            time1);        AddChapterFile(3, "chapter_03_draft3.md", "Content for chapter 3 draft 3.", time1);        AddChapterFile(3, "chapter_03_draft2.md", "Content for chapter 3 draft 2.", time2);
         // Act
         await _sut.ExportStoryAsync(null, CancellationToken.None);
 
@@ -206,18 +183,15 @@ public class ExportServiceTests
         var time1 = new DateTime(2023, 1, 1, 10, 0, 0, DateTimeKind.Utc);
         var time2 = new DateTime(2023, 1, 1, 12, 0, 0, DateTimeKind.Utc);
 
-        AddChapterFile(1, "some_old_final.md", "This is the older final content.", time1); // AI: Ends with _final
-
+        AddChapterFile(1, "some_old_final.md", "This is the older final content.", time1);
         AddChapterFile(1,
             "this_is_the_actual_final.md",
             "This is the newer final content.",
-            time2); // AI: Ends with _final, newer
-
+            time2);
         AddChapterFile(1,
             "not_really_a_final_file.md",
             "This is a draft that should be ignored.",
-            time1); // AI: Name doesn't end with _final
-
+            time1);
         // Act
         await _sut.ExportStoryAsync(null, CancellationToken.None);
 
@@ -245,22 +219,19 @@ public class ExportServiceTests
                     Title = "Chapter One",
                     State = ChapterStateType.Done,
                     Summary = "Summary 1"
-                }, // AI: Content exists
-                new ChapterState
+                },                new ChapterState
                 {
                     Number = 2,
                     Title = "Chapter Two",
                     State = ChapterStateType.Unstarted,
                     Summary = "Summary 2"
-                }, // AI: No files in directory
-                new ChapterState
+                },                new ChapterState
                 {
                     Number = 3,
                     Title = "Chapter Three",
                     State = ChapterStateType.Unstarted,
                     Summary = "Summary 3"
-                } // AI: Directory does not exist
-            ],
+                }            ],
             PipelineStage = PipelineStageType.DraftingChapters
         };
 
@@ -270,10 +241,7 @@ public class ExportServiceTests
         AddChapterFile(1, "chapter_01_final.md", "Content for chapter 1.");
 
         var chapter2DirPath = _fileSystem.Path.Join(TestChaptersDir, "chapter_02");
-        _fileSystem.AddDirectory(chapter2DirPath); // AI: For chapter 2, create directory but no files
-
-        // AI: For chapter 3, its directory ("chapter_03") is not created.
-
+        _fileSystem.AddDirectory(chapter2DirPath);
         // Act
         await _sut.ExportStoryAsync(null, CancellationToken.None);
 
@@ -291,8 +259,7 @@ public class ExportServiceTests
         // Arrange
         var state = new WorkspaceState
         {
-            Chapters = [], // AI: No chapters
-            PipelineStage = PipelineStageType.DraftingChapters
+            Chapters = [],            PipelineStage = PipelineStageType.DraftingChapters
         };
 
         SetupWorkspaceState(state);
@@ -312,10 +279,9 @@ public class ExportServiceTests
     public async Task ExportStoryAsync_NullWorkspaceState_LogsAndReturnsWithoutExporting()
     {
         // Arrange
-        // AI: Simulate LoadWorkspaceStateAsync returning null by providing a corrupt state file.
+        // Simulate LoadWorkspaceStateAsync returning null by providing a corrupt state file.
         var stateFilePath = _fileSystem.Path.Join(TestScribalDir, "state.json");
-        _fileSystem.AddFile(stateFilePath, new("invalid json")); // AI: Corrupt state file
-
+        _fileSystem.AddFile(stateFilePath, new("invalid json"));
         _fileSystem.AddDirectory(TestChaptersDir);
 
         // Act
@@ -395,32 +361,21 @@ public class ExportServiceTests
 
         // Assert
         var exportedFilePath = _fileSystem.Path.Join(TestChaptersDir, expectedOutputFileNameWithExt);
-        Assert.True(_fileSystem.FileExists(exportedFilePath), $"Exported file not found at {exportedFilePath}");
-
-        // AI: Content verification is done in other tests, here we focus on filename.
-    }
+        Assert.True(_fileSystem.FileExists(exportedFilePath), $"Exported file not found at {exportedFilePath}");    }
 
     [Fact]
     public async Task ExportStoryAsync_NotInWorkspace_ThrowsInvalidOperationException()
     {
         // Arrange
-        // AI: Ensure a clean file system state for this test to correctly simulate "not in workspace"
-        var localFileSystem = new MockFileSystem(); // AI: Use a local, clean file system
-        localFileSystem.Directory.SetCurrentDirectory(TestProjectRootDir); // AI: Set CWD, but no .scribal dir
-
-        var localWorkspaceManager = new WorkspaceManager(localFileSystem, // AI: Use the clean file system
-            Substitute.For<IGitService>(),
+        // Ensure a clean file system state for this test to correctly simulate "not in workspace"
+        var localFileSystem = new MockFileSystem();        localFileSystem.Directory.SetCurrentDirectory(TestProjectRootDir);
+        var localWorkspaceManager = new WorkspaceManager(localFileSystem,            Substitute.For<IGitService>(),
             Substitute.For<IUserInteraction>(),
             Options.Create(new AppConfig()),
             NullLogger<WorkspaceManager>.Instance);
 
-        var sutNotInWorkspace = new ExportService(localFileSystem, // AI: Use the clean file system
-            localWorkspaceManager, // AI: Use WorkspaceManager configured with the clean FS
-            Substitute.For<IAnsiConsole>(),
+        var sutNotInWorkspace = new ExportService(localFileSystem,            localWorkspaceManager,            Substitute.For<IAnsiConsole>(),
             NullLogger<ExportService>.Instance);
-
-        // AI: localWorkspaceManager.InWorkspace should now be false
-
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             sutNotInWorkspace.ExportStoryAsync(null, CancellationToken.None));

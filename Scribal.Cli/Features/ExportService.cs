@@ -1,4 +1,3 @@
-// AI: This file was newly created to handle story export functionality
 
 using System.IO.Abstractions;
 using System.Text;
@@ -50,9 +49,7 @@ public partial class ExportService(
         var mainChaptersDirectoryPath = fileSystem.Path.Join(projectRootPath, ChaptersDirectoryName);
 
         if (!fileSystem.Directory.Exists(mainChaptersDirectoryPath))
-        {
-            // AI: Ensure the main chapters directory exists, though it should if chapters were managed
-            logger.LogInformation("Main chapters directory {Path} does not exist, creating it",
+        {            logger.LogInformation("Main chapters directory {Path} does not exist, creating it",
                 mainChaptersDirectoryPath);
 
             fileSystem.Directory.CreateDirectory(mainChaptersDirectoryPath);
@@ -115,13 +112,12 @@ public partial class ExportService(
         var chapterFiles = fileSystem.Directory.GetFiles(chapterSpecificDirectoryPath, "*.md");
         string? latestDraftPath = null;
 
-        // AI: Prioritize final files
+        // Prioritize final files
         var finalFiles = chapterFiles
                          .Where(f => fileSystem.Path.GetFileNameWithoutExtension(f)
                                                .EndsWith("_final", StringComparison.OrdinalIgnoreCase))
                          .OrderByDescending(f =>
-                             fileSystem.FileInfo.New(f).LastWriteTimeUtc) // AI: Or by name if preferred
-                         .ToList();
+                             fileSystem.FileInfo.New(f).LastWriteTimeUtc)                         .ToList();
 
         if (finalFiles.Any())
         {
@@ -130,7 +126,7 @@ public partial class ExportService(
         }
         else
         {
-            // AI: If no final file, look for the highest numbered draft
+            // If no final file, look for the highest numbered draft
             var draftFiles = chapterFiles.Select(f => new
                                          {
                                              Path = f,
@@ -146,8 +142,7 @@ public partial class ExportService(
                                          })
                                          .OrderByDescending(x => x.DraftNumber)
                                          .ThenByDescending(x =>
-                                             x.LastWriteTime) // AI: Secondary sort by time for same draft number
-                                         .ToList();
+                                             x.LastWriteTime)                                         .ToList();
 
             if (draftFiles.Any())
             {
@@ -166,8 +161,7 @@ public partial class ExportService(
             storyContentBuilder.AppendLine();
             storyContentBuilder.AppendLine(chapterContent.Trim());
             storyContentBuilder.AppendLine();
-            storyContentBuilder.AppendLine("---"); // AI: Separator between chapters
-            storyContentBuilder.AppendLine();
+            storyContentBuilder.AppendLine("---");            storyContentBuilder.AppendLine();
         }
         else
         {

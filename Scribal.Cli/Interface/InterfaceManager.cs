@@ -20,11 +20,9 @@ public class InterfaceManager(
     WorkspaceManager workspaceManager,
     IOptions<AiSettings> aiSettings,
     RepoMapStore repoMapStore,
-    ConsoleChatRenderer consoleChatRenderer) // AI: Added ConsoleChatRenderer
-{
+    ConsoleChatRenderer consoleChatRenderer){
     private readonly ConsoleChatRenderer
-        _consoleChatRenderer = consoleChatRenderer; // AI: Added ConsoleChatRenderer instance
-
+        _consoleChatRenderer = consoleChatRenderer;
     private readonly Guid _conversationId = Guid.NewGuid();
     private CancellationTokenSource _cts = new();
 
@@ -160,10 +158,7 @@ public class InterfaceManager(
 
             var chatRequest = new ChatRequest(userInput, _conversationId.ToString(), sid);
 
-            var enumerable = aiChatService.StreamAsync(chatRequest, null, _cts.Token);
-
-            // AI: Use injected ConsoleChatRenderer instance
-            await _consoleChatRenderer.StreamWithSpinnerAsync(enumerable, _cts.Token);
+            var enumerable = aiChatService.StreamAsync(chatRequest, null, _cts.Token);            await _consoleChatRenderer.StreamWithSpinnerAsync(enumerable, _cts.Token);
         }
         catch (OperationCanceledException)
         {

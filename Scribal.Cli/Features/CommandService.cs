@@ -22,8 +22,7 @@ public class CommandService(
     WorkspaceManager workspaceManager,
     ChapterManagerService chapterManagerService,
     IGitService gitService,
-    ExportService exportService) // AI: Added ExportService
-{
+    ExportService exportService){
     private readonly Argument<string> _ideaArgument = new()
     {
         Name = "Idea",
@@ -94,8 +93,7 @@ public class CommandService(
             chaptersCmd,
             deleteWorkspaceCmd,
             commitCmd,
-            exportCmd, // AI: Added export command
-            tree,
+            exportCmd,            tree,
             quit
         };
 
@@ -134,7 +132,7 @@ public class CommandService(
             AnsiConsole.MarkupLine("Starting export...");
             await exportService.ExportStoryAsync(outputFileName, token);
 
-            // AI: Success/failure messages are handled within ExportService
+            // TODO: Success/failure messages are handled within ExportService
         }
         catch (OperationCanceledException)
         {

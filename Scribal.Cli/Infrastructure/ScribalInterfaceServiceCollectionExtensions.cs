@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
-using Scribal.Cli.Features;
+using Scribal.Cli.Features; // AI: Ensures ChapterSplitterService from this namespace is found
 using Scribal.Cli.Interface;
-using Scribal.Workspace;
+using Scribal.Workspace; // AI: Still needed for WorkspaceManager and other services
 using Spectre.Console;
 
 namespace Scribal.Cli.Infrastructure;
@@ -19,6 +19,7 @@ public static class ScribalInterfaceServiceCollectionExtensions
         services.AddSingleton<ChapterDrafterService>();
         services.AddSingleton<NewChapterCreator>();
         services.AddSingleton<IChapterDeletionService, ChapterDeletionService>();
+        services.AddSingleton<IChapterSplitterService, ChapterSplitterService>(); // AI: Added ChapterSplitterService registration
         services.AddSingleton<WorkspaceDeleter>();
         services.AddSingleton<ExportService>();
         services.AddSingleton(AnsiConsole.Console);

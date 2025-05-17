@@ -17,7 +17,8 @@ public class ChapterManagerService(
     ILogger<ChapterManagerService> logger,
     IChapterDeletionService chapterDeletionService,
     ChapterDrafterService chapterDrafterService,
-    NewChapterCreator newChapterCreator)
+    NewChapterCreator newChapterCreator,
+    IChapterSplitterService chapterSplitterService) // AI: Added IChapterSplitterService
 {
     public async Task ManageChaptersAsync(InvocationContext context)
     {
@@ -183,12 +184,18 @@ public class ChapterManagerService(
             // If it's cancelled by /back from within the refinement loop of drafting, linkedCts will be cancelled.
         });
 
+        var splitCmd = new Command("/split", "Split this chapter into two.");
+        // AI: Updated handler to call the chapterSplitterService directly
+        splitCmd.SetHandler(async () => { await SplitChapterAsync(chapter, linkedCts); });
+
+
         var chapterRootCommand =
             new RootCommand($"Actions for Chapter {chapter.Number}: {Markup.Escape(chapter.Title)}")
             {
                 dummyCmd,
-                draftCmd, // Added draft command
+                draftCmd, 
                 deleteCmd,
+                splitCmd, // AI: Added split command
                 backCmd
             };
 
@@ -318,6 +325,28 @@ public class ChapterManagerService(
             {
                 ExceptionDisplay.DisplayException(deletionResult.Exception);
             }
+        }
+    }
+
+    // AI: This method now directly calls the service, which handles user input.
+    private async Task SplitChapterAsync(ChapterState sourceChapter, CancellationTokenSource subMenuCts)
+    {
+        logger.LogInformation("Handing off to ChapterSplitterService for chapter {ChapterNumber}: {ChapterTitle}",
+            sourceChapter.Number, sourceChapter.Title);
+
+        var success = await chapterSplitterService.SplitChapterAsync(sourceChapter, subMenuCts.Token);
+
+        if (success)
+        {
+            AnsiConsole.MarkupLine($"[bold green]Chapter split operation completed successfully for {Markup.Escape(sourceChapter.Title)}. Returning to chapter list.[/]");
+            logger.LogInformation("Successfully completed split operation for chapter {SourceChapterNumber} via service.", sourceChapter.Number);
+            await subMenuCts.CancelAsync(); // AI: Exit sub-menu on success
+        }
+        else
+        {
+            AnsiConsole.MarkupLine("[bold red]Chapter split operation failed or was cancelled. Check logs for details.[/]");
+            logger.LogWarning("Chapter split operation failed or was cancelled for chapter {SourceChapterNumber} via service.", sourceChapter.Number);
+            // AI: Remain in the sub-menu if split fails or is cancelled by user within the service
         }
     }
 

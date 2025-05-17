@@ -13,7 +13,7 @@ public class Chapter
 
     [JsonPropertyName("Title")] public string Title { get; init; } = string.Empty;
 
-    [JsonPropertyName("Summary")] public string Summary { get; init; } = string.Empty;
+    [JsonPropertyName("Summary")] public string Summary { get; set; } = string.Empty;
 
     [JsonPropertyName("Beats")] public List<string> Beats { get; } = [];
 

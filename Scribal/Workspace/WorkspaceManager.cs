@@ -1,4 +1,5 @@
 using System.IO.Abstractions;
+using System.Linq; // AI: Added for LINQ operations
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
@@ -532,5 +533,169 @@ public class WorkspaceManager(
         _workspace = null;
 
         return Task.CompletedTask;
+    }
+
+    public async Task<bool> InsertSplitChapterAsync(
+        int sourceChapterNumber,
+        string updatedSourceChapterSummary,
+        int newChapterOrdinal,
+        string newChapterTitle,
+        string newChapterSummary,
+        CancellationToken cancellationToken)
+    {
+        var workspacePath = CurrentWorkspacePath;
+        if (string.IsNullOrEmpty(workspacePath))
+        {
+            logger.LogError("Cannot split chapter, workspace directory not found or not initialized");
+            return false;
+        }
+
+        var state = await LoadWorkspaceStateAsync(workspacePath, cancellationToken);
+        if (state is null)
+        {
+            logger.LogError("Failed to load workspace state. Cannot split chapter");
+            return false;
+        }
+
+        var plotOutline = await LoadPlotOutlineAsync(cancellationToken) ?? new StoryOutline();
+
+        // AI: Update source chapter's summary in WorkspaceState
+        var sourceChapterInState = state.Chapters.FirstOrDefault(c => c.Number == sourceChapterNumber);
+        if (sourceChapterInState is null)
+        {
+            logger.LogError("Source chapter {SourceChapterNumber} not found in workspace state. Cannot split.", sourceChapterNumber);
+            return false;
+        }
+        sourceChapterInState.Summary = updatedSourceChapterSummary;
+        logger.LogInformation("Updated summary for source chapter {SourceChapterNumber} in WorkspaceState", sourceChapterNumber);
+
+        // AI: Update source chapter's summary in StoryOutline
+        var sourceChapterInOutline = plotOutline.Chapters.FirstOrDefault(c => c.ChapterNumber == sourceChapterNumber);
+        if (sourceChapterInOutline is null)
+        {
+            logger.LogWarning("Source chapter {SourceChapterNumber} not found in plot outline. Summary update in outline skipped.", sourceChapterNumber);
+        }
+        else
+        {
+            sourceChapterInOutline.Summary = updatedSourceChapterSummary;
+            logger.LogInformation("Updated summary for source chapter {SourceChapterNumber} in StoryOutline", sourceChapterNumber);
+        }
+
+        // AI: Adjust ordinals for chapters in WorkspaceState that will be shifted
+        foreach (var chapter in state.Chapters.Where(c => c.Number >= newChapterOrdinal).ToList()) // AI: Added ToList() to avoid modification during iteration issues
+        {
+            chapter.Number++;
+        }
+
+        // AI: Adjust ordinals for chapters in StoryOutline that will be shifted
+        foreach (var chapter in plotOutline.Chapters.Where(c => c.ChapterNumber >= newChapterOrdinal).ToList()) // AI: Added ToList() to avoid modification during iteration issues
+        {
+            chapter.ChapterNumber++;
+        }
+
+        // AI: Create new chapter state
+        var newChapterState = new ChapterState
+        {
+            Number = newChapterOrdinal,
+            Title = newChapterTitle,
+            Summary = newChapterSummary,
+            State = ChapterStateType.Unstarted
+        };
+        state.Chapters.Add(newChapterState);
+        state.Chapters = state.Chapters.OrderBy(c => c.Number).ToList();
+        logger.LogInformation("Added new chapter {NewChapterOrdinal}: {NewChapterTitle} to WorkspaceState", newChapterOrdinal, newChapterTitle);
+
+        // AI: Create new chapter for plot outline
+        var newChapterForOutline = new Chapter
+        {
+            ChapterNumber = newChapterOrdinal,
+            Title = newChapterTitle,
+            Summary = newChapterSummary,
+        };
+        plotOutline.Chapters.Add(newChapterForOutline);
+        plotOutline.Chapters = plotOutline.Chapters.OrderBy(c => c.ChapterNumber).ToList();
+        logger.LogInformation("Added new chapter {NewChapterOrdinal}: {NewChapterTitle} to StoryOutline", newChapterOrdinal, newChapterTitle);
+
+        var projectRootPath = fileSystem.DirectoryInfo.New(workspacePath).Parent?.FullName;
+        if (string.IsNullOrWhiteSpace(projectRootPath))
+        {
+            logger.LogError("Could not determine project root path to create directory for new chapter {NewChapterOrdinal}: {NewChapterTitle}", newChapterOrdinal, newChapterTitle);
+            return false;
+        }
+
+        var mainChaptersDirectoryPath = fileSystem.Path.Combine(projectRootPath, "chapters");
+        var newChapterDirectoryName = $"chapter_{newChapterOrdinal:D2}";
+        var newChapterSpecificDirectoryPath = fileSystem.Path.Combine(mainChaptersDirectoryPath, newChapterDirectoryName);
+
+        try
+        {
+            if (!fileSystem.Directory.Exists(mainChaptersDirectoryPath))
+            {
+                logger.LogInformation("Main chapters directory does not exist. Creating it at {MainChaptersDirectoryPath}", mainChaptersDirectoryPath);
+                fileSystem.Directory.CreateDirectory(mainChaptersDirectoryPath);
+            }
+
+            // AI: Rename directories for chapters that were shifted *down* by the new chapter insertion.
+            // AI: Iterate from highest number downwards to avoid overwriting.
+            var chaptersToRenameDirsFor = state.Chapters
+                .Where(c => c.Number > newChapterOrdinal) // AI: Only chapters whose numbers actually changed and are *after* the new one
+                .OrderByDescending(c => c.Number)
+                .ToList();
+
+            foreach (var chapToRename in chaptersToRenameDirsFor)
+            {
+                // AI: The directory number *before* it was incremented due to the new chapter insertion.
+                var oldChapterDirNumber = chapToRename.Number - 1;
+                var oldChapterDirName = $"chapter_{oldChapterDirNumber:D2}";
+                var oldChapterDirPath = fileSystem.Path.Combine(mainChaptersDirectoryPath, oldChapterDirName);
+
+                // AI: The directory name corresponding to its *new* (incremented) number.
+                var newChapterDirNameForRename = $"chapter_{chapToRename.Number:D2}";
+                var newChapterDirPathForRename = fileSystem.Path.Combine(mainChaptersDirectoryPath, newChapterDirNameForRename);
+
+                if (fileSystem.Directory.Exists(oldChapterDirPath) && oldChapterDirPath != newChapterDirPathForRename)
+                {
+                    logger.LogInformation("Renaming chapter directory from {OldPath} to {NewPath} due to ordinal shift", oldChapterDirPath, newChapterDirPathForRename);
+                    fileSystem.Directory.Move(oldChapterDirPath, newChapterDirPathForRename);
+                }
+            }
+
+            // AI: Create the directory for the new chapter itself.
+            if (!fileSystem.Directory.Exists(newChapterSpecificDirectoryPath))
+            {
+                logger.LogInformation("Creating new chapter directory at {ChapterSpecificDirectoryPath}", newChapterSpecificDirectoryPath);
+                fileSystem.Directory.CreateDirectory(newChapterSpecificDirectoryPath);
+            }
+
+            var outlineJson = JsonSerializer.Serialize(plotOutline, JsonDefaults.Context.StoryOutline);
+            var plotOutlineFilePath = fileSystem.Path.Join(workspacePath, PlotOutlineFileName);
+            await fileSystem.File.WriteAllTextAsync(plotOutlineFilePath, outlineJson, cancellationToken);
+            logger.LogInformation("Plot outline saved to {PlotOutlineFilePath}", plotOutlineFilePath);
+
+            await SaveWorkspaceStateAsync(state, workspacePath, cancellationToken);
+
+            if (git.Enabled)
+            {
+                var commitMessage = $"Split chapter {sourceChapterNumber}, created new chapter {newChapterOrdinal}: {newChapterTitle}";
+                // AI: Using CommitAllAsync to capture directory renames and creations along with file changes.
+                var commitSuccess = await git.CreateCommitAllAsync(commitMessage, cancellationToken);
+
+                if (commitSuccess)
+                {
+                    logger.LogInformation("Successfully committed chapter split changes to git: {CommitMessage}", commitMessage);
+                }
+                else
+                {
+                    logger.LogWarning("Failed to commit chapter split changes to git: {CommitMessage}", commitMessage);
+                }
+            }
+            return true;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to finalize chapter split operation for new chapter {NewChapterOrdinal}: {NewChapterTitle}", newChapterOrdinal, newChapterTitle);
+            // AI: Consider rolling back state changes if filesystem operations fail. For now, logging the error.
+            return false;
+        }
     }
 }

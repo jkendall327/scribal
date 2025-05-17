@@ -5,8 +5,8 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{6432B1B3-0E67-4CE3-BBF4-756196C8FEE0}"
 	ProjectSection(SolutionItems) = preProject
 		README.md = README.md
-		plans.md = plans.md
-		checklist.md = checklist.md
+		docs\checklist.md = docs\checklist.md
+		docs\plans.md = docs\plans.md
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Scribal", "Scribal\Scribal.csproj", "{56F24F88-8033-47FB-B1AF-9C2900F7497C}"

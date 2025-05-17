@@ -9,7 +9,6 @@ using Scribal.Context;
 using ChatMessageContent = Microsoft.SemanticKernel.ChatMessageContent;
 
 #pragma warning disable SKEXP0001
-
 #pragma warning disable SKEXP0070
 
 namespace Scribal.AI;
@@ -34,7 +33,7 @@ public sealed class AiChatService(
     PromptBuilder prompts,
     IFileSystem fileSystem,
     TimeProvider time,
-    MetadataCollector metadataCollector) : IAiChatService // Added MetadataCollector
+    MetadataCollector metadataCollector) : IAiChatService
 {
     public async IAsyncEnumerable<ChatStreamItem> StreamAsync(string cid,
         string user,
@@ -44,9 +43,9 @@ public sealed class AiChatService(
         var start = time.GetTimestamp();
 
         var chat = kernel.GetRequiredService<IChatCompletionService>(sid);
-        
+
         // PrepareHistoryAsync adds the user message
-        var history = await PrepareHistoryAsync(cid, user, ct); 
+        var history = await PrepareHistoryAsync(cid, user, ct);
 
         var settings = GetSettings(sid);
 
@@ -54,16 +53,20 @@ public sealed class AiChatService(
         var stream = chat.GetStreamingChatMessageContentsAsync(history, settings, kernel, ct);
 
         var sb = new StringBuilder();
-        
-        await foreach (var chunk in stream)
+
+        var hunks = new List<StreamingChatMessageContent>();
+
+        await foreach (var fragment in stream)
         {
-            if (chunk.Content is not {Length: > 0} text)
+            hunks.Add(fragment);
+
+            if (fragment.Content is not {Length: > 0} text)
             {
                 continue;
             }
 
             var hunk = new ChatStreamItem.TokenChunk(text);
-                
+
             sb.Append(hunk.Content);
 
             yield return hunk;
@@ -71,10 +74,13 @@ public sealed class AiChatService(
 
         await UpdateChatHistoryWithAssistantMessage(cid, sb.ToString(), history, ct);
 
-        // Use the new MetadataCollector
-        // var metadata = metadataCollector.CollectMetadata(sid, start, final);
+        // We simply assume the last returned hunk is the one to contain token usage metadata.
+        var usage = hunks.Last().Metadata;
+        var fakeMessage = new ChatMessageContent(AuthorRole.Assistant, sb.ToString(), metadata: usage);
 
-        yield return new ChatStreamItem.Metadata(time.GetElapsedTime(start), 0, 0);
+        var metadata = metadataCollector.CollectMetadata(sid, start, fakeMessage);
+
+        yield return metadata;
     }
 
     public async IAsyncEnumerable<ChatStreamItem> StreamWithExplicitHistoryAsync(string conversationId,
@@ -107,7 +113,7 @@ public sealed class AiChatService(
 
         // Update the passed-in ChatHistory object with the assistant's full response
         var assistantMessageText = string.Concat(finalAssistantMessageContent).Trim();
-        history.AddAssistantMessage(assistantMessageText); // This modifies the 'history' instance
+        history.AddAssistantMessage(assistantMessageText);
 
         // Save the updated history
         await store.SaveAsync(conversationId, history, ct);
@@ -172,11 +178,11 @@ public sealed class AiChatService(
         ChatHistory history,
         CancellationToken ct)
     {
-        var assistant = string.Concat(final).Trim();
+        var assistant = final.Trim();
         history.AddAssistantMessage(assistant);
         await store.SaveAsync(cid, history, ct);
     }
-    
+
     private async Task<ChatHistory> PrepareHistoryAsync(string cid, string user, CancellationToken ct)
     {
         var history = await store.LoadAsync(cid, ct);

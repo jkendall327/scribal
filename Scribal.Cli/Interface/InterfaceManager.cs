@@ -99,7 +99,7 @@ public class InterfaceManager(
         if (parsed.Errors.Any())
         {
             AnsiConsole.MarkupLine("[red]There was an issue parsing that command, sorry.[/]");
-            AnsiConsole.MarkupLine("[yellow](hint: most commands require their arguments to be quoted)[/]");
+            AnsiConsole.MarkupLine("[yellow](hint: some commands require their arguments to be quoted)[/]");
             AnsiConsole.MarkupLine("[yellow](hint: for example, '/outline \"a sci-fi epic about a horse\"')[/]");
         }
         else

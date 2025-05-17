@@ -254,6 +254,9 @@ public class CommandService(
     private Task ClearCommand(InvocationContext ctx)
     {
         _ = conversationStore.TryClearConversation(string.Empty);
+        
+        AnsiConsole.Clear();
+        
         AnsiConsole.MarkupLine("[yellow]Conversation history cleared.[/]");
 
         return Task.FromResult(true);

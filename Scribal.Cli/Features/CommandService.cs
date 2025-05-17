@@ -56,7 +56,7 @@ public class CommandService(
     {
         var quit = Create("/quit", "Exit Scribal", QuitCommand, ["/exit"]);
         var clear = Create("/clear", "Clear conversation history", ClearCommand);
-        var tree = Create("/tree", "Set files to be included in context", TreeCommand);
+        var tree = Create("/add", "Set files to be included in context", TreeCommand);
         var init = Create("/init", "Creates a new Scribal workspace in the current folder", InitCommand);
 
         var pitch = Create("/pitch", "Turns an initial story idea into a fleshed-out premise", PitchCommand);
@@ -281,7 +281,7 @@ public class CommandService(
 
         var files = StickyTreeSelector.Scan(cwd);
 
-        // Add files, don't replace on multiple /tree invocations.
+        // Add files, don't replace on multiple /add invocations.
         foreach (var file in files)
         {
             // Don't care if duplicates failed to be added.

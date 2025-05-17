@@ -113,7 +113,7 @@ Scribal recursively scans the working directory for all Markdown files.
 
 It then provides the model with a high-level map of their names and place in the filesystem.
 
-Use the `/tree` command can select files to send to the model in full, if you know they are important.
+Use the `/add` command can select files to send to the model in full, if you know they are important.
 
 When in a free chat (i.e. not executing a `/command`), the model also has the ability to directly read files from the
 filesystem.

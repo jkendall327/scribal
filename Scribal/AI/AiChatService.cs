@@ -1,5 +1,6 @@
 using System.IO.Abstractions;
 using System.Runtime.CompilerServices;
+using System.Text;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.Google;
@@ -43,30 +44,37 @@ public sealed class AiChatService(
         var start = time.GetTimestamp();
 
         var chat = kernel.GetRequiredService<IChatCompletionService>(sid);
-        var history = await PrepareHistoryAsync(cid, user, ct); // PrepareHistoryAsync adds the user message
+        
+        // PrepareHistoryAsync adds the user message
+        var history = await PrepareHistoryAsync(cid, user, ct); 
 
         var settings = GetSettings(sid);
 
         // Stream response back for the UI.
         var stream = chat.GetStreamingChatMessageContentsAsync(history, settings, kernel, ct);
 
+        var sb = new StringBuilder();
+        
         await foreach (var chunk in stream)
         {
-            if (chunk.Content is {Length: > 0} text)
+            if (chunk.Content is not {Length: > 0} text)
             {
-                yield return new ChatStreamItem.TokenChunk(text);
+                continue;
             }
+
+            var hunk = new ChatStreamItem.TokenChunk(text);
+                
+            sb.Append(hunk.Content);
+
+            yield return hunk;
         }
 
-        // Collect the full assistant message from streamed chunks.
-        var final = await chat.GetChatMessageContentAsync(history, settings, kernel, ct);
-
-        await UpdateChatHistoryWithAssistantMessage(cid, final, history, ct);
+        await UpdateChatHistoryWithAssistantMessage(cid, sb.ToString(), history, ct);
 
         // Use the new MetadataCollector
-        var metadata = metadataCollector.CollectMetadata(sid, start, final);
+        // var metadata = metadataCollector.CollectMetadata(sid, start, final);
 
-        yield return metadata;
+        yield return new ChatStreamItem.Metadata(time.GetElapsedTime(start), 0, 0);
     }
 
     public async IAsyncEnumerable<ChatStreamItem> StreamWithExplicitHistoryAsync(string conversationId,
@@ -160,7 +168,7 @@ public sealed class AiChatService(
     }
 
     private async Task UpdateChatHistoryWithAssistantMessage(string cid,
-        ChatMessageContent final,
+        string final,
         ChatHistory history,
         CancellationToken ct)
     {
@@ -168,9 +176,7 @@ public sealed class AiChatService(
         history.AddAssistantMessage(assistant);
         await store.SaveAsync(cid, history, ct);
     }
-
-    // Removed CollectMetadata method from here
-
+    
     private async Task<ChatHistory> PrepareHistoryAsync(string cid, string user, CancellationToken ct)
     {
         var history = await store.LoadAsync(cid, ct);

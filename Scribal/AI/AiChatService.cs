@@ -1,4 +1,3 @@
-using System.ComponentModel.Design;
 using System.IO.Abstractions;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -101,7 +100,7 @@ public sealed class AiChatService(
         CancellationToken ct = default)
     {
         (var userMessage, var conversationId, var sid) = request;
-        
+
         var start = time.GetTimestamp();
         var chat = kernel.GetRequiredService<IChatCompletionService>(sid);
 

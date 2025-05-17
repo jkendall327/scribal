@@ -46,8 +46,8 @@ public class CommandService(
     };
 
     private readonly Option<string> _exportFileNameOption = new(
-        aliases: ["--output", "-o"],
-        description: "The name of the output Markdown file for export. Defaults to 'exported_story.md'.")
+        ["--output", "-o"],
+        "The name of the output Markdown file for export. Defaults to 'exported_story.md'.")
     {
         Arity = ArgumentArity.ZeroOrOne
     };
@@ -81,9 +81,7 @@ public class CommandService(
 
         var statusCmd = Create("/status", "Displays the current project status", StatusCommand);
 
-        var exportCmd = Create("/export",
-            "Exports all chapters into a single Markdown file",
-            ExportCommandAsync);
+        var exportCmd = Create("/export", "Exports all chapters into a single Markdown file", ExportCommandAsync);
         exportCmd.AddOption(_exportFileNameOption);
 
         var root = new RootCommand("Scribal interactive shell")
@@ -125,7 +123,9 @@ public class CommandService(
 
         if (!workspaceManager.InWorkspace)
         {
-            AnsiConsole.MarkupLine("[red]Cannot export: Not currently in a Scribal workspace. Use '/init' to create one.[/]");
+            AnsiConsole.MarkupLine(
+                "[red]Cannot export: Not currently in a Scribal workspace. Use '/init' to create one.[/]");
+
             return;
         }
 
@@ -133,6 +133,7 @@ public class CommandService(
         {
             AnsiConsole.MarkupLine("Starting export...");
             await exportService.ExportStoryAsync(outputFileName, token);
+
             // AI: Success/failure messages are handled within ExportService
         }
         catch (OperationCanceledException)

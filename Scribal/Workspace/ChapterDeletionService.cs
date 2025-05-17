@@ -203,9 +203,7 @@ public class ChapterDeletionService(
 
                 if (fileSystem.Directory.Exists(oldPath) && oldPath != newPath)
                 {
-                    logger.LogInformation("Renaming chapter directory from {OldPath} to {NewPath}",
-                        oldPath,
-                        newPath);
+                    logger.LogInformation("Renaming chapter directory from {OldPath} to {NewPath}", oldPath, newPath);
 
                     fileSystem.Directory.Move(oldPath, newPath);
                     result.ActionsTaken.Add($"Renamed directory: {oldDirName} -> {newDirName}");

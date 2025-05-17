@@ -131,7 +131,8 @@ public partial class DiffEditor(IFileSystem fileSystem, IOptions<AppConfig> opti
             switch (operation)
             {
                 // Context line
-                case ' ' when currentPositionInFile >= fileContent.Count || fileContent[currentPositionInFile] != lineData:
+                case ' ' when currentPositionInFile >= fileContent.Count ||
+                              fileContent[currentPositionInFile] != lineData:
                 {
                     throw new InvalidOperationException(
                         $"Context mismatch at line {currentPositionInFile + 1}. Expected: '{lineData}', Actual: '{(currentPositionInFile < fileContent.Count
@@ -140,11 +141,14 @@ public partial class DiffEditor(IFileSystem fileSystem, IOptions<AppConfig> opti
                 }
                 case ' ':
                 {
-                    currentPositionInFile++; break;
+                    currentPositionInFile++;
+
+                    break;
                 }
 
                 // Deletion line
-                case '-' when currentPositionInFile >= fileContent.Count || fileContent[currentPositionInFile] != lineData:
+                case '-' when currentPositionInFile >= fileContent.Count ||
+                              fileContent[currentPositionInFile] != lineData:
                 {
                     throw new InvalidOperationException(
                         $"Deletion mismatch at line {currentPositionInFile + 1}. Expected to delete: '{lineData}', Actual: '{(currentPositionInFile < fileContent.Count
@@ -155,7 +159,9 @@ public partial class DiffEditor(IFileSystem fileSystem, IOptions<AppConfig> opti
                 // Do not increment currentPositionInFile, as the next line shifts up.
                 case '-':
                 {
-                    fileContent.RemoveAt(currentPositionInFile); break;
+                    fileContent.RemoveAt(currentPositionInFile);
+
+                    break;
                 }
 
                 // Addition line

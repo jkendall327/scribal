@@ -53,8 +53,7 @@ public class WorkspaceDeleter(
                 var commitMessage = "Deleted .scribal workspace";
                 logger.LogInformation("Attempting to commit deletion of workspace: {WorkspacePath}", workspacePath);
 
-                var commitSuccess =
-                    await gitService.CreateCommitAsync(workspacePath, commitMessage, cancellationToken);
+                var commitSuccess = await gitService.CreateCommitAsync(workspacePath, commitMessage, cancellationToken);
 
                 if (commitSuccess)
                 {

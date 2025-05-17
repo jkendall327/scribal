@@ -188,7 +188,7 @@ public partial class ExportService(
             storyContentBuilder.AppendLine();
         }
     }
-    
+
     private string GetOutputPath(string? outputFileName, string mainChaptersDirectoryPath)
     {
         var finalOutputFileName = string.IsNullOrWhiteSpace(outputFileName) ? DefaultExportFileName : outputFileName;
@@ -197,7 +197,7 @@ public partial class ExportService(
         {
             finalOutputFileName += ".md";
         }
-        
+
         var outputFilePath = fileSystem.Path.Join(mainChaptersDirectoryPath, finalOutputFileName);
 
         return outputFilePath;

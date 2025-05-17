@@ -179,7 +179,6 @@ public class ChapterDeletionServiceTests
             State = ChapterStateType.Draft
         };
 
-        // AI: Setup chapter directories
         _fileSystem.AddDirectory(_fileSystem.Path.Join(TestChaptersDir, "chapter_01"));
 
         _fileSystem.AddFile(_fileSystem.Path.Join(TestChaptersDir, "chapter_01", "content.md"),
@@ -255,8 +254,6 @@ public class ChapterDeletionServiceTests
         var result = _sut.DeleteChapterAsync(chapterToDelete, CancellationToken.None);
 
         // Assert
-        // AI: Verify the entire result object, which includes actions, warnings, errors, etc.
-        // AI: Also verify the state of the file system after the operation.
         return Verify(new
                {
                    DeletionResult = result,
@@ -280,7 +277,6 @@ public class ChapterDeletionServiceTests
             State = ChapterStateType.Done
         };
 
-        // AI: Setup chapter directory
         _fileSystem.AddDirectory(_fileSystem.Path.Join(TestChaptersDir, "chapter_01")); // This one will be deleted
 
         _fileSystem.AddFile(_fileSystem.Path.Join(TestChaptersDir, "chapter_01", "final.md"),
@@ -323,7 +319,6 @@ public class ChapterDeletionServiceTests
         var result = _sut.DeleteChapterAsync(chapterToDelete, CancellationToken.None);
 
         // Assert
-        // AI: Verify the result object and the file system state.
         return Verify(new
                {
                    DeletionResult = result,

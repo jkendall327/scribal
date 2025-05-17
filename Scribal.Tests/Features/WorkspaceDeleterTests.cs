@@ -39,7 +39,7 @@ public class WorkspaceDeleterTests
             _gitService,
             NullLogger<WorkspaceDeleter>.Instance);
     }
-    
+
     private void InitializeTestSetup(bool gitEnabled = false, string currentDirectory = TestProjectRootDir)
     {
         _fileSystem.Directory.SetCurrentDirectory(currentDirectory);
@@ -48,7 +48,6 @@ public class WorkspaceDeleterTests
 
     private void SetupBasicWorkspace()
     {
-        // AI: Create .scribal directory and some dummy files to represent a workspace
         _fileSystem.AddDirectory(TestScribalDir);
         _fileSystem.AddFile(Path.Combine(TestScribalDir, "config.json"), new("{}"));
         _fileSystem.AddFile(Path.Combine(TestScribalDir, "state.json"), new("{}"));
@@ -69,15 +68,7 @@ public class WorkspaceDeleterTests
         var command = new RootCommand();
         var parseResult = command.Parse("");
 
-        var invocationContext = new InvocationContext(parseResult)
-        {
-            BindingContext =
-            {
-                // AI: Provide a CancellationToken if needed by the command handler
-                // AI: For WorkspaceDeleter, it's used for git commit.
-                //GetService = type => type == typeof(CancellationToken) ? cancellationToken : null!
-            }
-        };
+        var invocationContext = new InvocationContext(parseResult);
 
         return invocationContext;
     }
@@ -89,16 +80,14 @@ public class WorkspaceDeleterTests
         InitializeTestSetup(gitEnabled: false);
         SetupBasicWorkspace();
 
-        _userInteraction.ConfirmAsync(Arg.Any<string>())
-                        .Returns(Task.FromResult(true)); // AI: User confirms .scribal deletion
-
+        _userInteraction.ConfirmAsync(Arg.Any<string>()).Returns(Task.FromResult(true));
         var invocationContext = CreateTestInvocationContext();
 
         // Act
         await _sut.DeleteWorkspaceCommandAsync(invocationContext);
 
         // Assert
-        await Verify(_fileSystem.AllPaths) // AI: Snapshot the file system paths
+        await Verify(_fileSystem.AllPaths)
               .UseDirectory("Snapshots")
               .UseFileName("WorkspaceDeleter_DeletesScribal_NoGit");
     }
@@ -107,11 +96,9 @@ public class WorkspaceDeleterTests
     public async Task DeleteWorkspaceCommandAsync_DeletesScribalAndGitFolders_WhenUserConfirmsBoth()
     {
         // Arrange
-        InitializeTestSetup(gitEnabled: true); // AI: Git service is active for commit attempt
+        InitializeTestSetup(gitEnabled: true);
         SetupBasicWorkspace();
         SetupGitRepository();
-
-        // AI: First confirm is for .scribal, second is for .git
         _userInteraction.ConfirmAsync(Arg.Is<string>(s => s.Contains(".scribal"))).Returns(Task.FromResult(true));
         _userInteraction.ConfirmAsync(Arg.Is<string>(s => s.Contains(".git"))).Returns(Task.FromResult(true));
 
@@ -124,7 +111,9 @@ public class WorkspaceDeleterTests
         await _sut.DeleteWorkspaceCommandAsync(invocationContext);
 
         // Assert
-        await Verify(_fileSystem.AllPaths).UseDirectory("Snapshots").UseFileName("WorkspaceDeleter_DeletesScribalAndGit");
+        await Verify(_fileSystem.AllPaths)
+              .UseDirectory("Snapshots")
+              .UseFileName("WorkspaceDeleter_DeletesScribalAndGit");
     }
 
     [Fact]
@@ -137,8 +126,7 @@ public class WorkspaceDeleterTests
 
         _userInteraction.ConfirmAsync(Arg.Is<string>(s => s.Contains(".scribal"))).Returns(Task.FromResult(true));
 
-        _userInteraction.ConfirmAsync(Arg.Is<string>(s => s.Contains(".git")))
-                        .Returns(Task.FromResult(false)); // AI: User declines .git deletion
+        _userInteraction.ConfirmAsync(Arg.Is<string>(s => s.Contains(".git"))).Returns(Task.FromResult(false));
 
         _gitService.CreateCommitAsync(TestScribalDir, Arg.Any<string>(), Arg.Any<CancellationToken>())
                    .Returns(Task.FromResult(true));
@@ -150,9 +138,11 @@ public class WorkspaceDeleterTests
 
         // Assert
         await Verify(new
-        {
-            FileSystemState = _fileSystem.AllPaths
-        }).UseDirectory("Snapshots").UseFileName("WorkspaceDeleter_DeletesScribal_SkipsGit");
+              {
+                  FileSystemState = _fileSystem.AllPaths
+              })
+              .UseDirectory("Snapshots")
+              .UseFileName("WorkspaceDeleter_DeletesScribal_SkipsGit");
     }
 
     [Fact]
@@ -160,17 +150,12 @@ public class WorkspaceDeleterTests
     {
         // Arrange
         InitializeTestSetup();
-
-        // AI: No workspace is set up
-
         var invocationContext = CreateTestInvocationContext();
 
         // Act
         await _sut.DeleteWorkspaceCommandAsync(invocationContext);
 
         // Assert
-        // AI: Verify file system is still empty (or in its initial state)
-        // AI: And check console output for the "No .scribal workspace found" message.
         await Verify(new
               {
                   FileSystemState = _fileSystem.AllPaths
@@ -187,11 +172,8 @@ public class WorkspaceDeleterTests
         // Arrange
         InitializeTestSetup();
         SetupBasicWorkspace();
-        SetupGitRepository(); // AI: Git repo exists but won't be prompted for if .scribal deletion is cancelled
-
-        _userInteraction.ConfirmAsync(Arg.Is<string>(s => s.Contains(".scribal")))
-                        .Returns(Task.FromResult(false)); // AI: User cancels .scribal deletion
-
+        SetupGitRepository();
+        _userInteraction.ConfirmAsync(Arg.Is<string>(s => s.Contains(".scribal"))).Returns(Task.FromResult(false));
         var invocationContext = CreateTestInvocationContext();
 
         // Act
@@ -205,7 +187,7 @@ public class WorkspaceDeleterTests
               .UseDirectory("Snapshots")
               .UseFileName("WorkspaceDeleter_UserCancelsScribalDeletion");
 
-        Assert.Contains(TestScribalDir, _fileSystem.AllDirectories); // AI: .scribal should still exist
-        Assert.Contains(TestGitDir, _fileSystem.AllDirectories); // AI: .git should still exist
+        Assert.Contains(TestScribalDir, _fileSystem.AllDirectories);
+        Assert.Contains(TestGitDir, _fileSystem.AllDirectories);
     }
 }

@@ -2,6 +2,7 @@ using System.CommandLine.Invocation;
 using System.IO.Abstractions;
 using Microsoft.Extensions.Logging;
 using Scribal.Agency;
+using Scribal.Cli.Interface;
 using Scribal.Workspace;
 using Spectre.Console;
 
@@ -109,7 +110,7 @@ public class WorkspaceDeleter(
                     {
                         console.MarkupLine($"[red]Failed to delete .git folder: {Markup.Escape(ex.Message)}[/]");
 
-                        console.WriteException(ex);
+                        ExceptionDisplay.DisplayException(ex, console);
                     }
                 }
             }
@@ -117,7 +118,7 @@ public class WorkspaceDeleter(
         catch (Exception ex)
         {
             console.MarkupLine($"[red]Failed to delete .scribal workspace: {Markup.Escape(ex.Message)}[/]");
-            console.WriteException(ex);
+            ExceptionDisplay.DisplayException(ex, console);
         }
     }
 }

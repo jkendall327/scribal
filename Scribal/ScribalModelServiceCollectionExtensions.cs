@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Configuration;
+using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel;
@@ -18,17 +18,12 @@ namespace Scribal;
 
 public static class ScribalModelServiceCollectionExtensions
 {
-    public static void AddScribalAi(this IServiceCollection services, IConfiguration cfg)
+    private const string AiSectionPath = "AI";
+    
+    public static void AddScribalAi(this IServiceCollection services)
     {
         // Register everything that implements IModelProvider.
-        var providerTypes = typeof(IModelProvider).Assembly.GetTypes()
-                                                  .Where(t => typeof(IModelProvider).IsAssignableFrom(t))
-                                                  .Where(t => t is {IsClass: true, IsAbstract: false});
-
-        foreach (var providerType in providerTypes)
-        {
-            services.AddSingleton(typeof(IModelProvider), providerType);
-        }
+        IModelProvider.AddModelProviders(services);
 
         // Register services in the main DI container that the kernel will pull back later.
         services.AddSingleton<FileReader>();
@@ -41,16 +36,21 @@ public static class ScribalModelServiceCollectionExtensions
         var err = string.Empty;
 
         services.AddOptions<AiSettings>()
-                .Bind(cfg.GetSection("AI"))
-                .ValidateDataAnnotations()
+                .BindConfiguration(AiSectionPath,
+                    options =>
+                    {
+                        options.BindNonPublicProperties = false;
+                        options.ErrorOnUnknownConfiguration = true;
+                    })
                 .Validate(settings =>
                     {
                         var result = SlotsValidator.ValidateSlots(settings, out var error);
                         err = error;
-
+                
                         return result;
                     },
-                    err);
+                    err)
+                ;
 
         services.AddSingleton<Kernel>(sp =>
         {
@@ -76,14 +76,28 @@ public static class ScribalModelServiceCollectionExtensions
             }
 
             // Pull back those services we registered in the main DI container and put them into the kernel.
-            kb.Plugins.AddFromObject(sp.GetRequiredService<FileReader>(), nameof(FileReader));
-            kb.Plugins.AddFromObject(sp.GetRequiredService<DiffEditor>(), nameof(DiffEditor));
+            JsonSerializerOptions options = new();
 
+            var diffEditor = sp.GetRequiredService<DiffEditor>();
+            var fileReader = sp.GetRequiredService<FileReader>();
+
+            kb.Plugins.AddFromFunctions(nameof(FileReader), [KernelFunctionFactory.CreateFromMethod(
+                method: fileReader.ReadFileContentAsync,
+                jsonSerializerOptions: options)]);
+            
+            kb.Plugins.AddFromFunctions(nameof(DiffEditor), [KernelFunctionFactory.CreateFromMethod(
+                method: diffEditor.ApplyUnifiedDiffAsync,
+                jsonSerializerOptions: options)]);
+            
             var appConfig = sp.GetRequiredService<IOptions<AppConfig>>().Value;
 
             if (appConfig.IngestContent)
             {
-                kb.Plugins.AddFromObject(sp.GetRequiredService<VectorSearch>(), nameof(VectorSearch));
+                var vectorSearch = sp.GetRequiredService<VectorSearch>();
+                
+                kb.Plugins.AddFromFunctions(nameof(VectorSearch), [KernelFunctionFactory.CreateFromMethod(
+                    method: vectorSearch.SearchAsync,
+                    jsonSerializerOptions: options)]);
             }
 
             kb.Services.AddSingleton<IFunctionInvocationFilter>(sp.GetRequiredService<GitCommitFilter>());

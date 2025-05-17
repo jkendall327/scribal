@@ -4,6 +4,7 @@ using System.CommandLine.Invocation;
 using System.CommandLine.Parsing;
 using System.IO.Abstractions;
 using Microsoft.Extensions.Logging;
+using Scribal.Cli.Interface;
 using Scribal.Workspace;
 using Spectre.Console;
 
@@ -323,7 +324,7 @@ public class ChapterManagerService(
 
             if (deletionResult.Exception != null && deletionResult.Exception is not OperationCanceledException)
             {
-                AnsiConsole.WriteException(deletionResult.Exception);
+                ExceptionDisplay.DisplayException(deletionResult.Exception);
             }
         }
     }

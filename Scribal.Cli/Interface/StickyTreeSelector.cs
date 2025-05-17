@@ -61,7 +61,7 @@ public class StickyTreeSelector
         }
         catch (Exception ex)
         {
-            AnsiConsole.WriteException(ex);
+            ExceptionDisplay.DisplayException(ex);
 
             return [];
         }

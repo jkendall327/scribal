@@ -232,7 +232,7 @@ public class ChapterDrafterService(
             }
             catch (Exception e)
             {
-                console.WriteException(e);
+                ExceptionDisplay.DisplayException(e, console);
                 console.MarkupLine("[red]An error occurred during refinement.[/]");
                 logger.LogError(e, "Error during draft refinement for {RefinementCid}", refinementCid);
             }

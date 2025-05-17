@@ -38,14 +38,22 @@ public sealed class AiChatService(
     public async IAsyncEnumerable<ChatStreamItem> StreamAsync(string cid,
         string user,
         string sid,
+        ChatHistory? history = null,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
         var start = time.GetTimestamp();
 
         var chat = kernel.GetRequiredService<IChatCompletionService>(sid);
 
-        // PrepareHistoryAsync adds the user message
-        var history = await PrepareHistoryAsync(cid, user, ct);
+        if (history == null)
+        {
+            // Start a conversation from scratch, preparing default system prompt etc.
+            history = await PrepareHistoryAsync(cid, user, ct);
+        }
+        else
+        {
+            history.AddUserMessage(user);
+        }
 
         var settings = GetSettings(sid);
 
@@ -83,47 +91,6 @@ public sealed class AiChatService(
         yield return metadata;
     }
 
-    public async IAsyncEnumerable<ChatStreamItem> StreamWithExplicitHistoryAsync(string conversationId,
-        ChatHistory history,
-        string userMessage,
-        string sid,
-        [EnumeratorCancellation] CancellationToken ct = default)
-    {
-        var start = time.GetTimestamp();
-        var chat = kernel.GetRequiredService<IChatCompletionService>(sid);
-
-        // Add the current user message to the provided history
-        history.AddUserMessage(userMessage);
-
-        var settings = GetSettings(sid);
-
-        // Stream response back for the UI.
-        var stream = chat.GetStreamingChatMessageContentsAsync(history, settings, kernel, ct);
-
-        await foreach (var chunk in stream)
-        {
-            if (chunk.Content is {Length: > 0} text)
-            {
-                yield return new ChatStreamItem.TokenChunk(text);
-            }
-        }
-
-        // Collect the full assistant message from streamed chunks.
-        var finalAssistantMessageContent = await chat.GetChatMessageContentAsync(history, settings, kernel, ct);
-
-        // Update the passed-in ChatHistory object with the assistant's full response
-        var assistantMessageText = string.Concat(finalAssistantMessageContent).Trim();
-        history.AddAssistantMessage(assistantMessageText);
-
-        // Save the updated history
-        await store.SaveAsync(conversationId, history, ct);
-
-        // Collect and yield metadata using the new MetadataCollector
-        var metadata = metadataCollector.CollectMetadata(sid, start, finalAssistantMessageContent);
-
-        yield return metadata;
-    }
-
     public async Task<(string AssistantResponse, ChatStreamItem.Metadata Metadata)>
         GetFullResponseWithExplicitHistoryAsync(string conversationId,
             ChatHistory history,
@@ -134,24 +101,18 @@ public sealed class AiChatService(
         var start = time.GetTimestamp();
         var chat = kernel.GetRequiredService<IChatCompletionService>(sid);
 
-        // Add the current user message to the provided history
         history.AddUserMessage(userMessage);
 
         var settings = GetSettings(sid);
 
-        // Get the full response from the AI
         var finalAssistantMessageContent = await chat.GetChatMessageContentAsync(history, settings, kernel, ct);
 
-        // Extract the assistant's full response text
         var assistantResponseText = string.Concat(finalAssistantMessageContent).Trim();
 
-        // Update the passed-in ChatHistory object with the assistant's full response
-        history.AddAssistantMessage(assistantResponseText); // This modifies the 'history' instance
+        history.AddAssistantMessage(assistantResponseText);
 
-        // Save the updated history
         await store.SaveAsync(conversationId, history, ct);
 
-        // Collect metadata using the MetadataCollector
         var metadata = metadataCollector.CollectMetadata(sid, start, finalAssistantMessageContent);
 
         return (assistantResponseText, metadata);

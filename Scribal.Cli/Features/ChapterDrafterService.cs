@@ -142,7 +142,7 @@ public class ChapterDrafterService(
             $"[yellow]Generating initial draft for Chapter {chapter.Number}: {Markup.Escape(chapter.Title)}...[/]");
 
         var initialUserMessage = "Generate the chapter draft based on the details provided in your instructions.";
-        var draftStream = chat.StreamWithExplicitHistoryAsync(cid, history, initialUserMessage, sid, ct);
+        var draftStream = chat.StreamAsync(cid, initialUserMessage, sid, history, ct);
         var draftBuilder = new StringBuilder();
 
         // AI: Use injected ConsoleChatRenderer instance
@@ -206,10 +206,10 @@ public class ChapterDrafterService(
             {
                 refinementHistory.AddUserMessage(userInput);
 
-                var refinementStream = chat.StreamWithExplicitHistoryAsync(refinementCid,
-                    refinementHistory,
+                var refinementStream = chat.StreamAsync(refinementCid,
                     userInput,
                     sid,
+                    refinementHistory,
                     ct);
 
                 // AI: Use injected ConsoleChatRenderer instance

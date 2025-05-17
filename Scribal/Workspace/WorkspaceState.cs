@@ -20,7 +20,8 @@ public class ChapterState
     public int Number { get; set; }
     public required string Title { get; init; }
     public string? Summary { get; init; }
-    public ChapterStateType State { get; init; }
+    public ChapterStateType State { get; set; }
+    public string? DraftFilePath { get; set; }
 }
 
 public enum ChapterStateType

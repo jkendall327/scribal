@@ -384,4 +384,141 @@ public class WorkspaceManager(
             fileSystem.Directory.CreateDirectory(chapterSpecificDirectoryPath);
         }
     }
+
+    // AI: Added method to create a new chapter, save it, and update workspace state
+    public async Task<bool> AddNewChapterAsync(int ordinal,
+        string title,
+        string content,
+        CancellationToken cancellationToken)
+    {
+        var workspacePath = CurrentWorkspacePath;
+
+        if (string.IsNullOrEmpty(workspacePath))
+        {
+            logger.LogError("Cannot add new chapter, workspace directory not found or not initialized");
+
+            return false;
+        }
+
+        var state = await LoadWorkspaceStateAsync(workspacePath, cancellationToken);
+
+        if (state is null)
+        {
+            logger.LogError("Failed to load workspace state. Cannot add new chapter");
+
+            return false;
+        }
+
+        // AI: Adjust ordinals of existing chapters
+        foreach (var existingChapter in state.Chapters.Where(c => c.Number >= ordinal))
+        {
+            existingChapter.Number++;
+        }
+
+        var newChapterState = new ChapterState
+        {
+            Number = ordinal,
+            Title = title,
+            Summary = string.Empty, // AI: New chapters start with an empty summary; can be populated later
+            State = string.IsNullOrWhiteSpace(content) ? ChapterStateType.Unstarted : ChapterStateType.Draft
+
+            // AI: DraftFilePath will be set after saving the file
+        };
+
+        state.Chapters.Add(newChapterState);
+        state.Chapters = state.Chapters.OrderBy(c => c.Number).ToList();
+
+        // AI: Create chapter directory and save content
+        var projectRootPath = fileSystem.DirectoryInfo.New(workspacePath).Parent?.FullName;
+
+        if (string.IsNullOrWhiteSpace(projectRootPath))
+        {
+            logger.LogError("Could not determine project root path to save new chapter {Ordinal}: {Title}",
+                ordinal,
+                title);
+
+            return false;
+        }
+
+        var mainChaptersDirectoryPath = fileSystem.Path.Combine(projectRootPath, "chapters");
+        var chapterDirectoryName = $"chapter_{ordinal:D2}"; // AI: Using only ordinal for directory name for consistency
+        var chapterSpecificDirectoryPath = fileSystem.Path.Combine(mainChaptersDirectoryPath, chapterDirectoryName);
+
+        try
+        {
+            if (!fileSystem.Directory.Exists(chapterSpecificDirectoryPath))
+            {
+                logger.LogInformation("Creating chapter directory at {ChapterSpecificDirectoryPath}",
+                    chapterSpecificDirectoryPath);
+
+                fileSystem.Directory.CreateDirectory(chapterSpecificDirectoryPath);
+            }
+
+            // AI: Sanitize title for filename
+            var sanitizedTitle = string.Join("_", title.Split(fileSystem.Path.GetInvalidFileNameChars()));
+            sanitizedTitle = string.Join("_", sanitizedTitle.Split(fileSystem.Path.GetInvalidPathChars()));
+
+            if (string.IsNullOrWhiteSpace(sanitizedTitle))
+            {
+                sanitizedTitle = "untitled";
+            }
+
+            const int maxTitleLengthInFilename = 50;
+
+            if (sanitizedTitle.Length > maxTitleLengthInFilename)
+            {
+                sanitizedTitle = sanitizedTitle[..maxTitleLengthInFilename];
+            }
+
+            var timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
+            var draftFileName = $"chapter_{ordinal:D2}_{sanitizedTitle}_draft_{timestamp}.md";
+            var draftFilePath = fileSystem.Path.Combine(chapterSpecificDirectoryPath, draftFileName);
+
+            await fileSystem.File.WriteAllTextAsync(draftFilePath, content, cancellationToken);
+            logger.LogInformation("New chapter {Ordinal} content saved to {FilePath}", ordinal, draftFilePath);
+            newChapterState.DraftFilePath = draftFilePath; // AI: Store the path to the draft file
+
+            if (!string.IsNullOrWhiteSpace(content))
+            {
+                newChapterState.State = ChapterStateType.Draft;
+            }
+
+            // AI: Save the updated workspace state
+            await SaveWorkspaceStateAsync(state, workspacePath, cancellationToken);
+
+            if (git.Enabled)
+            {
+                var commitMessage = $"Added new Chapter {ordinal}: {title}";
+
+                // AI: Commit both the new chapter file and the state file
+                // AI: GitService might need adjustment if it only takes one file path, or we commit twice.
+                // AI: For now, assume CreateCommitAsync can handle the new file, and state is implicitly part of a broader commit strategy or needs explicit handling.
+                // AI: Let's commit the chapter file first. The state file is trickier as it changes often.
+                // AI: A better approach might be to have a "CommitWorkspaceChanges" that stages state + new file.
+                // AI: For now, just commit the new chapter file. State will be committed by other operations or a dedicated commit all.
+                var chapterCommitSuccess = await git.CreateCommitAsync(draftFilePath, commitMessage, cancellationToken);
+
+                if (chapterCommitSuccess)
+                {
+                    logger.LogInformation("Successfully committed new chapter file {FilePath} to git", draftFilePath);
+                }
+                else
+                {
+                    logger.LogWarning("Failed to commit new chapter file {FilePath} to git", draftFilePath);
+                }
+
+                // AI: Consider committing workspace state file separately or as part of a larger operation.
+                // AI: For now, we'll rely on other mechanisms or manual commits for the state file.
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to save new chapter {Ordinal}: {Title} content or directory", ordinal, title);
+
+            // AI: Attempt to revert state changes if file saving fails? Complex, for now log and return false.
+            return false;
+        }
+    }
 }

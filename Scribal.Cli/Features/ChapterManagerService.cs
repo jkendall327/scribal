@@ -15,13 +15,10 @@ public class ChapterManagerService(
     IUserInteraction userInteraction,
     ILogger<ChapterManagerService> logger,
     IChapterDeletionService chapterDeletionService,
-    ChapterDrafterService chapterDrafterService)
+    ChapterDrafterService chapterDrafterService,
+    // AI: Added NewChapterCreatorService
+    NewChapterCreatorService newChapterCreatorService)
 {
-    // Added
-    // Added
-
-    // Added
-
     public async Task ManageChaptersAsync(InvocationContext context)
     {
         logger.LogInformation("Starting chapter management");
@@ -97,11 +94,16 @@ public class ChapterManagerService(
             var chapterChoices = state.Chapters.OrderBy(c => c.Number)
                                       .Select(c => $"{c.Number}. {Markup.Escape(c.Title)} ({c.State})")
                                       .ToList();
+            
+            // AI: Added option to create a new chapter
+            var commandChoices = new List<string> { "[+] Create New Chapter" };
+            commandChoices.AddRange(chapterChoices);
+            commandChoices.Add("Back");
 
             var selectionPrompt = new SelectionPrompt<string>()
-                                  .Title("Select a chapter to manage or [blue]Back[/] to return:")
+                                  .Title("Select a chapter to manage, create a new one, or [blue]Back[/] to return:")
                                   .PageSize(10)
-                                  .AddChoices(chapterChoices.Append("Back"));
+                                  .AddChoices(commandChoices);
 
             var choice = AnsiConsole.Prompt(selectionPrompt);
 
@@ -110,11 +112,21 @@ public class ChapterManagerService(
                 break;
             }
 
+            if (choice == "[+] Create New Chapter")
+            {
+                // AI: Call the NewChapterCreatorService
+                await newChapterCreatorService.CreateNewChapterAsync(token);
+                // AI: State will be reloaded at the start of the loop
+                continue;
+            }
+
             var selectedChapterState =
                 state.Chapters.FirstOrDefault(c => $"{c.Number}. {Markup.Escape(c.Title)} ({c.State})" == choice);
 
             if (selectedChapterState == null)
             {
+                // AI: This case should ideally not be hit if choice is not Back or Create New
+                logger.LogWarning("Invalid chapter selection choice: {Choice}", choice);
                 continue;
             }
 

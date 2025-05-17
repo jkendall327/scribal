@@ -22,7 +22,9 @@ public class InterfaceManager(
     RepoMapStore repoMapStore,
     ConsoleChatRenderer consoleChatRenderer) // AI: Added ConsoleChatRenderer
 {
-    private readonly ConsoleChatRenderer _consoleChatRenderer = consoleChatRenderer; // AI: Added ConsoleChatRenderer instance
+    private readonly ConsoleChatRenderer
+        _consoleChatRenderer = consoleChatRenderer; // AI: Added ConsoleChatRenderer instance
+
     private readonly Guid _conversationId = Guid.NewGuid();
     private CancellationTokenSource _cts = new();
 
@@ -154,10 +156,11 @@ public class InterfaceManager(
 
         try
         {
-            var enumerable = aiChatService.StreamAsync(_conversationId.ToString(),
-                userInput,
-                aiSettings.Value.Primary.Provider,
-                ct: _cts.Token);
+            var sid = aiSettings.Value.Primary.Provider;
+            
+            var chatRequest = new ChatRequest(userInput, _conversationId.ToString(), sid);
+
+            var enumerable = aiChatService.StreamAsync(chatRequest, history: null, ct: _cts.Token);
 
             // AI: Use injected ConsoleChatRenderer instance
             await _consoleChatRenderer.StreamWithSpinnerAsync(enumerable, _cts.Token);

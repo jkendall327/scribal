@@ -239,7 +239,9 @@ public class OutlineService(
         // Let's use a simple instruction.
         var initialUserMessage = "Generate the plot outline based on the premise provided in your instructions.";
 
-        var task = chat.GetFullResponseWithExplicitHistoryAsync(cid, history, initialUserMessage, sid, ct);
+        var chatRequest = new ChatRequest(initialUserMessage, cid, sid);
+
+        var task = chat.GetFullResponseWithExplicitHistoryAsync(chatRequest, history, ct);
 
         await consoleRenderer.WaitWithSpinnerAsync(task, ct);
 
@@ -297,20 +299,17 @@ public class OutlineService(
                 // Add user's latest message to history for the next turn
                 refinementHistory.AddUserMessage(userInput);
 
-                var refinementStream = chat.GetFullResponseWithExplicitHistoryAsync(refinementCid,
-                    refinementHistory,
-                    userInput,
-                    sid,
-                    ct);
+                var chatRequest = new ChatRequest(userInput, refinementCid, sid);
 
-                // We need to collect the AI's response to update refinementHistory and lastAssistantResponse
+                var refinementStream = chat.GetFullResponseWithExplicitHistoryAsync(chatRequest, refinementHistory, ct);
+
                 await consoleRenderer.WaitWithSpinnerAsync(refinementStream, ct);
 
                 lastAssistantResponse = refinementStream.Result.Message;
 
                 if (!string.IsNullOrWhiteSpace(lastAssistantResponse))
                 {
-                    refinementHistory.AddAssistantMessage(lastAssistantResponse); // Add AI's response to history
+                    refinementHistory.AddAssistantMessage(lastAssistantResponse);
                 }
             }
             catch (OperationCanceledException)

@@ -1,3 +1,4 @@
+using System.ComponentModel.Design;
 using System.IO.Abstractions;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -29,6 +30,8 @@ public record ChatStreamItem
 
 public record ChatMessage(string Message, ChatStreamItem.Metadata Metadata);
 
+public record ChatRequest(string UserMessage, string ConversationId, string ServiceId);
+
 public sealed class AiChatService(
     Kernel kernel,
     IChatSessionStore store,
@@ -37,13 +40,13 @@ public sealed class AiChatService(
     TimeProvider time,
     MetadataCollector metadataCollector) : IAiChatService
 {
-    public async IAsyncEnumerable<ChatStreamItem> StreamAsync(string cid,
-        string user,
-        string sid,
+    public async IAsyncEnumerable<ChatStreamItem> StreamAsync(ChatRequest request,
         ChatHistory? history = null,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
         var start = time.GetTimestamp();
+
+        (var user, var cid, var sid) = request;
 
         var chat = kernel.GetRequiredService<IChatCompletionService>(sid);
 
@@ -93,12 +96,12 @@ public sealed class AiChatService(
         yield return metadata;
     }
 
-    public async Task<ChatMessage> GetFullResponseWithExplicitHistoryAsync(string conversationId,
+    public async Task<ChatMessage> GetFullResponseWithExplicitHistoryAsync(ChatRequest request,
         ChatHistory history,
-        string userMessage,
-        string sid,
         CancellationToken ct = default)
     {
+        (var userMessage, var conversationId, var sid) = request;
+        
         var start = time.GetTimestamp();
         var chat = kernel.GetRequiredService<IChatCompletionService>(sid);
 

@@ -27,7 +27,8 @@ public class ChapterDrafterService(
     ILogger<ChapterDrafterService> logger,
     ConsoleChatRenderer consoleChatRenderer) // AI: Added ConsoleChatRenderer
 {
-    private readonly ConsoleChatRenderer _consoleChatRenderer = consoleChatRenderer; // AI: Added ConsoleChatRenderer instance
+    private readonly ConsoleChatRenderer
+        _consoleChatRenderer = consoleChatRenderer; // AI: Added ConsoleChatRenderer instance
 
     public async Task DraftChapterAsync(ChapterState chapter, CancellationToken cancellationToken = default)
     {
@@ -142,7 +143,10 @@ public class ChapterDrafterService(
             $"[yellow]Generating initial draft for Chapter {chapter.Number}: {Markup.Escape(chapter.Title)}...[/]");
 
         var initialUserMessage = "Generate the chapter draft based on the details provided in your instructions.";
-        var draftStream = chat.StreamAsync(cid, initialUserMessage, sid, history, ct);
+
+        var chatRequest = new ChatRequest(initialUserMessage, cid, sid);
+
+        var draftStream = chat.StreamAsync(chatRequest, history, ct);
         var draftBuilder = new StringBuilder();
 
         // AI: Use injected ConsoleChatRenderer instance
@@ -206,11 +210,9 @@ public class ChapterDrafterService(
             {
                 refinementHistory.AddUserMessage(userInput);
 
-                var refinementStream = chat.StreamAsync(refinementCid,
-                    userInput,
-                    sid,
-                    refinementHistory,
-                    ct);
+                var chatRequest = new ChatRequest(userInput, refinementCid, sid);
+
+                var refinementStream = chat.StreamAsync(chatRequest, refinementHistory, ct);
 
                 // AI: Use injected ConsoleChatRenderer instance
                 await _consoleChatRenderer.StreamWithSpinnerAsync(
@@ -326,8 +328,7 @@ public class ChapterDrafterService(
             {
                 var commitMessage = $"Drafted Chapter {chapter.Number}: {chapter.Title}";
 
-                var commitSuccess =
-                    await gitService.CreateCommitAsync(draftFilePath, commitMessage, cancellationToken);
+                var commitSuccess = await gitService.CreateCommitAsync(draftFilePath, commitMessage, cancellationToken);
 
                 if (commitSuccess)
                 {

@@ -101,7 +101,9 @@ public class PitchService(
 
         console.MarkupLine("[yellow]Generating initial premise...[/]");
 
-        var premiseStream = chat.StreamAsync(cid, initialPitch, sid, history, ct);
+        var chatRequest = new ChatRequest(initialPitch, cid, sid);
+
+        var premiseStream = chat.StreamAsync(chatRequest, history, ct);
 
         var premiseBuilder = new StringBuilder();
 
@@ -156,11 +158,9 @@ public class PitchService(
 
             try
             {
-                var refinementStream = chat.StreamAsync(refinementCid,
-                    userInput,
-                    sid,
-                    refinementHistory,
-                    ct);
+                var request = new ChatRequest(userInput, refinementCid, sid);
+
+                var refinementStream = chat.StreamAsync(request, refinementHistory, ct);
 
                 // AI: Use injected ConsoleChatRenderer instance
                 await consoleChatRenderer.StreamWithSpinnerAsync(refinementStream, ct);

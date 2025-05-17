@@ -1,6 +1,6 @@
 # Scribal
 
-![](image.webp)
+![](docs/image.webp)
 
 AI-powered fiction writing assistant for drafting and revising prose. It scans your project's markdown files to
 understand your story's structure, characters, and plot, then provides contextually relevant assistance.

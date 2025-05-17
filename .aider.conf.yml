@@ -1,4 +1,4 @@
 read:
-  - plans.md
-  - checklist.md
+  - docs/plans.md
+  - docs/checklist.md
   - ~/.aider/GLOBAL_CONVENTIONS.md

@@ -41,7 +41,7 @@ public class InterfaceManager(
                 "[red rapidblink]You are not in a valid Git repository! AI edits will be destructive![/]");
         }
 
-        AnsiConsole.MarkupLine("Type [blue]--help[/] for available commands or just start typing to talk.");
+        AnsiConsole.MarkupLine("Type [blue]/help[/] for available commands or just start typing to talk.");
         AnsiConsole.WriteLine();
 
         return Task.CompletedTask;
@@ -79,13 +79,21 @@ public class InterfaceManager(
     private async Task ActOnInput(string input, Parser parser)
     {
         // Normal chat/agentic request.
-        if (!input.StartsWith('/'))
+        var command = input.StartsWith('/');
+
+        if (!command)
         {
             await ProcessConversation(input);
 
             return;
         }
 
+        if (input is "/help")
+        {
+            // Working around System.CommandLine seeming to hardcode this.
+            input = "--help";
+        }
+        
         var parsed = parser.Parse(input);
 
         if (parsed.Errors.Any())

@@ -17,7 +17,7 @@ public static class ScribalServiceCollectionExtensions
         IFileSystem fileSystem,
         TimeProvider time)
     {
-        services.Configure<AppConfig>(config.GetSection("AppConfig"));
+        services.Configure<AppConfig>(config.GetSection(nameof(AppConfig)));
 
         // Infrastructure
         services.AddSingleton(fileSystem);

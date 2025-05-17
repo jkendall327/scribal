@@ -101,7 +101,9 @@ public class WorkspaceDeleter(
 
                     try
                     {
-                        gitService.DeleteRepository();
+                        fileSystem.Directory.Delete(gitFolderPath, recursive: true);
+
+                        gitService.DisableRepository();
                         
                         console.MarkupLine(
                             $"[green].git folder at '{Markup.Escape(gitFolderPath)}' deleted successfully.[/]");

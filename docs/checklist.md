@@ -65,7 +65,7 @@
 - [ ] Existing chapter: Allow merging with other chapters
 - [ ] Chapter splitting: Prompt user for updated descriptions for the source and new chapter(s); create new chapter(s)
   empty for manual content transfer
-- [ ] Chapter merging: Prompt user for a description of the new merged chapter; concatenate file contents
+- [x] Chapter merging: Prompt user for a description of the new merged chapter; concatenate file contents
 - [x] Deleting a chapter: Automatically update the ordinals of subsequent chapters
 
 ## Drafting

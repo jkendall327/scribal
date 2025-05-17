@@ -107,7 +107,8 @@ public class PitchService(
 
         var premiseBuilder = new StringBuilder();
 
-        // Stream the initial premise generation.        await consoleChatRenderer.StreamWithSpinnerAsync(CollectWhileStreaming(premiseStream, premiseBuilder, ct), ct);
+        // Stream the initial premise generation.
+        await consoleChatRenderer.StreamWithSpinnerAsync(CollectWhileStreaming(premiseStream, premiseBuilder, ct), ct);
 
         var generatedPremise = premiseBuilder.ToString().Trim();
 

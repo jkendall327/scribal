@@ -27,6 +27,8 @@ public record ChatStreamItem
     public sealed record Metadata(TimeSpan Elapsed, int PromptTokens, int CompletionTokens) : ChatStreamItem;
 }
 
+public record ChatMessage(string Message, ChatStreamItem.Metadata Metadata);
+
 public sealed class AiChatService(
     Kernel kernel,
     IChatSessionStore store,
@@ -91,12 +93,11 @@ public sealed class AiChatService(
         yield return metadata;
     }
 
-    public async Task<(string AssistantResponse, ChatStreamItem.Metadata Metadata)>
-        GetFullResponseWithExplicitHistoryAsync(string conversationId,
-            ChatHistory history,
-            string userMessage,
-            string sid,
-            CancellationToken ct = default)
+    public async Task<ChatMessage> GetFullResponseWithExplicitHistoryAsync(string conversationId,
+        ChatHistory history,
+        string userMessage,
+        string sid,
+        CancellationToken ct = default)
     {
         var start = time.GetTimestamp();
         var chat = kernel.GetRequiredService<IChatCompletionService>(sid);
@@ -115,7 +116,7 @@ public sealed class AiChatService(
 
         var metadata = metadataCollector.CollectMetadata(sid, start, finalAssistantMessageContent);
 
-        return (assistantResponseText, metadata);
+        return new(assistantResponseText, metadata);
     }
 
     private PromptExecutionSettings GetSettings(string sid)

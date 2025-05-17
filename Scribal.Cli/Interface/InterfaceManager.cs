@@ -157,7 +157,7 @@ public class InterfaceManager(
             var enumerable = aiChatService.StreamAsync(_conversationId.ToString(),
                 userInput,
                 aiSettings.Value.Primary.Provider,
-                _cts.Token);
+                ct: _cts.Token);
 
             // AI: Use injected ConsoleChatRenderer instance
             await _consoleChatRenderer.StreamWithSpinnerAsync(enumerable, _cts.Token);

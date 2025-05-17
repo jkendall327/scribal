@@ -30,7 +30,7 @@ public interface IAiChatService
     /// <param name="history">A prepared chat history for the assistant to use.</param>
     /// <param name="ct">A cancellation token allowing the operation to be aborted.</param>
     /// <returns>A tuple containing the final response, and associated metadata, such as token usage.</returns>
-    Task<(string AssistantResponse, ChatStreamItem.Metadata Metadata)> GetFullResponseWithExplicitHistoryAsync(
+    Task<ChatMessage> GetFullResponseWithExplicitHistoryAsync(
         string conversationId,
         ChatHistory history,
         string userMessage,

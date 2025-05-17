@@ -248,7 +248,7 @@ public class OutlineService(
         // Displaying the outline (parsed or raw) will now be handled by the calling method CreateOutlineFromPremise
         AnsiConsole.WriteLine();
 
-        return task.Result.AssistantResponse;
+        return task.Result.Message;
     }
 
     private async Task<string> RefineOutline(string refinementCid,
@@ -306,7 +306,7 @@ public class OutlineService(
                 // We need to collect the AI's response to update refinementHistory and lastAssistantResponse
                 await consoleRenderer.WaitWithSpinnerAsync(refinementStream, ct);
 
-                lastAssistantResponse = refinementStream.Result.AssistantResponse;
+                lastAssistantResponse = refinementStream.Result.Message;
 
                 if (!string.IsNullOrWhiteSpace(lastAssistantResponse))
                 {

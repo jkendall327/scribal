@@ -47,10 +47,11 @@ public static class ScribalModelServiceCollectionExtensions
                     {
                         var result = SlotsValidator.ValidateSlots(settings, out var error);
                         err = error;
-
+                
                         return result;
                     },
-                    err);
+                    err)
+                ;
 
         services.AddSingleton<Kernel>(sp =>
         {

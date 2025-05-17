@@ -2,14 +2,14 @@ namespace Scribal.Config;
 
 public record ModelSlot
 {
-    public string Provider { get; init; } = default!; // "OpenAI", "Gemini", …
-    public string ModelId { get; init; } = default!;
-    public string? ApiKey { get; init; } // optional if the provider can share
+    public string Provider { get; set; } = default!; // "OpenAI", "Gemini", …
+    public string ModelId { get; set; } = default!;
+    public string? ApiKey { get; set; } // optional if the provider can share
 }
 
 public class AiSettings
 {
-    public ModelSlot? Primary { get; init; } = new();
-    public ModelSlot? Weak { get; init; }
-    public ModelSlot? Embeddings { get; init; }
+    public ModelSlot? Primary { get; set; }
+    public ModelSlot? Weak { get; set; }
+    public ModelSlot? Embeddings { get; set; }
 }

@@ -54,7 +54,7 @@
 - [x] New chapter: Allow user to specify its title
 - [x] New chapter: Allow user to optionally provide an initial draft
 - [x] New chapter: Allow user to optionally let the AI generate an initial version
-- [] Existing chapter: Display its current state
+- [x] Existing chapter: Display its current state
 - [x] Existing chapter: Allow deletion
 - [ ] Existing chapter: Allow splitting into multiple chapters
 - [ ] Existing chapter: Allow merging with other chapters

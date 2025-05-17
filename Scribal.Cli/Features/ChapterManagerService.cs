@@ -208,6 +208,10 @@ public class ChapterManagerService(
         {
             AnsiConsole.WriteLine();
             AnsiConsole.MarkupLine($"Managing Chapter: {FormatChapterDisplayString(selectedChapter)}");
+            if (!string.IsNullOrWhiteSpace(selectedChapter.Summary))
+            {
+                AnsiConsole.MarkupLine($"Summary: [grey]{Markup.Escape(selectedChapter.Summary)}[/]");
+            }
 
             AnsiConsole.MarkupLine(
                 "Enter a command for this chapter ([blue]/help[/] for options, [blue]/back[/] to return to chapter list):");

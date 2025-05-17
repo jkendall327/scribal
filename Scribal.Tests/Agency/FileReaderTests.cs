@@ -1,8 +1,7 @@
 // AI: Test suite for the FileReader class
+
 using System.IO.Abstractions.TestingHelpers;
-using NSubstitute;
 using Scribal.Agency;
-using Xunit;
 
 namespace Scribal.Tests.Agency;
 
@@ -13,8 +12,8 @@ public class FileReaderTests
 
     public FileReaderTests()
     {
-        _fileSystem = new MockFileSystem();
-        _fileReader = new FileReader(_fileSystem);
+        _fileSystem = new();
+        _fileReader = new(_fileSystem);
     }
 
     [Fact]
@@ -23,7 +22,7 @@ public class FileReaderTests
         // AI: Arrange
         var filePath = "testfile.txt";
         var fileContent = "This is a test file.";
-        _fileSystem.AddFile(filePath, new MockFileData(fileContent));
+        _fileSystem.AddFile(filePath, new(fileContent));
         _fileSystem.Directory.SetCurrentDirectory(_fileSystem.Path.GetFullPath("."));
 
         // AI: Act
@@ -52,6 +51,7 @@ public class FileReaderTests
     {
         // AI: Arrange
         var outsideFilePath = _fileSystem.Path.Combine("..", "outsidetest.txt");
+
         // AI: Ensure the mock file system knows about the CWD for path resolution
         var cwd = _fileSystem.Path.GetFullPath(".");
         _fileSystem.AddDirectory(cwd); // AI: Ensure CWD exists
@@ -59,8 +59,7 @@ public class FileReaderTests
 
         // AI: Create a file outside the CWD
         var absoluteOutsidePath = _fileSystem.Path.GetFullPath(outsideFilePath);
-        _fileSystem.AddFile(absoluteOutsidePath, new MockFileData("This content should not be accessible."));
-
+        _fileSystem.AddFile(absoluteOutsidePath, new("This content should not be accessible."));
 
         // AI: Act
         var result = await _fileReader.ReadFileContentAsync(outsideFilePath);
@@ -77,13 +76,12 @@ public class FileReaderTests
         var outsideFilePath = _fileSystem.Path.Combine(outsideDir, "absolutepathtest.txt");
 
         _fileSystem.AddDirectory(outsideDir);
-        _fileSystem.AddFile(outsideFilePath, new MockFileData("This content should not be accessible."));
+        _fileSystem.AddFile(outsideFilePath, new("This content should not be accessible."));
 
         // AI: Set CWD to something other than where the outside file is
         var cwd = _fileSystem.Path.GetFullPath("./current");
         _fileSystem.AddDirectory(cwd);
         _fileSystem.Directory.SetCurrentDirectory(cwd);
-
 
         // AI: Act
         var result = await _fileReader.ReadFileContentAsync(outsideFilePath);
@@ -119,10 +117,13 @@ public class FileReaderTests
         var cwd = _fileSystem.Path.GetFullPath("./project/src"); // AI: A nested CWD
         var filePathInCwd = _fileSystem.Path.Combine(cwd, fileName);
 
-        _fileSystem.AddFile(filePathInCwd, new MockFileData(fileContent));
+        _fileSystem.AddFile(filePathInCwd, new(fileContent));
         _fileSystem.Directory.SetCurrentDirectory(cwd);
 
-        var relativePath = _fileSystem.Path.Combine("..", "src", fileName); // AI: e.g. CWD is /project/src, path is ../src/testfile.txt
+        var relativePath =
+            _fileSystem.Path.Combine("..",
+                "src",
+                fileName); // AI: e.g. CWD is /project/src, path is ../src/testfile.txt
 
         // AI: Act
         var result = await _fileReader.ReadFileContentAsync(relativePath);

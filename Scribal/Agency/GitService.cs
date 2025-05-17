@@ -17,6 +17,7 @@ public interface IGitService
     Task<bool> CreateCommitAsync(List<string> files, string message, CancellationToken ct = default);
     Task<bool> CreateCommitAllAsync(string message, CancellationToken ct = default);
     Task CreateGitIgnore(string gitignore);
+    void DisableRepository();
 }
 
 public sealed class GitService(
@@ -180,6 +181,13 @@ public sealed class GitService(
         {
             await fileSystem.File.WriteAllTextAsync(path, gitignore);
         }
+    }
+
+    public void DisableRepository()
+    {
+        EnsureValidRepository();
+        
+        _repo = null;
     }
 
     public void Dispose()

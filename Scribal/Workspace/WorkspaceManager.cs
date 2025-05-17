@@ -493,18 +493,29 @@ public class WorkspaceManager(
 
             var commitMessage = $"Added new Chapter {ordinal}: {title}";
             var stateFilePath = fileSystem.Path.Join(workspacePath, StateFileName);
-            var filesToCommit = new List<string> { draftFilePath, stateFilePath };
+
+            var filesToCommit = new List<string>
+            {
+                draftFilePath,
+                stateFilePath
+            };
 
             // AI: Use the new overload to commit both the chapter file and the state file
             var commitSuccess = await git.CreateCommitAsync(filesToCommit, commitMessage, cancellationToken);
 
             if (commitSuccess)
             {
-                logger.LogInformation("Successfully committed new chapter file ({ChapterFile}) and state file ({StateFile}) to git", draftFilePath, stateFilePath);
+                logger.LogInformation(
+                    "Successfully committed new chapter file ({ChapterFile}) and state file ({StateFile}) to git",
+                    draftFilePath,
+                    stateFilePath);
             }
             else
             {
-                logger.LogWarning("Failed to commit new chapter file ({ChapterFile}) and/or state file ({StateFile}) to git", draftFilePath, stateFilePath);
+                logger.LogWarning(
+                    "Failed to commit new chapter file ({ChapterFile}) and/or state file ({StateFile}) to git",
+                    draftFilePath,
+                    stateFilePath);
             }
 
             return true;
@@ -516,5 +527,20 @@ public class WorkspaceManager(
             // AI: Attempt to revert state changes if file saving fails? Complex, for now log and return false.
             return false;
         }
+    }
+
+    public Task DeleteWorkspaceAsync()
+    {
+        if (string.IsNullOrEmpty(CurrentWorkspacePath))
+        {
+            throw new InvalidOperationException(
+                "Cannot delete workspace, workspace directory not found or not initialized");
+        }
+
+        fileSystem.Directory.Delete(CurrentWorkspacePath, true);
+
+        _workspace = null;
+
+        return Task.CompletedTask;
     }
 }

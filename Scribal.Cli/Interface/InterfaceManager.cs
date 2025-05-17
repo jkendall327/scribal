@@ -106,7 +106,7 @@ public class InterfaceManager(
             ? WorkspaceManager.TryFindWorkspaceFolder(fileSystem)
             : "not in workspace";
 
-        var branch = gitService.Enabled ? await gitService.GetCurrentBranch() : "[not in a git repository]";
+        var branch = gitService.Enabled ? await gitService.GetCurrentBranch() : "not in a git repository";
 
         var model = modelId is null ? "[yellow]no model![/]" : $"[yellow]{modelId}[/]";
 

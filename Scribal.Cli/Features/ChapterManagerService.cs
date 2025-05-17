@@ -186,19 +186,20 @@ public class ChapterManagerService(
         });
 
         var splitCmd = new Command("/split", "Split this chapter into two.");
+
         // AI: Updated handler to call the chapterSplitterService directly
         splitCmd.SetHandler(async () => { await SplitChapterAsync(chapter, linkedCts); });
 
         var mergeCmd = new Command("/merge", "Merge this chapter into another.");
+
         // AI: Handler to call the chapterMergerService
         mergeCmd.SetHandler(async () => { await MergeChapterAsync(chapter, linkedCts); });
-
 
         var chapterRootCommand =
             new RootCommand($"Actions for Chapter {chapter.Number}: {Markup.Escape(chapter.Title)}")
             {
                 dummyCmd,
-                draftCmd, 
+                draftCmd,
                 deleteCmd,
                 splitCmd, // AI: Added split command
                 mergeCmd, // AI: Added merge command
@@ -221,6 +222,7 @@ public class ChapterManagerService(
         {
             AnsiConsole.WriteLine();
             AnsiConsole.MarkupLine($"Managing Chapter: {FormatChapterDisplayString(selectedChapter)}");
+
             if (!string.IsNullOrWhiteSpace(selectedChapter.Summary))
             {
                 AnsiConsole.MarkupLine($"Summary: [grey]{Markup.Escape(selectedChapter.Summary)}[/]");
@@ -342,20 +344,31 @@ public class ChapterManagerService(
     private async Task SplitChapterAsync(ChapterState sourceChapter, CancellationTokenSource subMenuCts)
     {
         logger.LogInformation("Handing off to ChapterSplitterService for chapter {ChapterNumber}: {ChapterTitle}",
-            sourceChapter.Number, sourceChapter.Title);
+            sourceChapter.Number,
+            sourceChapter.Title);
 
         var success = await chapterSplitterService.SplitChapterAsync(sourceChapter, subMenuCts.Token);
 
         if (success)
         {
-            AnsiConsole.MarkupLine($"[bold green]Chapter split operation completed successfully for {Markup.Escape(sourceChapter.Title)}. Returning to chapter list.[/]");
-            logger.LogInformation("Successfully completed split operation for chapter {SourceChapterNumber} via service.", sourceChapter.Number);
+            AnsiConsole.MarkupLine(
+                $"[bold green]Chapter split operation completed successfully for {Markup.Escape(sourceChapter.Title)}. Returning to chapter list.[/]");
+
+            logger.LogInformation(
+                "Successfully completed split operation for chapter {SourceChapterNumber} via service",
+                sourceChapter.Number);
+
             await subMenuCts.CancelAsync(); // AI: Exit sub-menu on success
         }
         else
         {
-            AnsiConsole.MarkupLine("[bold red]Chapter split operation failed or was cancelled. Check logs for details.[/]");
-            logger.LogWarning("Chapter split operation failed or was cancelled for chapter {SourceChapterNumber} via service.", sourceChapter.Number);
+            AnsiConsole.MarkupLine(
+                "[bold red]Chapter split operation failed or was cancelled. Check logs for details.[/]");
+
+            logger.LogWarning(
+                "Chapter split operation failed or was cancelled for chapter {SourceChapterNumber} via service",
+                sourceChapter.Number);
+
             // AI: Remain in the sub-menu if split fails or is cancelled by user within the service
         }
     }
@@ -364,20 +377,31 @@ public class ChapterManagerService(
     private async Task MergeChapterAsync(ChapterState sourceChapter, CancellationTokenSource subMenuCts)
     {
         logger.LogInformation("Handing off to ChapterMergerService for chapter {ChapterNumber}: {ChapterTitle}",
-            sourceChapter.Number, sourceChapter.Title);
+            sourceChapter.Number,
+            sourceChapter.Title);
 
         var success = await chapterMergerService.MergeChapterAsync(sourceChapter, subMenuCts.Token);
 
         if (success)
         {
-            AnsiConsole.MarkupLine($"[bold green]Chapter merge operation completed successfully for {Markup.Escape(sourceChapter.Title)}. Returning to chapter list.[/]");
-            logger.LogInformation("Successfully completed merge operation for chapter {SourceChapterNumber} via service.", sourceChapter.Number);
+            AnsiConsole.MarkupLine(
+                $"[bold green]Chapter merge operation completed successfully for {Markup.Escape(sourceChapter.Title)}. Returning to chapter list.[/]");
+
+            logger.LogInformation(
+                "Successfully completed merge operation for chapter {SourceChapterNumber} via service",
+                sourceChapter.Number);
+
             await subMenuCts.CancelAsync(); // AI: Exit sub-menu on success
         }
         else
         {
-            AnsiConsole.MarkupLine("[bold red]Chapter merge operation failed or was cancelled. Check logs for details.[/]");
-            logger.LogWarning("Chapter merge operation failed or was cancelled for chapter {SourceChapterNumber} via service.", sourceChapter.Number);
+            AnsiConsole.MarkupLine(
+                "[bold red]Chapter merge operation failed or was cancelled. Check logs for details.[/]");
+
+            logger.LogWarning(
+                "Chapter merge operation failed or was cancelled for chapter {SourceChapterNumber} via service",
+                sourceChapter.Number);
+
             // AI: Remain in the sub-menu if merge fails or is cancelled by user within the service
         }
     }

@@ -65,7 +65,7 @@ public class ChapterSplitterService : IChapterSplitterService
         if (string.IsNullOrWhiteSpace(newChapterTitle))
         {
             _console.MarkupLine("[red]New chapter title cannot be empty. Aborting split.[/]");
-            _logger.LogWarning("New chapter title was empty, split aborted by user input.");
+            _logger.LogWarning("New chapter title was empty, split aborted by user input");
 
             return false;
         }

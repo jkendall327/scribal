@@ -37,7 +37,12 @@ public static class ScribalModelServiceCollectionExtensions
         var err = string.Empty;
 
         services.AddOptions<AiSettings>()
-                .BindConfiguration(AiSectionPath)
+                .BindConfiguration(AiSectionPath,
+                    options =>
+                    {
+                        options.BindNonPublicProperties = false;
+                        options.ErrorOnUnknownConfiguration = true;
+                    })
                 .Validate(settings =>
                     {
                         var result = SlotsValidator.ValidateSlots(settings, out var error);

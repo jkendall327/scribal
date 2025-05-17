@@ -19,7 +19,7 @@ public class ChapterState
 {
     public int Number { get; set; }
     public required string Title { get; init; }
-    public string? Summary { get; init; }
+    public string? Summary { get; set; }
     public ChapterStateType State { get; set; }
     public string? DraftFilePath { get; set; }
 }

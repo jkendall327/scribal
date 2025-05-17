@@ -21,6 +21,11 @@
 - [x] `scribal init`: Set project state to "Initialized" in `project_state.json`
 - [x] `project_state.json`: Track chapters and their individual states (e.g., unstarted, drafted, locked off)
 
+## Models
+
+- [ ] GUI for model selection
+- [ ] Add support for local models (Ollama etc.)
+
 ## Pitch
 
 - [x] Allow user to supply a core seed idea (pitch)

@@ -21,7 +21,7 @@ public class CommandService(
     WorkspaceDeleter workspaceDeleter,
     WorkspaceManager workspaceManager,
     ChapterManagerService chapterManagerService,
-    IGitService gitService,
+    IGitServiceFactory gitFactory,
     ExportService exportService)
 {
     private readonly Argument<string> _ideaArgument = new()
@@ -188,7 +188,7 @@ public class CommandService(
             return;
         }
 
-        if (!gitService.Enabled)
+        if (!gitFactory.TryOpenRepository(out var git))
         {
             AnsiConsole.MarkupLine("[yellow]Git is not initialized for this workspace. Cannot commit.[/]");
 
@@ -198,7 +198,8 @@ public class CommandService(
         try
         {
             AnsiConsole.MarkupLine($"Attempting to commit all changes with message: \"{message}\"...");
-            var success = await gitService.CreateCommitAllAsync(message, token);
+            
+            var success = await git.CreateCommitAllAsync(message, token);
 
             AnsiConsole.MarkupLine(success
                 ? "[green]Commit operation completed. Check logs for details.[/]"

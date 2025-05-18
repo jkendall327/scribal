@@ -66,6 +66,12 @@ public class GitServiceFactory(
 
     public void DeleteRepository(string repoPath)
     {
+        if (!Repository.IsValid(repoPath))
+        {
+            throw new ArgumentException("Path was not a valid Git repo.", nameof(repoPath));
+        }
+
+        fileSystem.Directory.Delete(repoPath, true);
     }
 }
 

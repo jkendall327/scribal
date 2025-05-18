@@ -13,7 +13,7 @@ public class WorkspaceDeleter(
     IFileSystem fileSystem,
     IUserInteraction interaction,
     IAnsiConsole console,
-    IGitService gitService,
+    IGitServiceFactory gitFactory,
     ILogger<WorkspaceDeleter> logger)
 {
     public async Task DeleteWorkspaceCommandAsync(InvocationContext context)
@@ -48,13 +48,13 @@ public class WorkspaceDeleter(
 
             logger.LogInformation(".scribal workspace at {WorkspacePath} deleted successfully", workspacePath);
 
-            if (gitService.Enabled)
+            if (gitFactory.TryOpenRepository(out var git))
             {
                 var cancellationToken = context.GetCancellationToken();
                 var commitMessage = "Deleted .scribal workspace";
                 logger.LogInformation("Attempting to commit deletion of workspace: {WorkspacePath}", workspacePath);
 
-                var commitSuccess = await gitService.CreateCommitAsync(workspacePath, commitMessage, cancellationToken);
+                var commitSuccess = await git.CreateCommitAsync(workspacePath, commitMessage, cancellationToken);
 
                 if (commitSuccess)
                 {
@@ -101,9 +101,7 @@ public class WorkspaceDeleter(
 
                     try
                     {
-                        fileSystem.Directory.Delete(gitFolderPath, true);
-
-                        gitService.DisableRepository();
+                        gitFactory.DeleteRepository(gitFolderPath);
 
                         console.MarkupLine(
                             $"[green].git folder at '{Markup.Escape(gitFolderPath)}' deleted successfully.[/]");

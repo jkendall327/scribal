@@ -135,7 +135,8 @@ public class OutlineService(
         if (userSuppliedAPremise && workspaceHasPremise)
         {
             var selectionPrompt = new SelectionPrompt<string>()
-                                  .Title("You supplied a premise, but your workspace already has one. Pick which one to use:")
+                                  .Title(
+                                      "You supplied a premise, but your workspace already has one. Pick which one to use:")
                                   .PageSize(3)
                                   .AddChoices("my existing premise", "the premise I just supplied");
 
@@ -143,13 +144,13 @@ public class OutlineService(
 
             return response is "my existing premise" ? existingPremise : premise;
         }
-        
+
         if (!userSuppliedAPremise && workspaceHasPremise)
         {
-            AnsiConsole.WriteLine(existingPremise!);
+            AnsiConsole.Console.DisplayProsePassage(existingPremise!, "Existing premise");
 
             AnsiConsole.WriteLine();
-            
+
             var useSavedPremise =
                 await AnsiConsole.ConfirmAsync("You have a saved premise. Use this to generate the outline?",
                     cancellationToken: ct);
@@ -169,12 +170,14 @@ public class OutlineService(
         {
             return premise;
         }
-        
+
         if (!userSuppliedAPremise && !workspaceHasPremise)
         {
             AnsiConsole.MarkupLine("[red]Premise cannot be empty.[/]");
             AnsiConsole.MarkupLine("[yellow]Either use the /pitch command to generate one,[/]");
-            AnsiConsole.MarkupLine("[yellow]or rerun the /outline command with your desired premise, e.g. '/outline \"a sci-fi epic about a horse\"'.[/]");
+
+            AnsiConsole.MarkupLine(
+                "[yellow]or rerun the /outline command with your desired premise, e.g. '/outline \"a sci-fi epic about a horse\"'.[/]");
 
             return null;
         }
@@ -338,11 +341,11 @@ public class OutlineService(
             }
 
             AnsiConsole.WriteLine();
-            
+
             AnsiConsole.MarkupLine("(available commands: [blue]/done[/], [blue]/cancel[/])");
 
             AnsiConsole.Markup("[green]Refine Plot Outline > [/]");
-            
+
             var userInput = ReadLine.Read();
 
             if (string.IsNullOrWhiteSpace(userInput))

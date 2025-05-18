@@ -221,7 +221,8 @@ public class ChapterManagerService(
 
             if (!string.IsNullOrWhiteSpace(selectedChapter.Summary))
             {
-                AnsiConsole.MarkupLine($"Summary: [grey]{Markup.Escape(selectedChapter.Summary)}[/]");
+                AnsiConsole.Console.DisplayProsePassage(selectedChapter.Summary, "Summary");
+                //AnsiConsole.MarkupLine($"Summary: [grey]{Markup.Escape(selectedChapter.Summary)}[/]");
             }
 
             AnsiConsole.MarkupLine(

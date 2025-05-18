@@ -2,6 +2,7 @@ namespace Scribal;
 
 public enum MessageType
 {
+    None,
     Informational,
     Hint,
     Warning,
@@ -16,4 +17,4 @@ public enum MessageStyle
     Underline
 }
 
-public record MessageOptions(MessageType Type = MessageType.Informational, MessageStyle Style = MessageStyle.None);
+public record MessageOptions(MessageType Type = MessageType.None, MessageStyle Style = MessageStyle.None);

@@ -4,9 +4,9 @@ namespace Scribal.Cli.Interface;
 
 public class SpectreUserInteraction(IAnsiConsole console) : IUserInteraction
 {
-    public async Task<bool> ConfirmAsync(string prompt)
+    public async Task<bool> ConfirmAsync(string prompt, CancellationToken cancellationToken = default)
     {
-        return await console.ConfirmAsync(prompt);
+        return await console.ConfirmAsync(prompt, cancellationToken: cancellationToken);
     }
 
     public Task NotifyAsync(string message, MessageOptions? options = null)
@@ -19,7 +19,8 @@ public class SpectreUserInteraction(IAnsiConsole console) : IUserInteraction
         {
             var messageColour = options.Type switch
             {
-                MessageType.Informational => null,
+                MessageType.None => null,
+                MessageType.Informational => "cyan",
                 MessageType.Hint => "yellow",
                 MessageType.Warning => "yellow",
                 MessageType.Error => "red",
@@ -51,5 +52,20 @@ public class SpectreUserInteraction(IAnsiConsole console) : IUserInteraction
         }
         
         return Task.CompletedTask;
+    }
+
+    public async Task NotifyError(string message, Exception? ex = null)
+    {
+        await NotifyAsync(message, new(MessageType.Error));
+
+        if (ex != null)
+        {
+            ExceptionDisplay.DisplayException(ex);
+        }
+    }
+
+    public void DisplayProsePassage(string prose, string? header = null)
+    {
+        console.DisplayProsePassage(prose, string.Empty);
     }
 }

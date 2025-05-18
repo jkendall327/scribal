@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Scribal.AI;
+using Scribal.Cli.Infrastructure;
 using Scribal.Cli.Interface;
 using Scribal.Config;
 using Scribal.Context;
@@ -19,10 +20,11 @@ public class NewChapterCreator(
     IAiChatService chat,
     PromptRenderer renderer,
     Kernel kernel,
-    IOptions<AiSettings> options,
-    ILogger<NewChapterCreator> logger,
     ConsoleChatRenderer consoleChatRenderer,
-    IUserInteraction userInteraction)
+    IUserInteraction userInteraction,
+    RefinementService refinementService,
+    IOptions<AiSettings> options,
+    ILogger<NewChapterCreator> logger)
 {
     public async Task CreateNewChapterAsync(CancellationToken cancellationToken)
     {
@@ -212,111 +214,12 @@ public class NewChapterCreator(
             return generatedDraft;
         }
 
-        var refinementCid = $"new-chapter-refine-{chapterNumber}-{Guid.NewGuid()}";
-        var refinementHistory = new ChatHistory();
-        var sb = new StringBuilder("You are an assistant helping to refine a new chapter draft. The current draft is:");
-        sb.AppendLine("---");
-        sb.AppendLine(generatedDraft);
-        sb.AppendLine("---");
-        sb.AppendLine("Focus on improving it based on user feedback. Be concise and helpful.");
-        refinementHistory.AddSystemMessage(sb.ToString());
-        refinementHistory.AddAssistantMessage(generatedDraft);
-
-        console.MarkupLine(
-            "Entering chapter draft refinement chat. Type [blue]/done[/] when finished or [blue]/cancel[/] to abort and use current version.");
-
-        var finalDraft = await RefineDraftLoopAsync(refinementCid, refinementHistory, sid, generatedDraft, ct);
+        var systemPrompt =
+            "You are an assistant helping to refine a new chapter draft. Focus on improving it based on user feedback. Be concise and helpful.";
+        
+        var finalDraft = await refinementService.RefineAsync(generatedDraft, systemPrompt, sid, ct);
         console.MarkupLine("[yellow]Chapter draft refinement finished for new chapter.[/]");
 
         return finalDraft;
-    }
-
-    private async Task<string> RefineDraftLoopAsync(string refinementCid,
-        ChatHistory refinementHistory,
-        string sid,
-        string currentDraft,
-        CancellationToken ct)
-    {
-        var lastAssistantResponse = currentDraft;
-
-        while (true)
-        {
-            if (ct.IsCancellationRequested)
-            {
-                console.MarkupLine("[yellow]Refinement cancelled by host.[/]");
-                logger.LogInformation("Draft refinement cancelled by host for {RefinementCid}", refinementCid);
-
-                break;
-            }
-
-            console.WriteLine();
-            
-            console.MarkupLine("(available commands: [blue]/done[/], [blue]/cancel[/])");
-            
-            console.Markup("[green]Refine New Chapter Draft > [/]");
-            
-            var userInput = ReadLine.Read();
-
-            if (string.IsNullOrWhiteSpace(userInput))
-            {
-                continue;
-            }
-
-            if (userInput.Equals("/done", StringComparison.OrdinalIgnoreCase))
-            {
-                logger.LogInformation("User finished draft refinement for {RefinementCid}", refinementCid);
-
-                break;
-            }
-
-            if (userInput.Equals("/cancel", StringComparison.OrdinalIgnoreCase))
-            {
-                console.MarkupLine("[yellow]Cancelling refinement, current version will be used...[/]");
-                logger.LogInformation("User cancelled draft refinement for {RefinementCid}", refinementCid);
-
-                return lastAssistantResponse; // Return the last good response
-            }
-
-            console.WriteLine();
-            var responseBuilder = new StringBuilder();
-
-            try
-            {
-                refinementHistory.AddUserMessage(userInput);
-                var chatRequest = new ChatRequest(userInput, refinementCid, sid);
-                var refinementStream = chat.StreamAsync(chatRequest, refinementHistory, ct);
-
-                await consoleChatRenderer.StreamWithSpinnerAsync(
-                    refinementStream.CollectWhileStreaming(responseBuilder, ct),
-                    ct);
-
-                lastAssistantResponse = responseBuilder.ToString().Trim();
-
-                if (!string.IsNullOrWhiteSpace(lastAssistantResponse))
-                {
-                    refinementHistory.AddAssistantMessage(lastAssistantResponse);
-
-                    logger.LogDebug("Refinement successful for {RefinementCid}, response length {Length}",
-                        refinementCid,
-                        lastAssistantResponse.Length);
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                console.WriteLine();
-                console.MarkupLine("[yellow](Refinement stream cancelled)[/]");
-                logger.LogInformation("Refinement stream cancelled for {RefinementCid}", refinementCid);
-
-                break; // Break and return last good response
-            }
-            catch (Exception e)
-            {
-                ExceptionDisplay.DisplayException(e, console);
-                console.MarkupLine("[red]An error occurred during refinement.[/]");
-                logger.LogError(e, "Error during draft refinement for {RefinementCid}", refinementCid);
-            }
-        }
-
-        return lastAssistantResponse;
     }
 }

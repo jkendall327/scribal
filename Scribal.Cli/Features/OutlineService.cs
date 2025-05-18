@@ -271,7 +271,11 @@ public class OutlineService(
             }
 
             AnsiConsole.WriteLine();
+            
+            AnsiConsole.MarkupLine("(available commands: [blue]/done[/], [blue]/cancel[/])");
+
             AnsiConsole.Markup("[green]Refine Plot Outline > [/]");
+            
             var userInput = ReadLine.Read();
 
             if (string.IsNullOrWhiteSpace(userInput))

@@ -81,8 +81,9 @@ public class SpectreUserInteraction(IAnsiConsole console, ConsoleChatRenderer co
         return sb.ToString();
     }
 
-    public void DisplayProsePassage(string prose, string? header = null)
+    public Task DisplayProsePassageAsync(string prose, string? header = null)
     {
         console.DisplayProsePassage(prose, string.Empty);
+        return Task.CompletedTask;
     }
 }

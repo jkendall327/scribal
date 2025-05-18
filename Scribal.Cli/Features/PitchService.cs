@@ -70,7 +70,7 @@ public class PitchService(
         var premiseBuilder = new StringBuilder();
 
         // Stream the initial premise generation.
-        await consoleChatRenderer.StreamWithSpinnerAsync(CollectWhileStreaming(premiseStream, premiseBuilder, ct), ct);
+        await consoleChatRenderer.StreamWithSpinnerAsync(premiseStream.CollectWhileStreaming(premiseBuilder, ct), ct);
 
         var generatedPremise = premiseBuilder.ToString().Trim();
 
@@ -102,21 +102,5 @@ public class PitchService(
         state.PipelineStage = PipelineStageType.AwaitingOutline;
         await workspaceManager.SaveWorkspaceStateAsync(state, cancellationToken: ct);
         console.MarkupLine("[green]Premise saved and pipeline stage updated to AwaitingOutline.[/]");
-    }
-
-    // Helper to collect content while streaming for the initial premise
-    private async IAsyncEnumerable<ChatStreamItem> CollectWhileStreaming(IAsyncEnumerable<ChatStreamItem> stream,
-        StringBuilder collector,
-        [EnumeratorCancellation] CancellationToken ct = default)
-    {
-        await foreach (var item in stream.WithCancellation(ct))
-        {
-            if (item is ChatStreamItem.TokenChunk tc)
-            {
-                collector.Append(tc.Content);
-            }
-
-            yield return item;
-        }
     }
 }

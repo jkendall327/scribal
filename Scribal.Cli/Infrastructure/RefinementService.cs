@@ -74,7 +74,7 @@ public class RefinementService(
                 var refinementStream = chat.StreamAsync(chatRequest, refinementHistory, ct);
 
                 await consoleChatRenderer.StreamWithSpinnerAsync(
-                    CollectWhileStreaming(refinementStream, responseBuilder, ct),
+                    refinementStream.CollectWhileStreaming(responseBuilder, ct),
                     ct);
 
                 lastAssistantResponse = responseBuilder.ToString().Trim();
@@ -105,20 +105,5 @@ public class RefinementService(
         }
 
         return lastAssistantResponse;
-    }
-    
-    private async IAsyncEnumerable<ChatStreamItem> CollectWhileStreaming(IAsyncEnumerable<ChatStreamItem> stream,
-        StringBuilder collector,
-        [EnumeratorCancellation] CancellationToken ct = default)
-    {
-        await foreach (var item in stream.WithCancellation(ct))
-        {
-            if (item is ChatStreamItem.TokenChunk tc)
-            {
-                collector.Append(tc.Content);
-            }
-
-            yield return item;
-        }
     }
 }

@@ -9,7 +9,7 @@ namespace Scribal.AI;
 
 public class MetadataCollector(TimeProvider timeProvider, ILogger<MetadataCollector> logger)
 {
-    public ChatStreamItem.Metadata CollectMetadata(string? sid, long startTimestamp, ChatMessageContent message)
+    public ChatModels.Metadata CollectMetadata(string? sid, long startTimestamp, ChatMessageContent message)
     {
         var elapsed = timeProvider.GetElapsedTime(startTimestamp);
         var promptTokens = 0;
@@ -40,7 +40,7 @@ public class MetadataCollector(TimeProvider timeProvider, ILogger<MetadataCollec
                 message.Metadata);
         }
 
-        var metadata = new ChatStreamItem.Metadata(elapsed, promptTokens, completionTokens);
+        var metadata = new ChatModels.Metadata(elapsed, promptTokens, completionTokens);
 
         logger.LogDebug(
             "Final metadata for SID '{Sid}': Elapsed: {Elapsed}, PromptTokens: {PromptTokens}, CompletionTokens: {CompletionTokens}",

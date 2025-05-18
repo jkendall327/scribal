@@ -147,7 +147,7 @@ public class ChapterDrafterService(
 
         var draftStream = chat.StreamAsync(chatRequest, history, ct);
         var draftBuilder = new StringBuilder();
-        await _consoleChatRenderer.StreamWithSpinnerAsync(CollectWhileStreaming(draftStream, draftBuilder, ct), ct);
+        await _consoleChatRenderer.StreamWithSpinnerAsync(draftStream.CollectWhileStreaming(draftBuilder, ct), ct);
 
         var generatedDraft = draftBuilder.ToString().Trim();
 
@@ -177,7 +177,7 @@ public class ChapterDrafterService(
             }
 
             console.WriteLine();
-            
+
             console.MarkupLine("(available commands: [blue]/done[/], [blue]/cancel[/])");
 
             console.Markup("[green]Refine Chapter Draft > [/]");
@@ -215,7 +215,7 @@ public class ChapterDrafterService(
                 var refinementStream = chat.StreamAsync(chatRequest, refinementHistory, ct);
 
                 await _consoleChatRenderer.StreamWithSpinnerAsync(
-                    CollectWhileStreaming(refinementStream, responseBuilder, ct),
+                    refinementStream.CollectWhileStreaming(responseBuilder, ct),
                     ct);
 
                 lastAssistantResponse = responseBuilder.ToString().Trim();
@@ -246,21 +246,6 @@ public class ChapterDrafterService(
         }
 
         return lastAssistantResponse;
-    }
-
-    private async IAsyncEnumerable<ChatStreamItem> CollectWhileStreaming(IAsyncEnumerable<ChatStreamItem> stream,
-        StringBuilder collector,
-        [EnumeratorCancellation] CancellationToken ct = default)
-    {
-        await foreach (var item in stream.WithCancellation(ct))
-        {
-            if (item is ChatStreamItem.TokenChunk tc)
-            {
-                collector.Append(tc.Content);
-            }
-
-            yield return item;
-        }
     }
 
     private async Task CommitDraftAsync(ChapterState chapter, string content, CancellationToken cancellationToken)

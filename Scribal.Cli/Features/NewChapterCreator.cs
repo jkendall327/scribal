@@ -185,7 +185,7 @@ public class NewChapterCreator(
 
         var draftStream = chat.StreamAsync(chatRequest, history, ct);
         var draftBuilder = new StringBuilder();
-        await consoleChatRenderer.StreamWithSpinnerAsync(CollectWhileStreaming(draftStream, draftBuilder, ct), ct);
+        await consoleChatRenderer.StreamWithSpinnerAsync(draftStream.CollectWhileStreaming(draftBuilder, ct), ct);
 
         var generatedDraft = draftBuilder.ToString().Trim();
 
@@ -287,7 +287,7 @@ public class NewChapterCreator(
                 var refinementStream = chat.StreamAsync(chatRequest, refinementHistory, ct);
 
                 await consoleChatRenderer.StreamWithSpinnerAsync(
-                    CollectWhileStreaming(refinementStream, responseBuilder, ct),
+                    refinementStream.CollectWhileStreaming(responseBuilder, ct),
                     ct);
 
                 lastAssistantResponse = responseBuilder.ToString().Trim();
@@ -318,20 +318,5 @@ public class NewChapterCreator(
         }
 
         return lastAssistantResponse;
-    }
-
-    private async IAsyncEnumerable<ChatStreamItem> CollectWhileStreaming(IAsyncEnumerable<ChatStreamItem> stream,
-        StringBuilder collector,
-        [EnumeratorCancellation] CancellationToken ct = default)
-    {
-        await foreach (var item in stream.WithCancellation(ct))
-        {
-            if (item is ChatStreamItem.TokenChunk tc)
-            {
-                collector.Append(tc.Content);
-            }
-
-            yield return item;
-        }
     }
 }

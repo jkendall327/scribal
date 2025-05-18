@@ -250,7 +250,11 @@ public class NewChapterCreator(
             }
 
             console.WriteLine();
+            
+            console.MarkupLine("(available commands: [blue]/done[/], [blue]/cancel[/])");
+            
             console.Markup("[green]Refine New Chapter Draft > [/]");
+            
             var userInput = ReadLine.Read();
 
             if (string.IsNullOrWhiteSpace(userInput))

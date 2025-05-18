@@ -177,6 +177,9 @@ public class ChapterDrafterService(
             }
 
             console.WriteLine();
+            
+            console.MarkupLine("(available commands: [blue]/done[/], [blue]/cancel[/])");
+
             console.Markup("[green]Refine Chapter Draft > [/]");
             var userInput = ReadLine.Read(); // Assuming ReadLine is accessible or replace with _console.Ask/Prompt
 

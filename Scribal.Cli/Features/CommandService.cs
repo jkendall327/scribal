@@ -307,9 +307,14 @@ public class CommandService(
 
         AnsiConsole.MarkupLine($"[green]Current Pipeline Stage:[/] {state.PipelineStage.ToString()}");
 
-        AnsiConsole.MarkupLine(!string.IsNullOrWhiteSpace(state.Premise)
-            ? $"[green]Premise:[/] {state.Premise}"
-            : "[green]Premise:[/] Not set");
+        if (string.IsNullOrWhiteSpace(state.Premise))
+        {
+            AnsiConsole.MarkupLine("[green]Premise:[/] Not set");
+        }
+        else
+        {
+            AnsiConsole.Console.DisplayProsePassage(state.Premise, "Premise");
+        }
 
         AnsiConsole.MarkupLine(!string.IsNullOrWhiteSpace(state.PlotOutlineFile)
             ? $"[green]Plot Outline File:[/] {state.PlotOutlineFile}"

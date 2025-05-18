@@ -303,7 +303,7 @@ public class WorkspaceManager(
         }
     }
 
-    public async Task SavePlotOutlineAsync(StoryOutline outline, string premise)
+    public async Task SavePlotOutlineAsync(StoryOutline outline, string? premise)
     {
         var workspacePath = CurrentWorkspacePath;
 

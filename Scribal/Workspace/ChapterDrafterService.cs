@@ -1,6 +1,4 @@
 using System.IO.Abstractions;
-using System.Runtime.CompilerServices;
-using System.Text;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel;
@@ -8,27 +6,23 @@ using Microsoft.SemanticKernel.ChatCompletion;
 using Scribal.Agency;
 using Scribal.AI;
 using Scribal.Cli.Infrastructure;
-using Scribal.Cli.Interface;
 using Scribal.Config;
 using Scribal.Context;
-using Scribal.Workspace;
-using Spectre.Console;
 
-namespace Scribal.Cli.Features;
+namespace Scribal.Workspace;
 
 public class ChapterDrafterService(
     IAiChatService chat,
     PromptRenderer renderer,
     Kernel kernel,
-    IAnsiConsole console,
     IOptions<AiSettings> options,
     IFileSystem fileSystem,
     WorkspaceManager workspaceManager,
     IGitService gitService,
     TimeProvider time,
-    RefinementService refinementService,
-    ILogger<ChapterDrafterService> logger,
-    ConsoleChatRenderer consoleChatRenderer)
+    IUserInteraction userInteraction,
+    IRefinementService refinementService,
+    ILogger<ChapterDrafterService> logger)
 {
     public async Task DraftChapterAsync(ChapterState chapter, CancellationToken cancellationToken = default)
     {
@@ -40,7 +34,8 @@ public class ChapterDrafterService(
 
         if (string.IsNullOrWhiteSpace(workspacePath))
         {
-            console.MarkupLine("[red]Could not determine current workspace path. Cannot draft chapter.[/]");
+            await userInteraction.NotifyAsync("Could not determine current workspace path. Cannot draft chapter.",
+                new(MessageType.Error));
 
             logger.LogWarning(
                 "Current workspace path is not set in WorkspaceManager. Chapter {ChapterNumber} drafting aborted",
@@ -51,7 +46,9 @@ public class ChapterDrafterService(
 
         if (options.Value.Primary is null)
         {
-            console.MarkupLine("[red]No primary model is configured. Cannot draft chapter.[/]");
+            await userInteraction.NotifyAsync("No primary model is configured. Cannot draft chapter.",
+                new(MessageType.Error));
+
             logger.LogWarning("Primary model not configured, cannot draft chapter");
 
             return;
@@ -63,22 +60,27 @@ public class ChapterDrafterService(
 
         if (string.IsNullOrWhiteSpace(initialDraft))
         {
-            console.MarkupLine("[red]Failed to generate an initial draft.[/]");
+            await userInteraction.NotifyAsync("Failed to generate an initial draft.", new(MessageType.Error));
+
             logger.LogWarning("Initial draft generation failed for chapter {ChapterNumber}", chapter.Number);
 
             return;
         }
 
-        console.MarkupLine("[cyan]Initial Draft Generated:[/]");
-        console.WriteLine(Markup.Escape(initialDraft));
+        await userInteraction.NotifyAsync("Initial draft generated.", new(MessageType.Informational));
 
-        var ok = await console.ConfirmAsync("Do you want to refine this draft?", cancellationToken: cancellationToken);
+        await userInteraction.DisplayProsePassageAsync(initialDraft, "Initial draft");
+
+        var ok = await userInteraction.ConfirmAsync("Do you want to refine this draft?",
+            cancellationToken: cancellationToken);
 
         string finalDraft;
 
         if (!ok)
         {
-            console.MarkupLine("[yellow]Chapter drafting complete (initial draft accepted).[/]");
+            await userInteraction.NotifyAsync("Chapter drafting complete (initial draft accepted).",
+                new(MessageType.Informational));
+
             finalDraft = initialDraft;
         }
         else
@@ -89,8 +91,8 @@ public class ChapterDrafterService(
             finalDraft = await refinementService.RefineAsync(initialDraft, systemPrompt, sid, cancellationToken);
         }
 
-        console.MarkupLine("[yellow]Final chapter draft:[/]");
-        console.WriteLine(Markup.Escape(finalDraft));
+        await userInteraction.NotifyAsync("Final chapter draft:", new(MessageType.Informational));
+        await userInteraction.DisplayProsePassageAsync(finalDraft, "Final draft");
 
         await CommitDraftAsync(chapter, finalDraft, cancellationToken);
     }
@@ -125,18 +127,17 @@ public class ChapterDrafterService(
         var history = new ChatHistory();
         history.AddSystemMessage(prompt);
 
-        console.MarkupLine(
-            $"[yellow]Generating initial draft for Chapter {chapter.Number}: {Markup.Escape(chapter.Title)}...[/]");
+        await userInteraction.NotifyAsync($"Generating initial draft for Chapter {chapter.Number}: {chapter.Title}...");
 
         var initialUserMessage = "Generate the chapter draft based on the details provided in your instructions.";
 
         var chatRequest = new ChatRequest(initialUserMessage, cid, sid);
 
         var draftStream = chat.StreamAsync(chatRequest, history, ct);
-        var draftBuilder = new StringBuilder();
-        await consoleChatRenderer.StreamWithSpinnerAsync(draftStream.CollectWhileStreaming(draftBuilder, ct), ct);
 
-        var generatedDraft = draftBuilder.ToString().Trim();
+        var response = await userInteraction.DisplayAssistantResponseAsync(draftStream, ct);
+
+        var generatedDraft = response.Trim();
 
         logger.LogInformation("Initial draft generated for Chapter {ChapterNumber}, length {Length}",
             chapter.Number,
@@ -151,7 +152,9 @@ public class ChapterDrafterService(
 
         if (string.IsNullOrWhiteSpace(workspacePath))
         {
-            console.MarkupLine("[red]Could not determine workspace path from WorkspaceManager. Draft not saved.[/]");
+            await userInteraction.NotifyAsync(
+                "Could not determine workspace path from WorkspaceManager. Draft not saved.",
+                new(MessageType.Error));
 
             logger.LogError(
                 "Cannot save draft, workspace path unknown (from WorkspaceManager.CurrentWorkspacePath) for chapter {ChapterNumber}",
@@ -165,7 +168,7 @@ public class ChapterDrafterService(
 
         if (string.IsNullOrWhiteSpace(projectRootPath))
         {
-            console.MarkupLine("[red]Could not determine project root path. Draft not saved.[/]");
+            await userInteraction.NotifyError("Could not determine project root path. Draft not saved.");
 
             logger.LogError(
                 "Cannot save draft, project root path could not be determined from workspace path {WorkspacePath} for chapter {ChapterNumber}",
@@ -186,27 +189,37 @@ public class ChapterDrafterService(
 
         try
         {
+            var workspaceState = await workspaceManager.LoadWorkspaceStateAsync(cancellationToken: cancellationToken);
+
+            if (workspaceState is null)
+            {
+                await userInteraction.NotifyAsync(
+                    "Could not determine workspace path from WorkspaceManager. Draft not saved.",
+                    new(MessageType.Error));
+
+                return;
+            }
+            
             await fileSystem.File.WriteAllTextAsync(draftFilePath, content, cancellationToken);
-            console.MarkupLine($"[green]Draft saved successfully to: {Markup.Escape(draftFilePath)}[/]");
+            
+            await userInteraction.NotifyAsync($"Draft saved successfully to: {draftFilePath}.", new(MessageType.Informational));
+
             logger.LogInformation("Chapter {ChapterNumber} draft saved to {FilePath}", chapter.Number, draftFilePath);
 
             await AttemptGitCommit(chapter, draftFilePath, cancellationToken);
 
             // Update the workspace's state.
-
-            var workspaceState = await workspaceManager.LoadWorkspaceStateAsync(cancellationToken: cancellationToken);
-
             var chapterState = workspaceState.Chapters.Single(s => s.Number == chapter.Number);
             chapterState.State = ChapterStateType.Draft;
             chapterState.DraftFilePath = draftFilePath;
 
             await workspaceManager.SaveWorkspaceStateAsync(workspaceState, cancellationToken: cancellationToken);
 
-            console.MarkupLine("[green]Workspace state updated with new draft information.[/]");
+            await userInteraction.NotifyAsync("Workspace state updated with new draft information.", new(MessageType.Informational));
         }
         catch (Exception ex)
         {
-            console.MarkupLine($"[red]Failed to save draft: {Markup.Escape(ex.Message)}[/]");
+            await userInteraction.NotifyError("Failed to save draft.", ex);
 
             logger.LogError(ex,
                 "Failed to save draft for chapter {ChapterNumber} to {FilePath}",
@@ -253,12 +266,16 @@ public class ChapterDrafterService(
 
         if (commitSuccess)
         {
-            console.MarkupLine($"[green]Committed draft to git: {Markup.Escape(commitMessage)}[/]");
+            await userInteraction.NotifyAsync($"Committed draft to git: {commitMessage}",
+                new(MessageType.Informational));
+
             logger.LogInformation("Successfully committed draft for chapter {ChapterNumber}", chapter.Number);
         }
         else
         {
-            console.MarkupLine($"[red]Failed to commit draft for chapter {chapter.Number} to git.[/]");
+            await userInteraction.NotifyAsync($"Failed to commit draft for chapter {chapter.Number} to git.",
+                new(MessageType.Error));
+
             logger.LogWarning("Failed to commit draft for chapter {ChapterNumber}", chapter.Number);
         }
     }

@@ -12,7 +12,7 @@ public class RefinementService(
     IAnsiConsole console,
     ConsoleChatRenderer consoleChatRenderer,
     IAiChatService chat,
-    ILogger<RefinementService> logger)
+    ILogger<RefinementService> logger) : IRefinementService
 {
     public async Task<string> RefineAsync(string input, string systemPrompt, string sid, CancellationToken ct = default)
     {

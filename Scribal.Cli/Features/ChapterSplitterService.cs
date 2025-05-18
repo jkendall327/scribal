@@ -94,7 +94,7 @@ public class ChapterSplitterService : IChapterSplitterService
             $"Confirm split: Original Chapter {sourceChapter.Number} ('{Markup.Escape(sourceChapter.Title)}') will be updated. " +
             $"New Chapter {newChapterOrdinal} ('{Markup.Escape(newChapterTitle)}') will be created. Proceed?";
 
-        var confirmed = await _userInteraction.ConfirmAsync(confirmPrompt);
+        var confirmed = await _userInteraction.ConfirmAsync(confirmPrompt, cancellationToken);
 
         if (!confirmed || cancellationToken.IsCancellationRequested)
         {

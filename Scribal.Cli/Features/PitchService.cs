@@ -20,7 +20,7 @@ public class PitchService(
     IAnsiConsole console,
     IOptions<AiSettings> options,
     WorkspaceManager workspaceManager,
-    RefinementService refinementService,
+    IRefinementService refinementService,
     ConsoleChatRenderer consoleChatRenderer)
 {
     public async Task CreatePremiseFromPitch(string pitch, CancellationToken ct = default)

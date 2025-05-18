@@ -8,9 +8,8 @@ using Scribal.AI;
 using Scribal.Cli.Infrastructure;
 using Scribal.Config;
 using Scribal.Context;
-using Scribal.Workspace;
 
-namespace Scribal.Cli.Features;
+namespace Scribal.Workspace;
 
 public class ChapterDrafterService(
     IAiChatService chat,
@@ -70,7 +69,7 @@ public class ChapterDrafterService(
 
         await userInteraction.NotifyAsync("Initial draft generated.", new(MessageType.Informational));
 
-        userInteraction.DisplayProsePassage(initialDraft, "Initial draft");
+        await userInteraction.DisplayProsePassageAsync(initialDraft, "Initial draft");
 
         var ok = await userInteraction.ConfirmAsync("Do you want to refine this draft?",
             cancellationToken: cancellationToken);
@@ -93,7 +92,7 @@ public class ChapterDrafterService(
         }
 
         await userInteraction.NotifyAsync("Final chapter draft:", new(MessageType.Informational));
-        userInteraction.DisplayProsePassage(finalDraft, "Final draft");
+        await userInteraction.DisplayProsePassageAsync(finalDraft, "Final draft");
 
         await CommitDraftAsync(chapter, finalDraft, cancellationToken);
     }

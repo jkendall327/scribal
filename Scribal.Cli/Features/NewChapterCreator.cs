@@ -22,7 +22,7 @@ public class NewChapterCreator(
     Kernel kernel,
     ConsoleChatRenderer consoleChatRenderer,
     IUserInteraction userInteraction,
-    RefinementService refinementService,
+    IRefinementService refinementService,
     IOptions<AiSettings> options,
     ILogger<NewChapterCreator> logger)
 {

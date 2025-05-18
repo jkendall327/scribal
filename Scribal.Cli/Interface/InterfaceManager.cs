@@ -1,6 +1,7 @@
 using System.CommandLine.Parsing;
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Abstractions;
+using System.Text;
 using Microsoft.Extensions.Options;
 using Scribal.Agency;
 using Scribal.AI;
@@ -42,6 +43,7 @@ public class InterfaceManager(
         }
 
         AnsiConsole.MarkupLine("Type [blue]/help[/] for available commands or just start typing to talk.");
+        AnsiConsole.MarkupLine("[yellow](hint: use '{' to enter multi-line mode and '}' to exit)[/]");
         AnsiConsole.WriteLine();
 
         return Task.CompletedTask;
@@ -53,6 +55,8 @@ public class InterfaceManager(
         var parser = commands.Build();
 
         ReadLine.HistoryEnabled = true;
+        var inMultiLineMode = false;
+        var multiLineInputBuilder = new StringBuilder();
 
         while (true)
         {
@@ -61,18 +65,50 @@ public class InterfaceManager(
             await DrawStatusLine(aiSettings.Value.Primary?.ModelId);
 
             AnsiConsole.WriteLine();
-            AnsiConsole.Markup("[green]> [/]");
 
-            var input = ReadLine.Read();
+            // AI: Use a different prompt when in multi-line mode for better UX
+            AnsiConsole.Markup(inMultiLineMode ? "[blue]... [/]" : "[green]> [/]");
 
-            if (string.IsNullOrWhiteSpace(input))
+            var lineInput = ReadLine.Read();
+
+            if (inMultiLineMode)
             {
-                continue;
+                if (lineInput == "}")
+                {
+                    inMultiLineMode = false;
+                    var fullInput = multiLineInputBuilder.ToString();
+                    multiLineInputBuilder.Clear();
+
+                    AnsiConsole.WriteLine();
+
+                    if (!string.IsNullOrWhiteSpace(fullInput))
+                    {
+                        await ActOnInput(fullInput, parser);
+                    }
+                }
+                else
+                {
+                    multiLineInputBuilder.AppendLine(lineInput);
+                }
             }
+            else
+            {
+                if (lineInput == "{")
+                {
+                    inMultiLineMode = true;
+                    multiLineInputBuilder.Clear();
+                }
+                else
+                {
+                    if (string.IsNullOrWhiteSpace(lineInput))
+                    {
+                        continue;
+                    }
 
-            AnsiConsole.WriteLine();
-
-            await ActOnInput(input, parser);
+                    AnsiConsole.WriteLine();
+                    await ActOnInput(lineInput, parser);
+                }
+            }
         }
     }
 
@@ -93,7 +129,7 @@ public class InterfaceManager(
             // Working around System.CommandLine seeming to hardcode this.
             input = "--help";
         }
-        
+
         var parsed = parser.Parse(input);
 
         if (parsed.Errors.Any())

@@ -155,7 +155,7 @@ public class ChapterMergerService : IChapterMergerService
             $"The source chapter will be deleted. The target chapter's summary will be '{Markup.Escape(newTargetSummary)}'." +
             Environment.NewLine + "Proceed?";
 
-        var confirmed = await _userInteraction.ConfirmAsync(confirmMessage);
+        var confirmed = await _userInteraction.ConfirmAsync(confirmMessage, cancellationToken);
 
         if (!confirmed || cancellationToken.IsCancellationRequested)
         {

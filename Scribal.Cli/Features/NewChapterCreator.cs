@@ -82,7 +82,7 @@ public class NewChapterCreator(
         var initialContent = string.Empty;
 
         var provideDraftYourself =
-            await userInteraction.ConfirmAsync("Do you want to provide an initial draft yourself?");
+            await userInteraction.ConfirmAsync("Do you want to provide an initial draft yourself?", cancellationToken);
 
         if (provideDraftYourself)
         {
@@ -102,7 +102,7 @@ public class NewChapterCreator(
         }
         else
         {
-            var generateWithAi = await userInteraction.ConfirmAsync("Do you want the AI to generate an initial draft?");
+            var generateWithAi = await userInteraction.ConfirmAsync("Do you want the AI to generate an initial draft?", cancellationToken);
 
             if (generateWithAi)
             {
@@ -205,7 +205,7 @@ public class NewChapterCreator(
         console.MarkupLine("[cyan]Initial AI Draft Generated:[/]");
         console.WriteLine(Markup.Escape(generatedDraft));
 
-        var okToRefine = await userInteraction.ConfirmAsync("Do you want to refine this AI draft?");
+        var okToRefine = await userInteraction.ConfirmAsync("Do you want to refine this AI draft?", ct);
 
         if (!okToRefine)
         {

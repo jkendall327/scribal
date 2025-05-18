@@ -39,6 +39,38 @@ public class OutlineService(
 
         var sid = options.Value.Primary.Provider;
 
+        if (string.IsNullOrWhiteSpace(premise))
+        {
+            var state = await workspaceManager.LoadWorkspaceStateAsync(cancellationToken: ct);
+
+            var existingPremise = state?.Premise;
+
+            if (string.IsNullOrWhiteSpace(existingPremise))
+            {
+                AnsiConsole.MarkupLine("[red]Premise cannot be empty.[/]");
+
+                return;
+            }
+
+            AnsiConsole.WriteLine(existingPremise);
+
+            var useSavedPremise =
+                await AnsiConsole.ConfirmAsync("You have a saved premise. Use this to generate the outline?",
+                    cancellationToken: ct);
+
+            if (useSavedPremise)
+            {
+                premise = existingPremise;
+            }
+            else
+            {
+                AnsiConsole.WriteLine(
+                    "Rerun the /outline command with your desired premise, e.g. '/outline \"a sci-fi epic about a horse\"'.");
+
+                return;
+            }
+        }
+
         var generatedOutlineJson = await GenerateInitialOutline(premise, sid, ct);
 
         if (!TryParseOutline(generatedOutlineJson, out var storyOutline))

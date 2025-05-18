@@ -34,7 +34,7 @@ public class CommandService(
     private readonly Argument<string> _premiseArgument = new()
     {
         Name = "Premise",
-        Arity = ArgumentArity.ExactlyOne,
+        Arity = ArgumentArity.ZeroOrOne,
         Description = "The story premise to be turned into an outline"
     };
 
@@ -163,14 +163,8 @@ public class CommandService(
     private async Task OutlineCommand(InvocationContext arg)
     {
         var premise = arg.ParseResult.GetValueForArgument(_premiseArgument);
+        
         var token = arg.GetCancellationToken();
-
-        if (string.IsNullOrWhiteSpace(premise))
-        {
-            AnsiConsole.MarkupLine("[red]Premise cannot be empty.[/]");
-
-            return;
-        }
 
         try
         {

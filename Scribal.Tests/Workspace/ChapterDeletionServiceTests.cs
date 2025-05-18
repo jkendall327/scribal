@@ -36,7 +36,7 @@ public class ChapterDeletionServiceTests
         _fileSystem.Directory.SetCurrentDirectory(currentDirectory); // Important for TryFindWorkspaceFolder
 
         _workspaceManager = new(_fileSystem,
-            Substitute.For<IGitService>(),
+            Substitute.For<IGitServiceFactory>(),
             Substitute.For<IUserInteraction>(),
             Options.Create(new AppConfig()),
             NullLogger<WorkspaceManager>.Instance);

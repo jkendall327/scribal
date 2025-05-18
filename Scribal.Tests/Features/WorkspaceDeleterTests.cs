@@ -17,7 +17,8 @@ public class WorkspaceDeleterTests
     private readonly MockFileSystem _fileSystem = new();
     private readonly IUserInteraction _userInteraction = Substitute.For<IUserInteraction>();
     private readonly IAnsiConsole _console = Substitute.For<IAnsiConsole>();
-    private readonly IGitService _gitService = Substitute.For<IGitService>();
+    private readonly IGitServiceFactory _gitFactory = Substitute.For<IGitServiceFactory>();
+    private readonly IGitService _git = Substitute.For<IGitService>();
     private readonly WorkspaceDeleter _sut;
 
     private const string TestProjectRootDir = "/test/project";
@@ -27,7 +28,7 @@ public class WorkspaceDeleterTests
     public WorkspaceDeleterTests()
     {
         WorkspaceManager workspaceManager = new(_fileSystem,
-            _gitService,
+            _gitFactory,
             _userInteraction,
             Options.Create(new AppConfig()),
             NullLogger<WorkspaceManager>.Instance);
@@ -36,14 +37,19 @@ public class WorkspaceDeleterTests
             _fileSystem,
             _userInteraction,
             _console,
-            _gitService,
+            _gitFactory,
             NullLogger<WorkspaceDeleter>.Instance);
     }
 
     private void InitializeTestSetup(bool gitEnabled = false, string currentDirectory = TestProjectRootDir)
     {
         _fileSystem.Directory.SetCurrentDirectory(currentDirectory);
-        _gitService.Enabled.Returns(gitEnabled);
+        
+        _gitFactory.TryOpenRepository(out Arg.Any<IGitService?>()).Returns(x =>
+        {
+            x[0] = gitEnabled ? _git : null;
+            return gitEnabled;
+        });
     }
 
     private void SetupBasicWorkspace()
@@ -102,8 +108,8 @@ public class WorkspaceDeleterTests
         _userInteraction.ConfirmAsync(Arg.Is<string>(s => s.Contains(".scribal"))).Returns(Task.FromResult(true));
         _userInteraction.ConfirmAsync(Arg.Is<string>(s => s.Contains(".git"))).Returns(Task.FromResult(true));
 
-        _gitService.CreateCommitAsync(TestScribalDir, Arg.Any<string>(), Arg.Any<CancellationToken>())
-                   .Returns(Task.FromResult(true));
+        _git.CreateCommitAsync(TestScribalDir, Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(true));
 
         var invocationContext = CreateTestInvocationContext();
 
@@ -128,8 +134,8 @@ public class WorkspaceDeleterTests
 
         _userInteraction.ConfirmAsync(Arg.Is<string>(s => s.Contains(".git"))).Returns(Task.FromResult(false));
 
-        _gitService.CreateCommitAsync(TestScribalDir, Arg.Any<string>(), Arg.Any<CancellationToken>())
-                   .Returns(Task.FromResult(true));
+        _git.CreateCommitAsync(TestScribalDir, Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(true));
 
         var invocationContext = CreateTestInvocationContext();
 

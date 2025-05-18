@@ -25,6 +25,7 @@ public class ChapterDrafterService(
     IFileSystem fileSystem,
     WorkspaceManager workspaceManager,
     IGitService gitService,
+    TimeProvider time,
     RefinementService refinementService,
     ILogger<ChapterDrafterService> logger,
     ConsoleChatRenderer consoleChatRenderer)
@@ -118,7 +119,6 @@ public class ChapterDrafterService(
             "Prompt for drafting a chapter based on its outline details.",
             arguments);
 
-        // Corrected: Removed 'ct' (CancellationToken) as it's not an argument for this method.
         var prompt = await renderer.RenderPromptTemplateFromFileAsync(kernel, request, cancellationToken: ct);
 
         var cid = $"draft-init-{chapter.Number}-{Guid.NewGuid()}";
@@ -176,8 +176,47 @@ public class ChapterDrafterService(
         }
 
         var chaptersDir = fileSystem.Path.Combine(projectRootPath, "chapters");
-        fileSystem.Directory.CreateDirectory(chaptersDir); // Ensure directory exists
+        fileSystem.Directory.CreateDirectory(chaptersDir);
 
+        var sanitizedTitle = GetSanitizedTitle(chapter);
+
+        var timestamp = time.GetUtcNow().ToString("yyyyMMddHHmmss");
+        var draftFileName = $"chapter_{chapter.Number:D2}_{sanitizedTitle}_draft_{timestamp}.md";
+        var draftFilePath = fileSystem.Path.Combine(chaptersDir, draftFileName);
+
+        try
+        {
+            await fileSystem.File.WriteAllTextAsync(draftFilePath, content, cancellationToken);
+            console.MarkupLine($"[green]Draft saved successfully to: {Markup.Escape(draftFilePath)}[/]");
+            logger.LogInformation("Chapter {ChapterNumber} draft saved to {FilePath}", chapter.Number, draftFilePath);
+
+            await AttemptGitCommit(chapter, draftFilePath, cancellationToken);
+
+            // Update the workspace's state.
+
+            var workspaceState = await workspaceManager.LoadWorkspaceStateAsync(cancellationToken: cancellationToken);
+
+            var chapterState = workspaceState.Chapters.Single(s => s.Number == chapter.Number);
+            chapterState.State = ChapterStateType.Draft;
+            chapterState.DraftFilePath = draftFilePath;
+
+            await workspaceManager.SaveWorkspaceStateAsync(workspaceState, cancellationToken: cancellationToken);
+
+            console.MarkupLine("[green]Workspace state updated with new draft information.[/]");
+        }
+        catch (Exception ex)
+        {
+            console.MarkupLine($"[red]Failed to save draft: {Markup.Escape(ex.Message)}[/]");
+
+            logger.LogError(ex,
+                "Failed to save draft for chapter {ChapterNumber} to {FilePath}",
+                chapter.Number,
+                draftFilePath);
+        }
+    }
+
+    private string GetSanitizedTitle(ChapterState chapter)
+    {
         // Sanitize title for filename
         var sanitizedTitle = string.Join("_", chapter.Title.Split(fileSystem.Path.GetInvalidFileNameChars()));
         sanitizedTitle = string.Join("_", sanitizedTitle.Split(fileSystem.Path.GetInvalidPathChars()));
@@ -195,53 +234,32 @@ public class ChapterDrafterService(
             sanitizedTitle = sanitizedTitle[..maxTitleLengthInFilename];
         }
 
-        var timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
-        var draftFileName = $"chapter_{chapter.Number:D2}_{sanitizedTitle}_draft_{timestamp}.md";
-        var draftFilePath = fileSystem.Path.Combine(chaptersDir, draftFileName);
+        return sanitizedTitle;
+    }
 
-        try
+    private async Task AttemptGitCommit(ChapterState chapter, string draftFilePath, CancellationToken cancellationToken)
+    {
+        if (!gitService.Enabled)
         {
-            await fileSystem.File.WriteAllTextAsync(draftFilePath, content, cancellationToken);
-            console.MarkupLine($"[green]Draft saved successfully to: {Markup.Escape(draftFilePath)}[/]");
-            logger.LogInformation("Chapter {ChapterNumber} draft saved to {FilePath}", chapter.Number, draftFilePath);
+            logger.LogInformation("Git service not enabled. Skipping commit for chapter {ChapterNumber} draft",
+                chapter.Number);
 
-            if (gitService.Enabled)
-            {
-                var commitMessage = $"Drafted Chapter {chapter.Number}: {chapter.Title}";
-
-                var commitSuccess = await gitService.CreateCommitAsync(draftFilePath, commitMessage, cancellationToken);
-
-                if (commitSuccess)
-                {
-                    console.MarkupLine($"[green]Committed draft to git: {Markup.Escape(commitMessage)}[/]");
-                    logger.LogInformation("Successfully committed draft for chapter {ChapterNumber}", chapter.Number);
-                }
-                else
-                {
-                    console.MarkupLine($"[red]Failed to commit draft for chapter {chapter.Number} to git.[/]");
-                    logger.LogWarning("Failed to commit draft for chapter {ChapterNumber}", chapter.Number);
-                }
-            }
-            else
-            {
-                logger.LogInformation("Git service not enabled. Skipping commit for chapter {ChapterNumber} draft",
-                    chapter.Number);
-            }
-
-            // Optionally, update ChapterState with the new draft path and save workspace state
-            // chapter.DraftFilePath = draftFilePath; // Assuming ChapterState has such a property
-            // chapter.State = ChapterStatus.Drafted; // Or similar
-            // await _workspaceManager.SaveWorkspaceStateAsync(state, cancellationToken: cancellationToken);
-            // _console.MarkupLine("[green]Workspace state updated with new draft information.[/]");
+            return;
         }
-        catch (Exception ex)
-        {
-            console.MarkupLine($"[red]Failed to save draft: {Markup.Escape(ex.Message)}[/]");
 
-            logger.LogError(ex,
-                "Failed to save draft for chapter {ChapterNumber} to {FilePath}",
-                chapter.Number,
-                draftFilePath);
+        var commitMessage = $"Drafted Chapter {chapter.Number}: {chapter.Title}";
+
+        var commitSuccess = await gitService.CreateCommitAsync(draftFilePath, commitMessage, cancellationToken);
+
+        if (commitSuccess)
+        {
+            console.MarkupLine($"[green]Committed draft to git: {Markup.Escape(commitMessage)}[/]");
+            logger.LogInformation("Successfully committed draft for chapter {ChapterNumber}", chapter.Number);
+        }
+        else
+        {
+            console.MarkupLine($"[red]Failed to commit draft for chapter {chapter.Number} to git.[/]");
+            logger.LogWarning("Failed to commit draft for chapter {ChapterNumber}", chapter.Number);
         }
     }
 }

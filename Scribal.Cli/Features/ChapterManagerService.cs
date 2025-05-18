@@ -174,15 +174,7 @@ public class ChapterManagerService(
 
         draftCmd.SetHandler(async () =>
         {
-            // We want the draft operation to be cancellable by the parent token (e.g. Ctrl+C)
-            // but not necessarily by the subMenuCts which is for /back.
-            // However, if /back is invoked during drafting, it might be good to cancel.
-            // For now, pass the linkedCts.Token. If drafting becomes long and needs independent cancellation,
-            // we might need a different token strategy.
             await chapterDrafterService.DraftChapterAsync(chapter, linkedCts.Token);
-
-            // If drafting completes successfully, we might want to stay in the sub-menu.
-            // If it's cancelled by /back from within the refinement loop of drafting, linkedCts will be cancelled.
         });
 
         var splitCmd = new Command("/split", "Split this chapter into two.");

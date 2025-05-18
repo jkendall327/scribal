@@ -45,6 +45,7 @@ public static class ScribalServiceCollectionExtensions
 
         // Other
         services.AddSingleton<CommitGenerator>();
+        services.AddSingleton(TimeProvider.System);
         services.AddSingleton<IGitService, GitService>();
     }
 }

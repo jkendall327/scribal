@@ -28,7 +28,7 @@ public class OutlineService(
     IOptions<AiSettings> options,
     WorkspaceManager workspaceManager) // Injected WorkspaceManager
 {
-    public async Task CreateOutlineFromPremise(string premise, CancellationToken ct = default)
+    public async Task CreateOutlineFromPremise(string? premise, CancellationToken ct = default)
     {
         if (options.Value.Primary is null)
         {
@@ -39,36 +39,11 @@ public class OutlineService(
 
         var sid = options.Value.Primary.Provider;
 
-        if (string.IsNullOrWhiteSpace(premise))
+        premise = await CheckInputAgainstPotentialExistingPremise(premise, ct);
+
+        if (premise is null)
         {
-            var state = await workspaceManager.LoadWorkspaceStateAsync(cancellationToken: ct);
-
-            var existingPremise = state?.Premise;
-
-            if (string.IsNullOrWhiteSpace(existingPremise))
-            {
-                AnsiConsole.MarkupLine("[red]Premise cannot be empty.[/]");
-
-                return;
-            }
-
-            AnsiConsole.WriteLine(existingPremise);
-
-            var useSavedPremise =
-                await AnsiConsole.ConfirmAsync("You have a saved premise. Use this to generate the outline?",
-                    cancellationToken: ct);
-
-            if (useSavedPremise)
-            {
-                premise = existingPremise;
-            }
-            else
-            {
-                AnsiConsole.WriteLine(
-                    "Rerun the /outline command with your desired premise, e.g. '/outline \"a sci-fi epic about a horse\"'.");
-
-                return;
-            }
+            return;
         }
 
         var generatedOutlineJson = await GenerateInitialOutline(premise, sid, ct);
@@ -145,6 +120,66 @@ public class OutlineService(
             await workspaceManager.SavePlotOutlineAsync(finalStoryOutline!, premise);
             AnsiConsole.MarkupLine($"[green]Final plot outline saved to workspace: .scribal/{PlotOutlineFileName}[/]");
         }
+    }
+
+    private async Task<string?> CheckInputAgainstPotentialExistingPremise(string? premise, CancellationToken ct)
+    {
+        var state = await workspaceManager.LoadWorkspaceStateAsync(cancellationToken: ct);
+
+        var existingPremise = state?.Premise;
+
+        var userSuppliedAPremise = !string.IsNullOrWhiteSpace(premise);
+
+        var workspaceHasPremise = !string.IsNullOrWhiteSpace(existingPremise);
+
+        if (userSuppliedAPremise && workspaceHasPremise)
+        {
+            var selectionPrompt = new SelectionPrompt<string>()
+                                  .Title("You supplied a premise, but your workspace already has one. Pick which one to use:")
+                                  .PageSize(3)
+                                  .AddChoices("my existing premise", "the premise I just supplied");
+
+            var response = AnsiConsole.Prompt(selectionPrompt);
+
+            return response is "my existing premise" ? existingPremise : premise;
+        }
+        
+        if (!userSuppliedAPremise && workspaceHasPremise)
+        {
+            AnsiConsole.WriteLine(existingPremise!);
+
+            AnsiConsole.WriteLine();
+            
+            var useSavedPremise =
+                await AnsiConsole.ConfirmAsync("You have a saved premise. Use this to generate the outline?",
+                    cancellationToken: ct);
+
+            if (useSavedPremise)
+            {
+                return existingPremise;
+            }
+
+            AnsiConsole.WriteLine(
+                "Rerun the /outline command with your desired premise, e.g. '/outline \"a sci-fi epic about a horse\"'.");
+
+            return null;
+        }
+
+        if (userSuppliedAPremise && !workspaceHasPremise)
+        {
+            return premise;
+        }
+        
+        if (!userSuppliedAPremise && !workspaceHasPremise)
+        {
+            AnsiConsole.MarkupLine("[red]Premise cannot be empty.[/]");
+            AnsiConsole.MarkupLine("[yellow]Either use the /pitch command to generate one,[/]");
+            AnsiConsole.MarkupLine("[yellow]or rerun the /outline command with your desired premise, e.g. '/outline \"a sci-fi epic about a horse\"'.[/]");
+
+            return null;
+        }
+
+        return premise;
     }
 
     // Added PlotOutlineFileName constant for messaging, assuming it's not directly accessible here
@@ -243,7 +278,7 @@ public class OutlineService(
         AnsiConsole.WriteLine();
     }
 
-    private async Task<string> GenerateInitialOutline(string premise, string sid, CancellationToken ct)
+    private async Task<string> GenerateInitialOutline(string? premise, string sid, CancellationToken ct)
     {
         var request = new RenderRequest("Outline",
             "Outline",

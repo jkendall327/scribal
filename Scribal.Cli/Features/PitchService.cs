@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Scribal.AI;
+using Scribal.Cli.Infrastructure;
 using Scribal.Cli.Interface;
 using Scribal.Config;
 using Scribal.Context;
@@ -19,6 +20,7 @@ public class PitchService(
     IAnsiConsole console,
     IOptions<AiSettings> options,
     WorkspaceManager workspaceManager,
+    RefinementService refinementService,
     ConsoleChatRenderer consoleChatRenderer)
 {
     public async Task CreatePremiseFromPitch(string pitch, CancellationToken ct = default)
@@ -32,60 +34,20 @@ public class PitchService(
 
         var sid = options.Value.Primary.Provider;
 
-        var initialGeneratedPremise = await GenerateInitialPremise(pitch, sid, ct);
-        var finalPremiseToSave = initialGeneratedPremise;
+        var initial = await GenerateInitialPremise(pitch, sid, ct);
+        var final = initial;
 
-        // Refinement loop.
-        var okToRefine = await console.ConfirmAsync("Do you want to refine this premise?", cancellationToken: ct);
+        var ok = await console.ConfirmAsync("Do you want to refine this premise?", cancellationToken: ct);
 
-        if (okToRefine)
+        if (ok)
         {
-            var refinementCid = $"pitch-refine-{Guid.NewGuid()}";
-            var refinementHistory = new ChatHistory();
+            var systemPrompt =
+                "You are an assistant helping to refine a story premise. Focus on improving it based on user feedback. Be concise and helpful.";
 
-            var sb = new StringBuilder(
-                "You are an assistant helping to refine a story premise. The current premise is:");
-
-            sb.AppendLine("---");
-            sb.AppendLine(initialGeneratedPremise);
-            sb.AppendLine("---");
-            sb.AppendLine("Focus on improving it based on user feedback. Be concise and helpful.");
-
-            refinementHistory.AddSystemMessage(sb.ToString());
-            refinementHistory.AddAssistantMessage(initialGeneratedPremise);
-
-            console.MarkupLine(
-                "Entering premise refinement chat. Type [blue]/done[/] when finished or [blue]/cancel[/] to abort.");
-
-            var refinementCompletedSuccessfully = await RefinePremise(refinementCid, refinementHistory, sid, ct);
-
-            if (refinementCompletedSuccessfully)
-            {
-                var lastAssistantMessage = refinementHistory.LastOrDefault(m => m.Role == AuthorRole.Assistant);
-
-                if (lastAssistantMessage?.Content is not null)
-                {
-                    finalPremiseToSave = lastAssistantMessage.Content.Trim();
-                    console.MarkupLine("[green]Premise successfully refined.[/]");
-                }
-                else
-                {
-                    console.MarkupLine(
-                        "[yellow]Refinement marked complete, but no refined premise found. Using initial premise.[/]");
-                }
-            }
-            else
-            {
-                console.MarkupLine(
-                    "[yellow]Premise refinement was cancelled or not completed. Using initial premise.[/]");
-            }
-        }
-        else
-        {
-            console.MarkupLine("[yellow]Initial premise accepted without refinement.[/]");
+            final = await refinementService.RefineAsync(initial, systemPrompt, sid, ct);
         }
 
-        await UpdateWorkspaceAfterPremiseFinalizedAsync(finalPremiseToSave, ct);
+        await UpdateWorkspaceAfterPremiseFinalizedAsync(final, ct);
     }
 
     private async Task<string> GenerateInitialPremise(string initialPitch, string sid, CancellationToken ct)
@@ -116,70 +78,6 @@ public class PitchService(
         console.WriteLine();
 
         return generatedPremise;
-    }
-
-    private async Task<bool> RefinePremise(string refinementCid,
-        ChatHistory refinementHistory,
-        string sid,
-        CancellationToken ct)
-    {
-        while (true)
-        {
-            if (ct.IsCancellationRequested)
-            {
-                console.MarkupLine("[yellow]Refinement cancelled by host.[/]");
-
-                return false;
-            }
-
-            console.WriteLine();
-            
-            console.MarkupLine("(available commands: [blue]/done[/], [blue]/cancel[/])");
-
-            console.Markup("[green]Refine Premise > [/]");
-            var userInput = ReadLine.Read();
-
-            if (string.IsNullOrWhiteSpace(userInput))
-            {
-                continue;
-            }
-
-            if (userInput.Equals("/done", StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-
-            if (userInput.Equals("/cancel", StringComparison.OrdinalIgnoreCase))
-            {
-                console.MarkupLine("[yellow]Cancelling refinement...[/]");
-
-                return false;
-            }
-
-            console.WriteLine();
-
-            try
-            {
-                var request = new ChatRequest(userInput, refinementCid, sid);
-
-                var refinementStream = chat.StreamAsync(request, refinementHistory, ct);
-                await consoleChatRenderer.StreamWithSpinnerAsync(refinementStream, ct);
-            }
-            catch (OperationCanceledException)
-            {
-                console.WriteLine();
-                console.MarkupLine("[yellow](Refinement stream cancelled)[/]");
-
-                return false;
-            }
-            catch (Exception e)
-            {
-                ExceptionDisplay.DisplayException(e, console);
-                console.MarkupLine("[red]An error occurred during refinement.[/]");
-
-                return false;
-            }
-        }
     }
 
     private async Task UpdateWorkspaceAfterPremiseFinalizedAsync(string premise, CancellationToken ct)

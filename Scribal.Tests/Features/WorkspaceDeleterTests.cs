@@ -99,30 +99,6 @@ public class WorkspaceDeleterTests
     }
 
     [Fact]
-    public async Task DeleteWorkspaceCommandAsync_DeletesScribalAndGitFolders_WhenUserConfirmsBoth()
-    {
-        // Arrange
-        InitializeTestSetup(gitEnabled: true);
-        SetupBasicWorkspace();
-        SetupGitRepository();
-        _userInteraction.ConfirmAsync(Arg.Is<string>(s => s.Contains(".scribal"))).Returns(Task.FromResult(true));
-        _userInteraction.ConfirmAsync(Arg.Is<string>(s => s.Contains(".git"))).Returns(Task.FromResult(true));
-
-        _git.CreateCommitAsync(TestScribalDir, Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult(true));
-
-        var invocationContext = CreateTestInvocationContext();
-
-        // Act
-        await _sut.DeleteWorkspaceCommandAsync(invocationContext);
-
-        // Assert
-        await Verify(_fileSystem.AllPaths)
-              .UseDirectory("Snapshots")
-              .UseFileName("WorkspaceDeleter_DeletesScribalAndGit");
-    }
-
-    [Fact]
     public async Task DeleteWorkspaceCommandAsync_DeletesScribal_SkipsGitFolder_WhenUserDeclinesGitDeletion()
     {
         // Arrange

@@ -12,7 +12,7 @@ public record WorkspaceCreation(bool Created, bool GitRepoInitialised);
 
 public class WorkspaceManager(
     IFileSystem fileSystem,
-    IGitService git,
+    IGitServiceFactory gitFactory,
     IUserInteraction interaction,
     IOptions<AppConfig> options,
     ILogger<WorkspaceManager> logger)
@@ -90,7 +90,7 @@ public class WorkspaceManager(
 
     private async Task<bool> TryInitialiseGitRepo(bool dry, string cwd)
     {
-        if (git.Enabled)
+        if (gitFactory.TryOpenRepository(cwd, out var _))
         {
             logger.LogDebug("Git repository already enabled");
 
@@ -106,10 +106,13 @@ public class WorkspaceManager(
             return false;
         }
 
-        if (!dry)
+        logger.LogInformation("Creating Git repository in {Directory}", cwd);
+
+        if (!gitFactory.TryCreateAndOpenRepository(cwd, out var repo))
         {
-            logger.LogInformation("Creating Git repository in {Directory}", cwd);
-            git.CreateRepository(cwd);
+            await interaction.NotifyError("Creating a Git repo failed.");
+
+            return false;
         }
 
         // .gitignore should ignore the config and state files within .scribal directory
@@ -130,7 +133,7 @@ public class WorkspaceManager(
 
         if (!dry)
         {
-            await git.CreateGitIgnore(gitignoreContent);
+            await repo.CreateGitIgnore(gitignoreContent);
         }
 
         logger.LogInformation("Git repository successfully initialized");
@@ -477,12 +480,7 @@ public class WorkspaceManager(
             }
 
             await SaveWorkspaceStateAsync(state, workspacePath, cancellationToken);
-
-            if (!git.Enabled)
-            {
-                return true;
-            }
-
+            
             var commitMessage = $"Added new Chapter {ordinal}: {title}";
             var stateFilePath = fileSystem.Path.Join(workspacePath, StateFileName);
 
@@ -491,6 +489,11 @@ public class WorkspaceManager(
                 draftFilePath,
                 stateFilePath
             };
+            
+            if (!gitFactory.TryOpenRepository(out var git))
+            {
+                return true;
+            }
 
             var commitSuccess = await git.CreateCommitAsync(filesToCommit, commitMessage, cancellationToken);
 
@@ -708,23 +711,25 @@ public class WorkspaceManager(
 
             await SaveWorkspaceStateAsync(state, workspacePath, cancellationToken);
 
-            if (git.Enabled)
+            if (!gitFactory.TryOpenRepository(out var git))
             {
-                var commitMessage =
-                    $"Split chapter {sourceChapterNumber}, created new chapter {newChapterOrdinal}: {newChapterTitle}";
+                return true;
+            }
 
-                // Using CommitAllAsync to capture directory renames and creations along with file changes.
-                var commitSuccess = await git.CreateCommitAllAsync(commitMessage, cancellationToken);
+            var commitMessage =
+                $"Split chapter {sourceChapterNumber}, created new chapter {newChapterOrdinal}: {newChapterTitle}";
 
-                if (commitSuccess)
-                {
-                    logger.LogInformation("Successfully committed chapter split changes to git: {CommitMessage}",
-                        commitMessage);
-                }
-                else
-                {
-                    logger.LogWarning("Failed to commit chapter split changes to git: {CommitMessage}", commitMessage);
-                }
+            // Using CommitAllAsync to capture directory renames and creations along with file changes.
+            var commitSuccess = await git.CreateCommitAllAsync(commitMessage, cancellationToken);
+
+            if (commitSuccess)
+            {
+                logger.LogInformation("Successfully committed chapter split changes to git: {CommitMessage}",
+                    commitMessage);
+            }
+            else
+            {
+                logger.LogWarning("Failed to commit chapter split changes to git: {CommitMessage}", commitMessage);
             }
 
             return true;
@@ -937,7 +942,7 @@ public class WorkspaceManager(
         await fileSystem.File.WriteAllTextAsync(plotOutlineFilePath, outlineJson, cancellationToken);
         logger.LogInformation("Plot outline saved to {PlotOutlineFilePath} after merge", plotOutlineFilePath);
 
-        if (git.Enabled)
+        if (gitFactory.TryOpenRepository(out var git))
         {
             var commitMessage =
                 $"Merged Chapter {sourceChapterNumber} ('{sourceChapterState.Title}') into Chapter {targetChapterState.Number} ('{targetChapterState.Title}')";

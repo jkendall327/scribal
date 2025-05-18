@@ -9,7 +9,10 @@ namespace Scribal.Agency;
 
 public interface IGitServiceFactory
 {
-    bool TryOpen(string repoPath, out IGitService? service);
+    bool TryOpenRepository([NotNullWhen(true)] out IGitService? service);
+    bool TryOpenRepository(string repoPath, [NotNullWhen(true)] out IGitService? service);
+    bool TryCreateAndOpenRepository(string repoPath, [NotNullWhen(true)] out IGitService? service);
+    void DeleteRepository(string repoPath);
 }
 
 public class GitServiceFactory(
@@ -18,7 +21,13 @@ public class GitServiceFactory(
     IOptions<AppConfig> config,
     ILoggerFactory factory) : IGitServiceFactory
 {
-    public bool TryOpen(string repoPath, [NotNullWhen(true)] out IGitService? service)
+    public bool TryOpenRepository([NotNullWhen(true)] out IGitService? service)
+    {
+        var cwd = fileSystem.Directory.GetCurrentDirectory();
+        return TryOpenRepository(cwd, out service);
+    }
+    
+    public bool TryOpenRepository(string repoPath, [NotNullWhen(true)] out IGitService? service)
     {
         service = null;
 
@@ -38,40 +47,35 @@ public class GitServiceFactory(
 
         return false;
     }
-    
-    public bool TryCreateAndOpen(string repoPath, [NotNullWhen(true)] out IGitService? service)
+
+    public bool TryCreateAndOpenRepository(string repoPath, [NotNullWhen(true)] out IGitService? service)
     {
         Repository.Init(repoPath);
-        
-        return TryOpen(repoPath, out service);
+
+        return TryOpenRepository(repoPath, out service);
     }
 
     private GitService BuildAssumingValid(string repoPath)
     {
         var repo = new Repository(repoPath);
-            
+
         var logger = factory.CreateLogger<GitService>();
-            
+
         return new(repo, time, fileSystem, config, logger);
     }
 
     public void DeleteRepository(string repoPath)
     {
-        
     }
 }
 
 public interface IGitService
 {
-    public bool Enabled { get; }
-    void Initialise(string path);
-    void CreateRepository(string path);
     Task<string> GetCurrentBranch();
     Task<bool> CreateCommitAsync(string filepath, string message, CancellationToken ct = default);
     Task<bool> CreateCommitAsync(List<string> files, string message, CancellationToken ct = default);
     Task<bool> CreateCommitAllAsync(string message, CancellationToken ct = default);
     Task CreateGitIgnore(string gitignore);
-    void DisableRepository();
 }
 
 public sealed class GitService(

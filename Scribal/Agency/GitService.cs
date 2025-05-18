@@ -7,6 +7,60 @@ using Scribal.Config;
 
 namespace Scribal.Agency;
 
+public interface IGitServiceFactory
+{
+    bool TryOpen(string repoPath, out IGitService? service);
+}
+
+public class GitServiceFactory(
+    TimeProvider time,
+    IFileSystem fileSystem,
+    IOptions<AppConfig> config,
+    ILoggerFactory factory) : IGitServiceFactory
+{
+    public bool TryOpen(string repoPath, [NotNullWhen(true)] out IGitService? service)
+    {
+        service = null;
+
+        try
+        {
+            if (Repository.IsValid(repoPath))
+            {
+                service = BuildAssumingValid(repoPath);
+
+                return true;
+            }
+        }
+        catch
+        {
+            return false;
+        }
+
+        return false;
+    }
+    
+    public bool TryCreateAndOpen(string repoPath, [NotNullWhen(true)] out IGitService? service)
+    {
+        Repository.Init(repoPath);
+        
+        return TryOpen(repoPath, out service);
+    }
+
+    private GitService BuildAssumingValid(string repoPath)
+    {
+        var repo = new Repository(repoPath);
+            
+        var logger = factory.CreateLogger<GitService>();
+            
+        return new(repo, time, fileSystem, config, logger);
+    }
+
+    public void DeleteRepository(string repoPath)
+    {
+        
+    }
+}
+
 public interface IGitService
 {
     public bool Enabled { get; }
@@ -21,67 +75,18 @@ public interface IGitService
 }
 
 public sealed class GitService(
+    IRepository repo,
     TimeProvider time,
     IFileSystem fileSystem,
     IOptions<AppConfig> config,
     ILogger<GitService> logger) : IGitService, IDisposable
 {
-    private Repository? _repo;
-    private string? _name;
-    private string? _email;
-
-    public bool Enabled => _repo is not null;
-
-    public void Initialise(string path)
-    {
-        // TODO: use Repository.IsValid instead of throwing?
-
-        try
-        {
-            _repo = new(path);
-
-            _name = _repo.Config.GetValueOrDefault<string>("user.name");
-            _email = _repo.Config.GetValueOrDefault<string>("user.email");
-
-            if (string.IsNullOrEmpty(_name) || string.IsNullOrEmpty(_email))
-            {
-                // TODO surface this to the user or make it optional.
-                throw new InvalidOperationException("No username or email set in git config.");
-            }
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to initialise git repository");
-        }
-    }
-
-    public void CreateRepository(string path)
-    {
-        Repository.Init(path);
-        Initialise(path);
-    }
-
-    [MemberNotNull(nameof(_repo))]
-    [MemberNotNull(nameof(_name))]
-    [MemberNotNull(nameof(_email))]
-    private void EnsureValidRepository()
-    {
-        if (_repo is null)
-        {
-            throw new InvalidOperationException("Not in a valid Git repository.");
-        }
-
-        if (_name is null || _email is null)
-        {
-            throw new InvalidOperationException("No username or email set in git config.");
-        }
-    }
+    private readonly string _name = repo.Config.GetValueOrDefault<string>("user.name");
+    private readonly string _email = repo.Config.GetValueOrDefault<string>("user.email");
 
     public Task<string> GetCurrentBranch()
     {
-        EnsureValidRepository();
-
-        var name = _repo.Head.FriendlyName;
+        var name = repo.Head.FriendlyName;
 
         return Task.FromResult(name);
     }
@@ -101,19 +106,18 @@ public sealed class GitService(
         }
 
         ct.ThrowIfCancellationRequested();
-        EnsureValidRepository();
 
         try
         {
             foreach (var file in files)
             {
-                Commands.Stage(_repo, file);
+                Commands.Stage(repo, file);
                 logger.LogInformation("Staged changes for {Filepath}", file);
             }
 
             var sig = new Signature($"{_name} (scribal)", _email, time.GetLocalNow());
 
-            _repo.Commit(message, sig, sig);
+            repo.Commit(message, sig, sig);
 
             logger.LogInformation("Committed changes with message: {Message}", message);
 
@@ -137,13 +141,12 @@ public sealed class GitService(
         }
 
         ct.ThrowIfCancellationRequested();
-        EnsureValidRepository();
 
         try
         {
-            Commands.Stage(_repo, "*"); // Stage all changes
+            Commands.Stage(repo, "*"); // Stage all changes
             var sig = new Signature($"{_name} (scribal)", _email, time.GetLocalNow());
-            _repo.Commit(message, sig, sig);
+            repo.Commit(message, sig, sig);
             logger.LogInformation("Committed all staged changes with message: {Message}", message);
 
             return Task.FromResult(true);
@@ -164,9 +167,7 @@ public sealed class GitService(
 
     public async Task CreateGitIgnore(string gitignore)
     {
-        EnsureValidRepository();
-
-        var folder = _repo.Info.Path;
+        var folder = repo.Info.Path;
 
         var root = fileSystem.DirectoryInfo.New(folder).Parent;
 
@@ -183,15 +184,8 @@ public sealed class GitService(
         }
     }
 
-    public void DisableRepository()
-    {
-        EnsureValidRepository();
-
-        _repo = null;
-    }
-
     public void Dispose()
     {
-        _repo?.Dispose();
+        repo.Dispose();
     }
 }

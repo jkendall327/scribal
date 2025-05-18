@@ -17,13 +17,12 @@ public class InterfaceManager(
     CommandService commands,
     IFileSystem fileSystem,
     IAiChatService aiChatService,
-    IGitService gitService,
+    IGitServiceFactory gitFactory,
     WorkspaceManager workspaceManager,
     IOptions<AiSettings> aiSettings,
     RepoMapStore repoMapStore,
-    ConsoleChatRenderer consoleChatRenderer)
+    ConsoleChatRenderer consoleRenderer)
 {
-    private readonly ConsoleChatRenderer _consoleChatRenderer = consoleChatRenderer;
     private readonly Guid _conversationId = Guid.NewGuid();
     private CancellationTokenSource _cts = new();
 
@@ -36,7 +35,7 @@ public class InterfaceManager(
         AnsiConsole.Write(figlet);
         AnsiConsole.WriteLine();
 
-        if (!gitService.Enabled)
+        if (!gitFactory.TryOpenRepository(out var _))
         {
             AnsiConsole.MarkupLine(
                 "[red rapidblink]You are not in a valid Git repository! AI edits will be destructive![/]");
@@ -150,7 +149,7 @@ public class InterfaceManager(
             ? WorkspaceManager.TryFindWorkspaceFolder(fileSystem)
             : "not in workspace";
 
-        var branch = gitService.Enabled ? await gitService.GetCurrentBranch() : "not in a git repository";
+        var branch = gitFactory.TryOpenRepository(out var git) ? await git.GetCurrentBranch() : "not in a git repository";
 
         var model = modelId is null ? "[yellow]no model![/]" : $"[yellow]{modelId}[/]";
 
@@ -203,7 +202,7 @@ public class InterfaceManager(
             var chatRequest = new ChatRequest(userInput, _conversationId.ToString(), sid);
 
             var enumerable = aiChatService.StreamAsync(chatRequest, null, _cts.Token);
-            await _consoleChatRenderer.StreamWithSpinnerAsync(enumerable, _cts.Token);
+            await consoleRenderer.StreamWithSpinnerAsync(enumerable, _cts.Token);
         }
         catch (OperationCanceledException)
         {

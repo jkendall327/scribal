@@ -16,7 +16,7 @@ public class ExportServiceTests
     private readonly MockFileSystem _fileSystem = new();
     private readonly IAnsiConsole _console = Substitute.For<IAnsiConsole>();
     private readonly ExportService _sut;
-    private readonly IGitService _gitService = Substitute.For<IGitService>();
+    private readonly IGitServiceFactory _gitFactory = Substitute.For<IGitServiceFactory>();
     private readonly IUserInteraction _userInteraction = Substitute.For<IUserInteraction>();
 
     private const string TestProjectRootDir = "/test/project";
@@ -27,7 +27,7 @@ public class ExportServiceTests
     public ExportServiceTests()
     {
         var workspaceManager = new WorkspaceManager(_fileSystem,
-            _gitService,
+            _gitFactory,
             _userInteraction,
             Options.Create(new AppConfig()),
             NullLogger<WorkspaceManager>.Instance);
@@ -377,7 +377,7 @@ public class ExportServiceTests
         localFileSystem.Directory.SetCurrentDirectory(TestProjectRootDir);
 
         var localWorkspaceManager = new WorkspaceManager(localFileSystem,
-            Substitute.For<IGitService>(),
+            Substitute.For<IGitServiceFactory>(),
             Substitute.For<IUserInteraction>(),
             Options.Create(new AppConfig()),
             NullLogger<WorkspaceManager>.Instance);

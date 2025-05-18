@@ -7,7 +7,7 @@ using Scribal.Config;
 namespace Scribal.Agency;
 
 public sealed class GitCommitFilter(
-    IGitService git,
+    IGitServiceFactory factory,
     CommitGenerator generator,
     IOptions<AiSettings> aiSettings,
     ILogger<GitCommitFilter> logger) : IFunctionInvocationFilter
@@ -18,7 +18,7 @@ public sealed class GitCommitFilter(
         // Let the real function run first.
         await next(ctx);
 
-        if (!git.Enabled)
+        if (!factory.TryOpenRepository(out var git))
         {
             return;
         }

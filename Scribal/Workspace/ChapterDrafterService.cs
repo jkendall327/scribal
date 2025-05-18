@@ -18,7 +18,7 @@ public class ChapterDrafterService(
     IOptions<AiSettings> options,
     IFileSystem fileSystem,
     WorkspaceManager workspaceManager,
-    IGitService gitService,
+    IGitServiceFactory factory,
     TimeProvider time,
     IUserInteraction userInteraction,
     IRefinementService refinementService,
@@ -252,7 +252,7 @@ public class ChapterDrafterService(
 
     private async Task AttemptGitCommit(ChapterState chapter, string draftFilePath, CancellationToken cancellationToken)
     {
-        if (!gitService.Enabled)
+        if (!factory.TryOpenRepository(out var git))
         {
             logger.LogInformation("Git service not enabled. Skipping commit for chapter {ChapterNumber} draft",
                 chapter.Number);
@@ -262,7 +262,7 @@ public class ChapterDrafterService(
 
         var commitMessage = $"Drafted Chapter {chapter.Number}: {chapter.Title}";
 
-        var commitSuccess = await gitService.CreateCommitAsync(draftFilePath, commitMessage, cancellationToken);
+        var commitSuccess = await git.CreateCommitAsync(draftFilePath, commitMessage, cancellationToken);
 
         if (commitSuccess)
         {

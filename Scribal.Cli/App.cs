@@ -25,10 +25,7 @@ public static class App
         {
             await ingestor.IngestAllMarkdown(cwd, SearchOption.AllDirectories);
         }
-
-        var git = app.Services.GetRequiredService<IGitService>();
-        git.Initialise(filesystem.Directory.GetCurrentDirectory());
-
+        
         var manager = app.Services.GetRequiredService<InterfaceManager>();
 
         await manager.DisplayWelcome();

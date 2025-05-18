@@ -90,7 +90,7 @@ public class WorkspaceManager(
 
     private async Task<bool> TryInitialiseGitRepo(bool dry, string cwd)
     {
-        if (gitFactory.TryOpenRepository(cwd, out var _))
+        if (gitFactory.TryOpenRepository(out var _))
         {
             logger.LogDebug("Git repository already enabled");
 

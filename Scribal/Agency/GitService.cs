@@ -24,7 +24,10 @@ public class GitServiceFactory(
     public bool TryOpenRepository([NotNullWhen(true)] out IGitService? service)
     {
         var cwd = fileSystem.Directory.GetCurrentDirectory();
-        return TryOpenRepository(cwd, out service);
+
+        var repo = fileSystem.Path.Combine(cwd, ".git");
+        
+        return TryOpenRepository(repo, out service);
     }
     
     public bool TryOpenRepository(string repoPath, [NotNullWhen(true)] out IGitService? service)
@@ -52,7 +55,9 @@ public class GitServiceFactory(
     {
         Repository.Init(repoPath);
 
-        return TryOpenRepository(repoPath, out service);
+        var repo = fileSystem.Path.Combine(repoPath, ".git");
+        
+        return TryOpenRepository(repo, out service);
     }
 
     private GitService BuildAssumingValid(string repoPath)

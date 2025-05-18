@@ -101,6 +101,19 @@ public static class ScribalModelServiceCollectionExtensions
 
     private static void AddToolsToKernel(IServiceProvider sp, IKernelBuilder kb, AiSettings settings)
     {
+        // TODO: This is obviously not very robust.
+        // Need a model info file probably.
+        var supportsToolUse = settings.Primary?.Provider switch
+        {
+            "deepseek" => false,
+            _ => true
+        };
+
+        if (!supportsToolUse)
+        {
+            return;
+        }
+        
         // Pull back those services we registered in the main DI container and put them into the kernel.
         JsonSerializerOptions options = new();
 

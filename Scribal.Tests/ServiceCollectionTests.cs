@@ -25,7 +25,7 @@ public class ServiceCollectionTests
                                                .Build();
 
         services.AddSingleton<IConfiguration>(config);
-        services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
+        services.AddLogging();
 
         services.AddScribal(config, filesystem, new FakeTimeProvider());
         services.AddScribalAi();

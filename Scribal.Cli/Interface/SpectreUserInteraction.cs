@@ -1,8 +1,10 @@
+using System.Text;
+using Scribal.AI;
 using Spectre.Console;
 
 namespace Scribal.Cli.Interface;
 
-public class SpectreUserInteraction(IAnsiConsole console) : IUserInteraction
+public class SpectreUserInteraction(IAnsiConsole console, ConsoleChatRenderer consoleChatRenderer) : IUserInteraction
 {
     public async Task<bool> ConfirmAsync(string prompt, CancellationToken cancellationToken = default)
     {
@@ -62,6 +64,15 @@ public class SpectreUserInteraction(IAnsiConsole console) : IUserInteraction
         {
             ExceptionDisplay.DisplayException(ex);
         }
+    }
+
+    public async Task<string> DisplayAssistantResponseAsync(IAsyncEnumerable<ChatModels> stream, CancellationToken ct = default)
+    {
+        var sb = new StringBuilder();
+        
+        await consoleChatRenderer.StreamWithSpinnerAsync(stream.CollectWhileStreaming(sb, ct), ct);
+
+        return sb.ToString();
     }
 
     public void DisplayProsePassage(string prose, string? header = null)

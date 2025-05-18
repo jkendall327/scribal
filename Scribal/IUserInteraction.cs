@@ -1,3 +1,5 @@
+using Scribal.AI;
+
 namespace Scribal;
 
 public interface IUserInteraction
@@ -6,5 +8,6 @@ public interface IUserInteraction
     
     Task NotifyAsync(string message, MessageOptions? options = null);
     Task NotifyError(string message, Exception? exception = null);
+    Task<string> DisplayAssistantResponseAsync(IAsyncEnumerable<ChatModels> stream, CancellationToken ct = default);
     void DisplayProsePassage(string prose, string? header = null);
 }

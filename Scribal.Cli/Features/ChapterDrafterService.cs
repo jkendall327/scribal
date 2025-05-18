@@ -25,8 +25,7 @@ public class ChapterDrafterService(
     TimeProvider time,
     IUserInteraction userInteraction,
     RefinementService refinementService,
-    ILogger<ChapterDrafterService> logger,
-    ConsoleChatRenderer consoleChatRenderer)
+    ILogger<ChapterDrafterService> logger)
 {
     public async Task DraftChapterAsync(ChapterState chapter, CancellationToken cancellationToken = default)
     {
@@ -138,10 +137,10 @@ public class ChapterDrafterService(
         var chatRequest = new ChatRequest(initialUserMessage, cid, sid);
 
         var draftStream = chat.StreamAsync(chatRequest, history, ct);
-        var draftBuilder = new StringBuilder();
-        await consoleChatRenderer.StreamWithSpinnerAsync(draftStream.CollectWhileStreaming(draftBuilder, ct), ct);
 
-        var generatedDraft = draftBuilder.ToString().Trim();
+        var response = await userInteraction.DisplayAssistantResponseAsync(draftStream, ct);
+
+        var generatedDraft = response.Trim();
 
         logger.LogInformation("Initial draft generated for Chapter {ChapterNumber}, length {Length}",
             chapter.Number,

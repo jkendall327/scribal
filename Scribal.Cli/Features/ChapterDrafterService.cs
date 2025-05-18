@@ -7,6 +7,7 @@ using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Scribal.Agency;
 using Scribal.AI;
+using Scribal.Cli.Infrastructure;
 using Scribal.Cli.Interface;
 using Scribal.Config;
 using Scribal.Context;
@@ -24,11 +25,10 @@ public class ChapterDrafterService(
     IFileSystem fileSystem,
     WorkspaceManager workspaceManager,
     IGitService gitService,
+    RefinementService refinementService,
     ILogger<ChapterDrafterService> logger,
     ConsoleChatRenderer consoleChatRenderer)
 {
-    private readonly ConsoleChatRenderer _consoleChatRenderer = consoleChatRenderer;
-
     public async Task DraftChapterAsync(ChapterState chapter, CancellationToken cancellationToken = default)
     {
         logger.LogInformation("Starting draft for Chapter {ChapterNumber}: {ChapterTitle}",
@@ -69,7 +69,7 @@ public class ChapterDrafterService(
         }
 
         console.MarkupLine("[cyan]Initial Draft Generated:[/]");
-        console.WriteLine(Markup.Escape(initialDraft)); // Display initial draft
+        console.WriteLine(Markup.Escape(initialDraft));
 
         var ok = await console.ConfirmAsync("Do you want to refine this draft?", cancellationToken: cancellationToken);
 
@@ -82,23 +82,10 @@ public class ChapterDrafterService(
         }
         else
         {
-            var refinementCid = $"draft-refine-{chapter.Number}-{Guid.NewGuid()}";
-            var refinementHistory = new ChatHistory();
+            var systemPrompt =
+                "You are an assistant helping to refine a chapter draft. Focus on improving it based on user feedback. Be concise and helpful.";
 
-            var sb = new StringBuilder("You are an assistant helping to refine a chapter draft. The current draft is:");
-            sb.AppendLine("---");
-            sb.AppendLine(initialDraft);
-            sb.AppendLine("---");
-            sb.AppendLine("Focus on improving it based on user feedback. Be concise and helpful.");
-
-            refinementHistory.AddSystemMessage(sb.ToString());
-            refinementHistory.AddAssistantMessage(initialDraft);
-
-            console.MarkupLine(
-                "Entering chapter draft refinement chat. Type [blue]/done[/] when finished or [blue]/cancel[/] to abort.");
-
-            finalDraft = await RefineDraft(refinementCid, refinementHistory, sid, initialDraft, cancellationToken);
-            console.MarkupLine("[yellow]Chapter draft refinement finished.[/]");
+            finalDraft = await refinementService.RefineAsync(initialDraft, systemPrompt, sid, cancellationToken);
         }
 
         console.MarkupLine("[yellow]Final chapter draft:[/]");
@@ -147,7 +134,7 @@ public class ChapterDrafterService(
 
         var draftStream = chat.StreamAsync(chatRequest, history, ct);
         var draftBuilder = new StringBuilder();
-        await _consoleChatRenderer.StreamWithSpinnerAsync(draftStream.CollectWhileStreaming(draftBuilder, ct), ct);
+        await consoleChatRenderer.StreamWithSpinnerAsync(draftStream.CollectWhileStreaming(draftBuilder, ct), ct);
 
         var generatedDraft = draftBuilder.ToString().Trim();
 
@@ -156,96 +143,6 @@ public class ChapterDrafterService(
             generatedDraft.Length);
 
         return generatedDraft;
-    }
-
-    private async Task<string> RefineDraft(string refinementCid,
-        ChatHistory refinementHistory,
-        string sid,
-        string currentDraft,
-        CancellationToken ct)
-    {
-        var lastAssistantResponse = currentDraft;
-
-        while (true)
-        {
-            if (ct.IsCancellationRequested)
-            {
-                console.MarkupLine("[yellow]Refinement cancelled by host.[/]");
-                logger.LogInformation("Draft refinement cancelled by host for {RefinementCid}", refinementCid);
-
-                break;
-            }
-
-            console.WriteLine();
-
-            console.MarkupLine("(available commands: [blue]/done[/], [blue]/cancel[/])");
-
-            console.Markup("[green]Refine Chapter Draft > [/]");
-            var userInput = ReadLine.Read(); // Assuming ReadLine is accessible or replace with _console.Ask/Prompt
-
-            if (string.IsNullOrWhiteSpace(userInput))
-            {
-                continue;
-            }
-
-            if (userInput.Equals("/done", StringComparison.OrdinalIgnoreCase))
-            {
-                logger.LogInformation("User finished draft refinement for {RefinementCid}", refinementCid);
-
-                break;
-            }
-
-            if (userInput.Equals("/cancel", StringComparison.OrdinalIgnoreCase))
-            {
-                console.MarkupLine("[yellow]Cancelling refinement...[/]");
-                logger.LogInformation("User cancelled draft refinement for {RefinementCid}", refinementCid);
-
-                return lastAssistantResponse;
-            }
-
-            console.WriteLine();
-            var responseBuilder = new StringBuilder();
-
-            try
-            {
-                refinementHistory.AddUserMessage(userInput);
-
-                var chatRequest = new ChatRequest(userInput, refinementCid, sid);
-
-                var refinementStream = chat.StreamAsync(chatRequest, refinementHistory, ct);
-
-                await _consoleChatRenderer.StreamWithSpinnerAsync(
-                    refinementStream.CollectWhileStreaming(responseBuilder, ct),
-                    ct);
-
-                lastAssistantResponse = responseBuilder.ToString().Trim();
-
-                if (!string.IsNullOrWhiteSpace(lastAssistantResponse))
-                {
-                    refinementHistory.AddAssistantMessage(lastAssistantResponse);
-
-                    logger.LogDebug("Refinement successful for {RefinementCid}, response length {Length}",
-                        refinementCid,
-                        lastAssistantResponse.Length);
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                console.WriteLine();
-                console.MarkupLine("[yellow](Refinement stream cancelled)[/]");
-                logger.LogInformation("Refinement stream cancelled for {RefinementCid}", refinementCid);
-
-                break;
-            }
-            catch (Exception e)
-            {
-                ExceptionDisplay.DisplayException(e, console);
-                console.MarkupLine("[red]An error occurred during refinement.[/]");
-                logger.LogError(e, "Error during draft refinement for {RefinementCid}", refinementCid);
-            }
-        }
-
-        return lastAssistantResponse;
     }
 
     private async Task CommitDraftAsync(ChapterState chapter, string content, CancellationToken cancellationToken)

@@ -133,6 +133,9 @@ public class PitchService(
             }
 
             console.WriteLine();
+            
+            console.MarkupLine("(available commands: [blue]/done[/], [blue]/cancel[/])");
+
             console.Markup("[green]Refine Premise > [/]");
             var userInput = ReadLine.Read();
 

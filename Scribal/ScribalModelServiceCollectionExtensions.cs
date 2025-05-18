@@ -32,7 +32,25 @@ public static class ScribalModelServiceCollectionExtensions
 
         AddRag(services);
 
-        // Set up IOptions.
+        SetUpIOptions(services);
+
+        services.AddSingleton<Kernel>(sp =>
+        {
+            var settings = sp.GetRequiredService<IOptions<AiSettings>>().Value;
+            var providers = sp.GetServices<IModelProvider>().ToList();
+
+            var kb = Kernel.CreateBuilder();
+
+            RegisterModelSlotsInKernel(settings, kb, providers);
+
+            AddToolsToKernel(sp, kb, settings);
+
+            return kb.Build();
+        });
+    }
+
+    private static void SetUpIOptions(IServiceCollection services)
+    {
         var err = string.Empty;
 
         services.AddOptions<AiSettings>()
@@ -50,58 +68,27 @@ public static class ScribalModelServiceCollectionExtensions
                         return result;
                     },
                     err);
-
-        services.AddSingleton<Kernel>(sp =>
-        {
-            var settings = sp.GetRequiredService<IOptions<AiSettings>>().Value;
-            var providers = sp.GetServices<IModelProvider>().ToList();
-
-            var kb = Kernel.CreateBuilder();
-
-            // See if we have a model provider who can fill each slot; if so, let them do it.
-            if (settings.Primary is not null)
-            {
-                Register(kb, settings.Primary, string.Empty, providers);
-            }
-
-            if (settings.Weak is not null)
-            {
-                Register(kb, settings.Weak, "-weak", providers);
-            }
-
-            if (settings.Embeddings is not null)
-            {
-                Register(kb, settings.Embeddings, "-embed", providers);
-            }
-
-            // Pull back those services we registered in the main DI container and put them into the kernel.
-            JsonSerializerOptions options = new();
-
-            var diffEditor = sp.GetRequiredService<DiffEditor>();
-            var fileReader = sp.GetRequiredService<FileReader>();
-
-            kb.Plugins.AddFromFunctions(nameof(FileReader),
-                [KernelFunctionFactory.CreateFromMethod(fileReader.ReadFileContentAsync, options)]);
-
-            kb.Plugins.AddFromFunctions(nameof(DiffEditor),
-                [KernelFunctionFactory.CreateFromMethod(diffEditor.ApplyUnifiedDiffAsync, options)]);
-
-            var appConfig = sp.GetRequiredService<IOptions<AppConfig>>().Value;
-
-            if (appConfig.IngestContent)
-            {
-                var vectorSearch = sp.GetRequiredService<VectorSearch>();
-
-                kb.Plugins.AddFromFunctions(nameof(VectorSearch),
-                    [KernelFunctionFactory.CreateFromMethod(vectorSearch.SearchAsync, options)]);
-            }
-
-            kb.Services.AddSingleton<IFunctionInvocationFilter>(sp.GetRequiredService<GitCommitFilter>());
-
-            return kb.Build();
-        });
     }
 
+    private static void RegisterModelSlotsInKernel(AiSettings settings, IKernelBuilder kb, List<IModelProvider> providers)
+    {
+        // See if we have a model provider who can fill each slot; if so, let them do it.
+        if (settings.Primary is not null)
+        {
+            Register(kb, settings.Primary, string.Empty, providers);
+        }
+
+        if (settings.Weak is not null)
+        {
+            Register(kb, settings.Weak, "-weak", providers);
+        }
+
+        if (settings.Embeddings is not null)
+        {
+            Register(kb, settings.Embeddings, "-embed", providers);
+        }
+    }
+    
     private static void Register(IKernelBuilder kb,
         ModelSlot slot,
         string suffix,
@@ -110,6 +97,46 @@ public static class ScribalModelServiceCollectionExtensions
         var p = providers.Single(x => x.Name.Equals(slot.Provider, StringComparison.OrdinalIgnoreCase));
 
         p.RegisterServices(kb, slot, suffix);
+    }
+
+    private static void AddToolsToKernel(IServiceProvider sp, IKernelBuilder kb, AiSettings settings)
+    {
+        // TODO: This is obviously not very robust.
+        // Need a model info file probably.
+        var supportsToolUse = settings.Primary?.Provider switch
+        {
+            "deepseek" => false,
+            _ => true
+        };
+
+        if (!supportsToolUse)
+        {
+            return;
+        }
+        
+        // Pull back those services we registered in the main DI container and put them into the kernel.
+        JsonSerializerOptions options = new();
+
+        var diffEditor = sp.GetRequiredService<DiffEditor>();
+        var fileReader = sp.GetRequiredService<FileReader>();
+
+        kb.Plugins.AddFromFunctions(nameof(FileReader),
+            [KernelFunctionFactory.CreateFromMethod(fileReader.ReadFileContentAsync, options)]);
+
+        kb.Plugins.AddFromFunctions(nameof(DiffEditor),
+            [KernelFunctionFactory.CreateFromMethod(diffEditor.ApplyUnifiedDiffAsync, options)]);
+
+        var appConfig = sp.GetRequiredService<IOptions<AppConfig>>().Value;
+
+        if (appConfig.IngestContent)
+        {
+            var vectorSearch = sp.GetRequiredService<VectorSearch>();
+
+            kb.Plugins.AddFromFunctions(nameof(VectorSearch),
+                [KernelFunctionFactory.CreateFromMethod(vectorSearch.SearchAsync, options)]);
+        }
+
+        kb.Services.AddSingleton<IFunctionInvocationFilter>(sp.GetRequiredService<GitCommitFilter>());
     }
 
     private static void AddRag(IServiceCollection services)

@@ -11,6 +11,12 @@ public class SpectreUserInteraction(IAnsiConsole console, ConsoleChatRenderer co
         return await console.ConfirmAsync(prompt, cancellationToken: cancellationToken);
     }
 
+    public Task<string> GetUserInputAsync(CancellationToken cancellationToken = default)
+    {
+        var line = ReadLine.Read();
+        return Task.FromResult(line);
+    }
+
     public Task NotifyAsync(string message, MessageOptions? options = null)
     {
         if (options == null)

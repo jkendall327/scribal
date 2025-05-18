@@ -1,5 +1,4 @@
 using System.IO.Abstractions;
-using System.Text;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel;
@@ -7,7 +6,6 @@ using Microsoft.SemanticKernel.ChatCompletion;
 using Scribal.Agency;
 using Scribal.AI;
 using Scribal.Cli.Infrastructure;
-using Scribal.Cli.Interface;
 using Scribal.Config;
 using Scribal.Context;
 using Scribal.Workspace;
@@ -24,7 +22,7 @@ public class ChapterDrafterService(
     IGitService gitService,
     TimeProvider time,
     IUserInteraction userInteraction,
-    RefinementService refinementService,
+    IRefinementService refinementService,
     ILogger<ChapterDrafterService> logger)
 {
     public async Task DraftChapterAsync(ChapterState chapter, CancellationToken cancellationToken = default)
@@ -192,6 +190,17 @@ public class ChapterDrafterService(
 
         try
         {
+            var workspaceState = await workspaceManager.LoadWorkspaceStateAsync(cancellationToken: cancellationToken);
+
+            if (workspaceState is null)
+            {
+                await userInteraction.NotifyAsync(
+                    "Could not determine workspace path from WorkspaceManager. Draft not saved.",
+                    new(MessageType.Error));
+
+                return;
+            }
+            
             await fileSystem.File.WriteAllTextAsync(draftFilePath, content, cancellationToken);
             
             await userInteraction.NotifyAsync($"Draft saved successfully to: {draftFilePath}.", new(MessageType.Informational));
@@ -201,9 +210,6 @@ public class ChapterDrafterService(
             await AttemptGitCommit(chapter, draftFilePath, cancellationToken);
 
             // Update the workspace's state.
-
-            var workspaceState = await workspaceManager.LoadWorkspaceStateAsync(cancellationToken: cancellationToken);
-
             var chapterState = workspaceState.Chapters.Single(s => s.Number == chapter.Number);
             chapterState.State = ChapterStateType.Draft;
             chapterState.DraftFilePath = draftFilePath;

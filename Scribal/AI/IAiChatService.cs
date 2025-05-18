@@ -20,7 +20,7 @@ public interface IAiChatService
     ///     An asynchronous stream of discriminated unions, which either represent a chunk of
     ///     the assistant's response or (ultimately) a record of the response's metadata, such as token usage.
     /// </returns>
-    IAsyncEnumerable<ChatStreamItem> StreamAsync(ChatRequest request,
+    IAsyncEnumerable<ChatModels> StreamAsync(ChatRequest request,
         ChatHistory? history = null,
         CancellationToken ct = default);
 

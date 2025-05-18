@@ -9,7 +9,7 @@ public class ConsoleChatRenderer(IAnsiConsole console)
     ///     Streams an LLM response to the console, showing a spinner
     ///     until the first token is available.
     /// </summary>
-    public async Task StreamWithSpinnerAsync(IAsyncEnumerable<ChatStreamItem> stream, CancellationToken ct = default)
+    public async Task StreamWithSpinnerAsync(IAsyncEnumerable<ChatModels> stream, CancellationToken ct = default)
     {
         // 1. Get an enumerator we can advance manually.
         await using var e = stream.GetAsyncEnumerator(ct);
@@ -54,12 +54,12 @@ public class ConsoleChatRenderer(IAnsiConsole console)
                      .StartAsync("Processing …", async _ => await taskToAwait.WaitAsync(ct));
     }
 
-    private void ProcessChatStreamItem(ChatStreamItem e)
+    private void ProcessChatStreamItem(ChatModels e)
     {
         switch (e)
         {
-            case ChatStreamItem.TokenChunk tc: console.Write(tc.Content); break;
-            case ChatStreamItem.Metadata md:
+            case ChatModels.TokenChunk tc: console.Write(tc.Content); break;
+            case ChatModels.Metadata md:
             {
                 console.WriteLine();
                 console.WriteLine();

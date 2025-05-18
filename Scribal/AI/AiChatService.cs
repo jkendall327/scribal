@@ -13,23 +13,6 @@ using ChatMessageContent = Microsoft.SemanticKernel.ChatMessageContent;
 
 namespace Scribal.AI;
 
-/// <summary>
-///     Discriminated union between a chunk of the model's streamed output and a metadata record produced when it's done.
-/// </summary>
-public record ChatStreamItem
-{
-    private ChatStreamItem()
-    {
-    }
-
-    public sealed record TokenChunk(string Content) : ChatStreamItem;
-
-    public sealed record Metadata(TimeSpan Elapsed, int PromptTokens, int CompletionTokens) : ChatStreamItem;
-}
-
-public record ChatMessage(string Message, ChatStreamItem.Metadata Metadata);
-
-public record ChatRequest(string UserMessage, string ConversationId, string ServiceId);
 
 public sealed class AiChatService(
     Kernel kernel,
@@ -39,7 +22,7 @@ public sealed class AiChatService(
     TimeProvider time,
     MetadataCollector metadataCollector) : IAiChatService
 {
-    public async IAsyncEnumerable<ChatStreamItem> StreamAsync(ChatRequest request,
+    public async IAsyncEnumerable<ChatModels> StreamAsync(ChatRequest request,
         ChatHistory? history = null,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
@@ -77,7 +60,7 @@ public sealed class AiChatService(
                 continue;
             }
 
-            var hunk = new ChatStreamItem.TokenChunk(text);
+            var hunk = new ChatModels.TokenChunk(text);
 
             sb.Append(hunk.Content);
 

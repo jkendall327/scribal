@@ -21,6 +21,8 @@ public class ChapterManagerService(
     IChapterSplitterService chapterSplitterService,
     IChapterMergerService chapterMergerService)
 {
+    private readonly IUserInteraction _userInteraction = userInteraction;
+
     public async Task ManageChaptersAsync(InvocationContext context)
     {
         logger.LogInformation("Starting chapter management");
@@ -34,8 +36,9 @@ public class ChapterManagerService(
             {
                 logger.LogWarning("Not in a Scribal workspace and no workspace found nearby");
 
-                AnsiConsole.MarkupLine(
-                    "[red]You are not currently in a Scribal workspace. Use '/init' to create one.[/]");
+                await _userInteraction.NotifyAsync(
+                    "You are not currently in a Scribal workspace. Use '/init' to create one.",
+                    new(MessageType.Error));
 
                 return;
             }
@@ -50,7 +53,8 @@ public class ChapterManagerService(
         if (state == null)
         {
             logger.LogError("Could not load workspace state initially");
-            AnsiConsole.MarkupLine("[red]Could not load workspace state. Exiting chapter management.[/]");
+            await _userInteraction.NotifyAsync("Could not load workspace state. Exiting chapter management.",
+                new(MessageType.Error));
 
             return;
         }
@@ -59,8 +63,9 @@ public class ChapterManagerService(
         {
             logger.LogInformation("No chapters found in the workspace upon initial load");
 
-            AnsiConsole.MarkupLine(
-                "[yellow]No chapters found in the workspace. Generate an outline first using '/outline'.[/]");
+            await _userInteraction.NotifyAsync(
+                "No chapters found in the workspace. Generate an outline first using '/outline'.",
+                new(MessageType.Warning));
 
             return;
         }
@@ -75,7 +80,8 @@ public class ChapterManagerService(
             if (state == null)
             {
                 logger.LogError("Could not reload workspace state in loop");
-                AnsiConsole.MarkupLine("[red]Error reloading workspace state. Exiting chapter management.[/]");
+                await _userInteraction.NotifyAsync("Error reloading workspace state. Exiting chapter management.",
+                    new(MessageType.Error));
 
                 break;
             }
@@ -84,14 +90,15 @@ public class ChapterManagerService(
             {
                 logger.LogInformation("No chapters remain in the workspace after potential deletion/update");
 
-                AnsiConsole.MarkupLine(
-                    "[yellow]No chapters remain or an error occurred. Returning to the previous menu.[/]");
+                await _userInteraction.NotifyAsync(
+                    "No chapters remain or an error occurred. Returning to the previous menu.",
+                    new(MessageType.Warning));
 
                 break;
             }
 
             logger.LogDebug("Refreshed chapter list, {ChapterCount} chapters found", state.Chapters.Count);
-            AnsiConsole.WriteLine();
+            await _userInteraction.NotifyAsync(""); // Replicates AnsiConsole.WriteLine() for spacing
             var chapterChoices = state.Chapters.OrderBy(c => c.Number).Select(FormatChapterDisplayString).ToList();
 
             var commandChoices = new List<string>
@@ -107,7 +114,7 @@ public class ChapterManagerService(
                                   .PageSize(10)
                                   .AddChoices(commandChoices);
 
-            var choice = AnsiConsole.Prompt(selectionPrompt);
+            var choice = await _userInteraction.PromptAsync(selectionPrompt);
 
             if (choice == "Back" || token.IsCancellationRequested)
             {
@@ -143,45 +150,22 @@ public class ChapterManagerService(
     private Parser BuildChapterSubMenuParser(ChapterState chapter, CancellationTokenSource linkedCts)
     {
         var dummyCmd = new Command("/dummy", "A dummy action for the chapter.");
-
-        dummyCmd.SetHandler(async () =>
-        {
-            AnsiConsole.MarkupLine(
-                $"[grey]Executed dummy action for chapter {chapter.Number}: {Markup.Escape(chapter.Title)}.[/]");
-
-            try
-            {
-                await Task.Delay(100, linkedCts.Token);
-            }
-            catch (OperationCanceledException)
-            {
-                AnsiConsole.MarkupLine("[yellow]Dummy action cancelled.[/]");
-            }
-        });
+        dummyCmd.SetHandler(async () => await HandleDummyCommandAsync(chapter, linkedCts.Token));
 
         var backCmd = new Command("/back", "Return to chapter selection.");
-
-        backCmd.SetHandler(() =>
-        {
-            AnsiConsole.MarkupLine("[blue]Returning to chapter selection...[/]");
-            linkedCts.Cancel();
-        });
+        backCmd.SetHandler(async () => await HandleBackCommandAsync(linkedCts));
 
         var deleteCmd = new Command("/delete", "Delete this chapter.");
-        deleteCmd.SetHandler(async () => { await DeleteChapterAsync(chapter, linkedCts); });
+        deleteCmd.SetHandler(async () => await DeleteChapterAsync(chapter, linkedCts));
 
         var draftCmd = new Command("/draft", "Draft this chapter using AI.");
-
-        draftCmd.SetHandler(async () =>
-        {
-            await chapterDrafterService.DraftChapterAsync(chapter, linkedCts.Token);
-        });
+        draftCmd.SetHandler(async () => await chapterDrafterService.DraftChapterAsync(chapter, linkedCts.Token));
 
         var splitCmd = new Command("/split", "Split this chapter into two.");
-        splitCmd.SetHandler(async () => { await SplitChapterAsync(chapter, linkedCts); });
+        splitCmd.SetHandler(async () => await SplitChapterAsync(chapter, linkedCts));
 
         var mergeCmd = new Command("/merge", "Merge this chapter into another.");
-        mergeCmd.SetHandler(async () => { await MergeChapterAsync(chapter, linkedCts); });
+        mergeCmd.SetHandler(async () => await MergeChapterAsync(chapter, linkedCts));
 
         var chapterRootCommand =
             new RootCommand($"Actions for Chapter {chapter.Number}: {Markup.Escape(chapter.Title)}")
@@ -208,25 +192,32 @@ public class ChapterManagerService(
 
         while (!chapterSubMenuCts.IsCancellationRequested && !parentToken.IsCancellationRequested)
         {
-            AnsiConsole.WriteLine();
-            AnsiConsole.MarkupLine($"Managing Chapter: {FormatChapterDisplayString(selectedChapter)}");
+            await _userInteraction.NotifyAsync(""); // Replicates AnsiConsole.WriteLine()
+            await _userInteraction.NotifyAsync($"Managing Chapter: {FormatChapterDisplayString(selectedChapter)}");
 
             if (!string.IsNullOrWhiteSpace(selectedChapter.Summary))
             {
-                AnsiConsole.Console.DisplayProsePassage(selectedChapter.Summary, "Summary");
-                //AnsiConsole.MarkupLine($"Summary: [grey]{Markup.Escape(selectedChapter.Summary)}[/]");
+                await _userInteraction.DisplayProsePassageAsync(selectedChapter.Summary, "Summary");
             }
 
-            AnsiConsole.MarkupLine(
+            await _userInteraction.NotifyAsync(
                 "Enter a command for this chapter ([blue]/help[/] for options, [blue]/back[/] to return to chapter list):");
 
-            AnsiConsole.Markup($"Chapter {selectedChapter.Number} > ");
-
-            var input = ReadLine.Read();
+            // For the prompt like "Chapter X > ", IUserInteraction typically doesn't support partial line prompts.
+            // GetUserInputAsync is expected to handle the full interaction.
+            // We can prepend the prompt to the user's mental model or adjust GetUserInputAsync if it had prompt capabilities.
+            // For now, we'll rely on the previous "Enter a command" message.
+            // If a visual prompt prefix is strictly needed, IUserInteraction would need a method for it,
+            // or we make GetUserInputAsync take a prompt string.
+            // Consider current GetUserInputAsync as a simple line reader.
+            // await _userInteraction.NotifyAsync($"Chapter {selectedChapter.Number} > ", new MessageOptions { NoNewLine = true }); // Assuming NotifyAsync can do this
+            
+            var input = await _userInteraction.GetUserInputAsync(parentToken);
 
             if (parentToken.IsCancellationRequested)
             {
-                AnsiConsole.MarkupLine("[yellow]Exiting chapter menu due to external cancellation.[/]");
+                await _userInteraction.NotifyAsync("Exiting chapter menu due to external cancellation.",
+                    new(MessageType.Warning));
 
                 break;
             }
@@ -246,7 +237,8 @@ public class ChapterManagerService(
                 logger.LogInformation("Chapter action cancelled or /back invoked for chapter {ChapterNumber}",
                     selectedChapter.Number);
 
-                AnsiConsole.MarkupLine("[yellow](Chapter action cancelled or /back invoked)[/]");
+                await _userInteraction.NotifyAsync("(Chapter action cancelled or /back invoked)",
+                    new(MessageType.Warning));
             }
             catch (Exception ex)
             {
@@ -255,7 +247,7 @@ public class ChapterManagerService(
                     input,
                     selectedChapter.Number);
 
-                AnsiConsole.MarkupLine($"[red]Error processing chapter command: {ex.Message}[/]");
+                await _userInteraction.NotifyError($"Error processing chapter command: {ex.Message}", ex);
             }
         }
 
@@ -273,10 +265,10 @@ public class ChapterManagerService(
         var confirmPrompt =
             $"Are you sure you want to delete Chapter {chapterToDelete.Number}: '{Markup.Escape(chapterToDelete.Title)}'? This action cannot be undone.";
 
-        if (!await userInteraction.ConfirmAsync(confirmPrompt))
+        if (!await _userInteraction.ConfirmAsync(confirmPrompt, subMenuCts.Token))
         {
             logger.LogInformation("User cancelled deletion of chapter {ChapterNumber}", chapterToDelete.Number);
-            AnsiConsole.MarkupLine("[yellow]Chapter deletion cancelled.[/]");
+            await _userInteraction.NotifyAsync("Chapter deletion cancelled.", new(MessageType.Warning));
 
             return;
         }
@@ -287,17 +279,17 @@ public class ChapterManagerService(
 
         foreach (var error in deletionResult.Errors)
         {
-            AnsiConsole.MarkupLine($"[red]{Markup.Escape(error)}[/]");
+            await _userInteraction.NotifyAsync(Markup.Escape(error), new(MessageType.Error));
         }
 
         foreach (var warning in deletionResult.Warnings)
         {
-            AnsiConsole.MarkupLine($"[yellow]{Markup.Escape(warning)}[/]");
+            await _userInteraction.NotifyAsync(Markup.Escape(warning), new(MessageType.Warning));
         }
 
         foreach (var action in deletionResult.ActionsTaken)
         {
-            AnsiConsole.MarkupLine($"[green]{Markup.Escape(action)}[/]");
+            await _userInteraction.NotifyAsync(Markup.Escape(action), new(MessageType.Informational, MessageStyle.Bold)); // Assuming green means informational/success
         }
 
         if (deletionResult.Success)
@@ -306,8 +298,9 @@ public class ChapterManagerService(
                 chapterToDelete.Number,
                 chapterToDelete.Title);
 
-            AnsiConsole.MarkupLine(
-                $"[bold green]{Markup.Escape(deletionResult.OverallMessage ?? "Chapter deleted successfully.")}[/]");
+            await _userInteraction.NotifyAsync(
+                Markup.Escape(deletionResult.OverallMessage ?? "Chapter deleted successfully."),
+                new(MessageType.Informational, MessageStyle.Bold)); // Assuming green means informational/success
 
             await subMenuCts.CancelAsync(); // Exit the current chapter's sub-menu
         }
@@ -319,13 +312,9 @@ public class ChapterManagerService(
                 chapterToDelete.Title,
                 deletionResult.OverallMessage);
 
-            AnsiConsole.MarkupLine(
-                $"[bold red]{Markup.Escape(deletionResult.OverallMessage ?? "Chapter deletion failed.")}[/]");
-
-            if (deletionResult.Exception != null && deletionResult.Exception is not OperationCanceledException)
-            {
-                ExceptionDisplay.DisplayException(deletionResult.Exception);
-            }
+            await _userInteraction.NotifyError(
+                Markup.Escape(deletionResult.OverallMessage ?? "Chapter deletion failed."),
+                deletionResult.Exception); // NotifyError will handle displaying the exception
         }
     }
 
@@ -339,8 +328,9 @@ public class ChapterManagerService(
 
         if (success)
         {
-            AnsiConsole.MarkupLine(
-                $"[bold green]Chapter split operation completed successfully for {Markup.Escape(sourceChapter.Title)}. Returning to chapter list.[/]");
+            await _userInteraction.NotifyAsync(
+                $"Chapter split operation completed successfully for {Markup.Escape(sourceChapter.Title)}. Returning to chapter list.",
+                new(MessageType.Informational, MessageStyle.Bold));
 
             logger.LogInformation(
                 "Successfully completed split operation for chapter {SourceChapterNumber} via service",
@@ -350,8 +340,9 @@ public class ChapterManagerService(
         }
         else
         {
-            AnsiConsole.MarkupLine(
-                "[bold red]Chapter split operation failed or was cancelled. Check logs for details.[/]");
+            await _userInteraction.NotifyAsync(
+                "Chapter split operation failed or was cancelled. Check logs for details.",
+                new(MessageType.Error, MessageStyle.Bold));
 
             logger.LogWarning(
                 "Chapter split operation failed or was cancelled for chapter {SourceChapterNumber} via service",
@@ -369,8 +360,9 @@ public class ChapterManagerService(
 
         if (success)
         {
-            AnsiConsole.MarkupLine(
-                $"[bold green]Chapter merge operation completed successfully for {Markup.Escape(sourceChapter.Title)}. Returning to chapter list.[/]");
+            await _userInteraction.NotifyAsync(
+                $"Chapter merge operation completed successfully for {Markup.Escape(sourceChapter.Title)}. Returning to chapter list.",
+                new(MessageType.Informational, MessageStyle.Bold));
 
             logger.LogInformation(
                 "Successfully completed merge operation for chapter {SourceChapterNumber} via service",
@@ -380,13 +372,35 @@ public class ChapterManagerService(
         }
         else
         {
-            AnsiConsole.MarkupLine(
-                "[bold red]Chapter merge operation failed or was cancelled. Check logs for details.[/]");
+            await _userInteraction.NotifyAsync(
+                "Chapter merge operation failed or was cancelled. Check logs for details.",
+                new(MessageType.Error, MessageStyle.Bold));
 
             logger.LogWarning(
                 "Chapter merge operation failed or was cancelled for chapter {SourceChapterNumber} via service",
                 sourceChapter.Number);
         }
+    }
+    
+    // Helper methods for command handlers in BuildChapterSubMenuParser
+    private async Task HandleDummyCommandAsync(ChapterState chapter, CancellationToken token)
+    {
+        await _userInteraction.NotifyAsync(
+            $"Executed dummy action for chapter {chapter.Number}: {Markup.Escape(chapter.Title)}.", new(MessageType.Hint));
+        try
+        {
+            await Task.Delay(100, token);
+        }
+        catch (OperationCanceledException)
+        {
+            await _userInteraction.NotifyAsync("Dummy action cancelled.", new(MessageType.Warning));
+        }
+    }
+
+    private async Task HandleBackCommandAsync(CancellationTokenSource linkedCts)
+    {
+        await _userInteraction.NotifyAsync("Returning to chapter selection...", new(MessageType.Informational));
+        await linkedCts.CancelAsync();
     }
 
     private string FormatChapterDisplayString(ChapterState chapter)

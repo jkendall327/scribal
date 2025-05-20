@@ -7,7 +7,6 @@ namespace Scribal.Cli.Features;
 public class ChapterMergerService : IChapterMergerService
 {
     private readonly WorkspaceManager _workspaceManager;
-    private readonly IAnsiConsole _console;
     private readonly IUserInteraction _userInteraction;
     private readonly ILogger<ChapterMergerService> _logger;
 
@@ -19,12 +18,10 @@ public class ChapterMergerService : IChapterMergerService
     }
 
     public ChapterMergerService(WorkspaceManager workspaceManager,
-        IAnsiConsole console,
         IUserInteraction userInteraction,
         ILogger<ChapterMergerService> logger)
     {
         _workspaceManager = workspaceManager;
-        _console = console;
         _userInteraction = userInteraction;
         _logger = logger;
     }
@@ -35,13 +32,13 @@ public class ChapterMergerService : IChapterMergerService
             sourceChapter.Number,
             sourceChapter.Title);
 
-        _console.MarkupLine($"Merging Chapter {sourceChapter.Number}: {Markup.Escape(sourceChapter.Title)}");
+        await _userInteraction.NotifyAsync($"Merging Chapter {sourceChapter.Number}: {Markup.Escape(sourceChapter.Title)}");
 
         var state = await _workspaceManager.LoadWorkspaceStateAsync(cancellationToken: cancellationToken);
 
         if (state is null || !state.Chapters.Any())
         {
-            _console.MarkupLine("[red]Could not load workspace state or no chapters available to merge into.[/]");
+            await _userInteraction.NotifyAsync("Could not load workspace state or no chapters available to merge into.", new(MessageType.Error));
             _logger.LogWarning("Failed to load workspace state or no chapters found for merging");
 
             return false;
@@ -54,7 +51,7 @@ public class ChapterMergerService : IChapterMergerService
 
         if (!targetableChapters.Any())
         {
-            _console.MarkupLine("[yellow]No other chapters available to merge into.[/]");
+            await _userInteraction.NotifyAsync("No other chapters available to merge into.", new(MessageType.Warning));
 
             _logger.LogInformation("No target chapters available for merging with source chapter {SourceChapterNumber}",
                 sourceChapter.Number);
@@ -71,7 +68,7 @@ public class ChapterMergerService : IChapterMergerService
                                     .PageSize(10)
                                     .AddChoices(targetChapterChoices);
 
-        var targetChoiceString = _console.Prompt(targetSelectionPrompt);
+        var targetChoiceString = await _userInteraction.PromptAsync(targetSelectionPrompt);
 
         if (cancellationToken.IsCancellationRequested)
         {
@@ -83,7 +80,7 @@ public class ChapterMergerService : IChapterMergerService
 
         if (selectedTargetChapterState is null)
         {
-            _console.MarkupLine("[red]Invalid target chapter selection. Aborting merge.[/]");
+            await _userInteraction.NotifyAsync("Invalid target chapter selection. Aborting merge.", new(MessageType.Error));
             _logger.LogWarning("Invalid target chapter selected for merge");
 
             return false;
@@ -96,7 +93,7 @@ public class ChapterMergerService : IChapterMergerService
             selectedTargetChapterState.Number,
             selectedTargetChapterState.Title);
 
-        _console.MarkupLine(
+        await _userInteraction.NotifyAsync(
             $"Merging [yellow]'{Markup.Escape(sourceChapter.Title)}'[/] into [green]'{Markup.Escape(selectedTargetChapterState.Title)}'[/].");
 
         var summaryPrompt = new SelectionPrompt<SummaryChoice>()
@@ -112,7 +109,7 @@ public class ChapterMergerService : IChapterMergerService
                                 var _ => choice.ToString()
                             });
 
-        var summaryDecision = _console.Prompt(summaryPrompt);
+        var summaryDecision = await _userInteraction.PromptAsync(summaryPrompt);
 
         if (cancellationToken.IsCancellationRequested)
         {
@@ -132,9 +129,10 @@ public class ChapterMergerService : IChapterMergerService
 
                 break;
             case SummaryChoice.EnterNew:
-                newTargetSummary = _console
-                                   .Ask<string>(
-                                       $"Enter the new summary for the merged chapter '{Markup.Escape(selectedTargetChapterState.Title)}':")
+                newTargetSummary = (await _userInteraction
+                                   .AskAsync<string>(
+                                       $"Enter the new summary for the merged chapter '{Markup.Escape(selectedTargetChapterState.Title)}':", 
+                                       cancellationToken: cancellationToken))
                                    .Trim();
 
                 if (cancellationToken.IsCancellationRequested)
@@ -164,7 +162,7 @@ public class ChapterMergerService : IChapterMergerService
                 sourceChapter.Number,
                 selectedTargetChapterState.Number);
 
-            _console.MarkupLine("[yellow]Chapter merge cancelled.[/]");
+            await _userInteraction.NotifyAsync("Chapter merge cancelled.", new(MessageType.Warning));
 
             return false;
         }
@@ -187,8 +185,9 @@ public class ChapterMergerService : IChapterMergerService
                 sourceChapter.Number,
                 selectedTargetChapterState.Number);
 
-            _console.MarkupLine(
-                $"[bold green]Successfully merged '{Markup.Escape(sourceChapter.Title)}' into '{Markup.Escape(selectedTargetChapterState.Title)}'.[/]");
+            await _userInteraction.NotifyAsync(
+                $"Successfully merged '{Markup.Escape(sourceChapter.Title)}' into '{Markup.Escape(selectedTargetChapterState.Title)}'.", 
+                new(MessageType.Informational, MessageStyle.Bold));
         }
         else
         {
@@ -197,7 +196,7 @@ public class ChapterMergerService : IChapterMergerService
                 sourceChapter.Number,
                 selectedTargetChapterState.Number);
 
-            _console.MarkupLine("[bold red]Chapter merge operation failed. Check logs for details.[/]");
+            await _userInteraction.NotifyAsync("Chapter merge operation failed. Check logs for details.", new(MessageType.Error, MessageStyle.Bold));
         }
 
         return success;

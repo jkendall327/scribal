@@ -22,8 +22,12 @@ public class CommandService(
     WorkspaceManager workspaceManager,
     ChapterManagerService chapterManagerService,
     IGitServiceFactory gitFactory,
-    ExportService exportService)
+    ExportService exportService,
+    IUserInteraction userInteraction,
+    StickyTreeSelector stickyTreeSelector) // Added StickyTreeSelector
 {
+    private readonly IUserInteraction _userInteraction = userInteraction;
+    private readonly StickyTreeSelector _stickyTreeSelector = stickyTreeSelector; // Added StickyTreeSelector field
     private readonly Argument<string> _ideaArgument = new()
     {
         Name = "Idea",
@@ -54,12 +58,12 @@ public class CommandService(
 
     public Parser Build()
     {
-        var quit = Create("/quit", "Exit Scribal", QuitCommand, ["/exit"]);
-        var clear = Create("/clear", "Clear conversation history", ClearCommand);
-        var tree = Create("/add", "Set files to be included in context", TreeCommand);
-        var init = Create("/init", "Creates a new Scribal workspace in the current folder", InitCommand);
+        var quit = Create("/quit", "Exit Scribal", QuitCommandAsync, ["/exit"]);
+        var clear = Create("/clear", "Clear conversation history", ClearCommandAsync);
+        var tree = Create("/add", "Set files to be included in context", TreeCommand); // Stays Task, no await needed
+        var init = Create("/init", "Creates a new Scribal workspace in the current folder", InitCommandAsync);
 
-        var pitch = Create("/pitch", "Turns an initial story idea into a fleshed-out premise", PitchCommand);
+        var pitch = Create("/pitch", "Turns an initial story idea into a fleshed-out premise", PitchCommand); // Already async
         pitch.AddArgument(_ideaArgument);
 
         var outline = Create("/outline", "Generates a plot outline from a premise", OutlineCommand);
@@ -79,13 +83,13 @@ public class CommandService(
 
         var commitCmd = Create("/commit",
             "Stages all changes and creates a commit with the given message",
-            CommitAllCommandAsync);
+            CommitAllCommandAsync); // Already async
 
         commitCmd.AddArgument(_commitMessageArgument);
 
-        var statusCmd = Create("/status", "Displays the current project status", StatusCommand);
+        var statusCmd = Create("/status", "Displays the current project status", StatusCommandAsync);
 
-        var exportCmd = Create("/export", "Exports all chapters into a single Markdown file", ExportCommandAsync);
+        var exportCmd = Create("/export", "Exports all chapters into a single Markdown file", ExportCommandAsync); // Already async
         exportCmd.AddOption(_exportFileNameOption);
 
         var root = new RootCommand("Scribal interactive shell")
@@ -121,12 +125,10 @@ public class CommandService(
         }
     }
 
-    private Task DropCommand(InvocationContext arg)
+    private async Task DropCommand(InvocationContext arg)
     {
         repoStore.Paths.Clear();
-        AnsiConsole.MarkupLine("[yellow]All files cleared from context.[/]");
-        
-        return Task.CompletedTask;
+        await _userInteraction.NotifyAsync("All files cleared from context.", new(MessageType.Warning));
     }
 
     private async Task ExportCommandAsync(InvocationContext context)
@@ -136,27 +138,27 @@ public class CommandService(
 
         if (!workspaceManager.InWorkspace)
         {
-            AnsiConsole.MarkupLine(
-                "[red]Cannot export: Not currently in a Scribal workspace. Use '/init' to create one.[/]");
+            await _userInteraction.NotifyAsync(
+                "Cannot export: Not currently in a Scribal workspace. Use '/init' to create one.",
+                new(MessageType.Error));
 
             return;
         }
 
         try
         {
-            AnsiConsole.MarkupLine("Starting export...");
+            await _userInteraction.NotifyAsync("Starting export...");
             await exportService.ExportStoryAsync(outputFileName, token);
 
             // TODO: Success/failure messages are handled within ExportService
         }
         catch (OperationCanceledException)
         {
-            AnsiConsole.MarkupLine("[yellow]Export operation cancelled.[/]");
+            await _userInteraction.NotifyAsync("Export operation cancelled.", new(MessageType.Warning));
         }
         catch (Exception e)
         {
-            AnsiConsole.MarkupLine("[red]An unexpected error occurred during export.[/]");
-            ExceptionDisplay.DisplayException(e);
+            await _userInteraction.NotifyError("An unexpected error occurred during export.", e);
         }
     }
 
@@ -172,7 +174,9 @@ public class CommandService(
         }
         catch (Exception e)
         {
-            ExceptionDisplay.DisplayException(e);
+            // Assuming OutlineService handles its own specific user notifications for known errors.
+            // This NotifyError is for unexpected exceptions during the call.
+            await _userInteraction.NotifyError("An unexpected error occurred during outline generation.", e);
         }
     }
 
@@ -183,36 +187,37 @@ public class CommandService(
 
         if (string.IsNullOrWhiteSpace(message))
         {
-            AnsiConsole.MarkupLine("[red]Commit message cannot be empty.[/]");
+            await _userInteraction.NotifyAsync("Commit message cannot be empty.", new(MessageType.Error));
 
             return;
         }
 
         if (!gitFactory.TryOpenRepository(out var git))
         {
-            AnsiConsole.MarkupLine("[yellow]Git is not initialized for this workspace. Cannot commit.[/]");
+            await _userInteraction.NotifyAsync("Git is not initialized for this workspace. Cannot commit.",
+                new(MessageType.Warning));
 
             return;
         }
 
         try
         {
-            AnsiConsole.MarkupLine($"Attempting to commit all changes with message: \"{message}\"...");
+            await _userInteraction.NotifyAsync($"Attempting to commit all changes with message: \"{message}\"...");
             
             var success = await git.CreateCommitAllAsync(message, token);
 
-            AnsiConsole.MarkupLine(success
-                ? "[green]Commit operation completed. Check logs for details.[/]"
-                : "[red]Failed to create commit. Check logs for details.[/]");
+            await _userInteraction.NotifyAsync(success
+                ? "Commit operation completed. Check logs for details."
+                : "Failed to create commit. Check logs for details.",
+                success ? new(MessageType.Informational) : new(MessageType.Error));
         }
         catch (InvalidOperationException ex)
         {
-            AnsiConsole.MarkupLine($"[red]Git operation failed: {ex.Message}[/]");
+            await _userInteraction.NotifyAsync($"Git operation failed: {ex.Message}", new(MessageType.Error));
         }
         catch (Exception e)
         {
-            AnsiConsole.MarkupLine("[red]An unexpected error occurred while committing.[/]");
-            ExceptionDisplay.DisplayException(e);
+            await _userInteraction.NotifyError("An unexpected error occurred while committing.", e);
         }
     }
 
@@ -223,7 +228,7 @@ public class CommandService(
 
         if (string.IsNullOrWhiteSpace(idea))
         {
-            AnsiConsole.MarkupLine("[red]Idea cannot be empty.[/]");
+            await _userInteraction.NotifyAsync("Idea cannot be empty.", new(MessageType.Error));
 
             return;
         }
@@ -234,11 +239,12 @@ public class CommandService(
         }
         catch (Exception e)
         {
-            ExceptionDisplay.DisplayException(e);
+            // Assuming PitchService handles its own specific user notifications.
+            await _userInteraction.NotifyError("An unexpected error occurred during pitch generation.", e);
         }
     }
 
-    private async Task InitCommand(InvocationContext arg)
+    private async Task InitCommandAsync(InvocationContext arg)
     {
         try
         {
@@ -246,35 +252,35 @@ public class CommandService(
 
             var message = created ? "Workspace initialised." : "You are already in a Scribal workspace.";
 
-            AnsiConsole.WriteLine(message);
+            await _userInteraction.NotifyAsync(message);
 
             if (initialised)
             {
-                AnsiConsole.WriteLine("Git repo initialised.");
+                await _userInteraction.NotifyAsync("Git repo initialised.");
             }
         }
         catch (Exception e)
         {
-            ExceptionDisplay.DisplayException(e);
+            await _userInteraction.NotifyError("An error occurred during workspace initialisation.", e);
         }
     }
 
-    private Task ClearCommand(InvocationContext ctx)
+    private async Task ClearCommandAsync(InvocationContext ctx)
     {
         _ = conversationStore.TryClearConversation(string.Empty);
         
-        AnsiConsole.Clear();
+        await _userInteraction.ClearAsync();
         
-        AnsiConsole.MarkupLine("[yellow]Conversation history cleared.[/]");
-
-        return Task.FromResult(true);
+        await _userInteraction.NotifyAsync("Conversation history cleared.", new(MessageType.Warning), ctx.GetCancellationToken());
     }
 
-    private Task TreeCommand(InvocationContext ctx)
+    private async Task TreeCommand(InvocationContext ctx) // Changed to async Task
     {
         var cwd = fileSystem.Directory.GetCurrentDirectory();
+        var token = ctx.GetCancellationToken();
 
-        var files = StickyTreeSelector.Scan(cwd);
+        // Call the instance method ScanAsync from the injected StickyTreeSelector
+        var files = await _stickyTreeSelector.ScanAsync(cwd, token);
 
         // Add files, don't replace on multiple /add invocations.
         foreach (var file in files)
@@ -282,48 +288,56 @@ public class CommandService(
             // Don't care if duplicates failed to be added.
             _ = repoStore.Paths.Add(file);
         }
-
-        return Task.FromResult(true);
+        
+        // Optional: Notify user that files have been added to context
+        if (files.Any())
+        {
+            await _userInteraction.NotifyAsync("Selected files have been added to the context for AI interaction.", new(MessageType.Informational), token);
+        }
+        // If ScanAsync already provides user feedback about selection, this NotifyAsync might be redundant or supplementary.
     }
 
-    private async Task StatusCommand(InvocationContext context)
+    private async Task StatusCommandAsync(InvocationContext context)
     {
         if (!workspaceManager.InWorkspace)
         {
-            AnsiConsole.MarkupLine("[yellow]Not currently in a Scribal workspace. Use '/init' to create one.[/]");
+            await _userInteraction.NotifyAsync("Not currently in a Scribal workspace. Use '/init' to create one.",
+                new(MessageType.Warning));
 
             return;
         }
 
-        AnsiConsole.MarkupLine($"[green]Current Workspace Path:[/] {workspaceManager.CurrentWorkspacePath ?? "N/A"}");
+        await _userInteraction.NotifyAsync(
+            $"[green]Current Workspace Path:[/] {workspaceManager.CurrentWorkspacePath ?? "N/A"}");
         var state = await workspaceManager.LoadWorkspaceStateAsync(cancellationToken: context.GetCancellationToken());
 
         if (state is null)
         {
-            AnsiConsole.MarkupLine(
-                "[red]Could not load workspace state. The state file might be corrupted or missing.[/]");
+            await _userInteraction.NotifyAsync(
+                "Could not load workspace state. The state file might be corrupted or missing.",
+                new(MessageType.Error));
 
             return;
         }
 
-        AnsiConsole.MarkupLine($"[green]Current Pipeline Stage:[/] {state.PipelineStage.ToString()}");
+        await _userInteraction.NotifyAsync($"[green]Current Pipeline Stage:[/] {state.PipelineStage.ToString()}");
 
         if (string.IsNullOrWhiteSpace(state.Premise))
         {
-            AnsiConsole.MarkupLine("[green]Premise:[/] Not set");
+            await _userInteraction.NotifyAsync("[green]Premise:[/] Not set");
         }
         else
         {
-            AnsiConsole.Console.DisplayProsePassage(state.Premise, "Premise");
+            await _userInteraction.DisplayProsePassageAsync(state.Premise, "Premise");
         }
 
-        AnsiConsole.MarkupLine(!string.IsNullOrWhiteSpace(state.PlotOutlineFile)
+        await _userInteraction.NotifyAsync(!string.IsNullOrWhiteSpace(state.PlotOutlineFile)
             ? $"[green]Plot Outline File:[/] {state.PlotOutlineFile}"
             : "[green]Plot Outline File:[/] Not set");
 
         if (state.Chapters.Any())
         {
-            AnsiConsole.MarkupLine("[green]Chapters:[/]");
+            await _userInteraction.NotifyAsync("[green]Chapters:[/]");
             var table = new Table().Expand();
             table.AddColumn("Number");
             table.AddColumn("Title");
@@ -338,19 +352,18 @@ public class CommandService(
                     chapter.Summary ?? "N/A");
             }
 
-            AnsiConsole.Write(table);
+            await _userInteraction.WriteTableAsync(table);
         }
         else
         {
-            AnsiConsole.MarkupLine("[yellow]No chapters found in the current workspace state.[/]");
+            await _userInteraction.NotifyAsync("No chapters found in the current workspace state.",
+                new(MessageType.Warning));
         }
     }
 
-    private static Task QuitCommand(InvocationContext ctx)
+    private async Task QuitCommandAsync(InvocationContext ctx)
     {
-        AnsiConsole.MarkupLine("[yellow]Thank you for using Scribal. Goodbye![/]");
+        await _userInteraction.NotifyAsync("Thank you for using Scribal. Goodbye!", new(MessageType.Warning), ctx.GetCancellationToken());
         Environment.Exit(0);
-
-        return Task.CompletedTask;
     }
 }

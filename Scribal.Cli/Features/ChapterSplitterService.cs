@@ -7,17 +7,14 @@ namespace Scribal.Cli.Features;
 public class ChapterSplitterService : IChapterSplitterService
 {
     private readonly WorkspaceManager _workspaceManager;
-    private readonly IAnsiConsole _console;
     private readonly IUserInteraction _userInteraction;
     private readonly ILogger<ChapterSplitterService> _logger;
 
     public ChapterSplitterService(WorkspaceManager workspaceManager,
-        IAnsiConsole console,
         IUserInteraction userInteraction,
         ILogger<ChapterSplitterService> logger)
     {
         _workspaceManager = workspaceManager;
-        _console = console;
         _userInteraction = userInteraction;
         _logger = logger;
     }
@@ -28,67 +25,51 @@ public class ChapterSplitterService : IChapterSplitterService
             sourceChapter.Number,
             sourceChapter.Title);
 
-        _console.MarkupLine($"Splitting Chapter {sourceChapter.Number}: {Markup.Escape(sourceChapter.Title)}");
+        await _userInteraction.NotifyAsync($"Splitting Chapter {sourceChapter.Number}: {Markup.Escape(sourceChapter.Title)}");
 
-        var prompt = new TextPrompt<int>(
-                         $"Enter the ordinal position for the new chapter part (e.g., if splitting chapter {sourceChapter.Number}, and new part is immediately after, enter {sourceChapter.Number + 1}):")
-                     .PromptStyle("green")
-                     .ValidationErrorMessage("[red]That's not a valid number[/]")
-                     .Validate(ordinal =>
-                     {
-                         if (ordinal <= 0)
-                         {
-                             return ValidationResult.Error("[red]Ordinal must be a positive number.[/]");
-                         }
+        var ordinalPrompt = $"Enter the ordinal position for the new chapter part (e.g., if splitting chapter {sourceChapter.Number}, and new part is immediately after, enter {sourceChapter.Number + 1}):";
+        // IUserInteraction.AskAsync<T> does not support complex validation like Spectre's TextPrompt.
+        // We'll get the value and validate manually.
+        var newChapterOrdinalString = await _userInteraction.AskAsync<string>(ordinalPrompt, cancellationToken: cancellationToken);
 
-                         return ValidationResult.Success();
-                     });
+        if (cancellationToken.IsCancellationRequested) return false;
 
-        var newChapterOrdinal = _console.Prompt(prompt);
-
-        if (cancellationToken.IsCancellationRequested)
+        if (!int.TryParse(newChapterOrdinalString, out var newChapterOrdinal) || newChapterOrdinal <= 0)
         {
+            await _userInteraction.NotifyAsync("Ordinal must be a positive number. Aborting split.", new(MessageType.Error));
+            _logger.LogWarning("Invalid ordinal input: {OrdinalInput}", newChapterOrdinalString);
             return false;
         }
-
-        var newChapterTitle = _console
-                              .Ask<string>(
-                                  $"Enter the title for the new chapter part (at position {newChapterOrdinal}):")
+        
+        var newChapterTitle = (await _userInteraction
+                              .AskAsync<string>(
+                                  $"Enter the title for the new chapter part (at position {newChapterOrdinal}):", cancellationToken: cancellationToken))
                               .Trim();
 
         if (string.IsNullOrWhiteSpace(newChapterTitle))
         {
-            _console.MarkupLine("[red]New chapter title cannot be empty. Aborting split.[/]");
+            await _userInteraction.NotifyAsync("New chapter title cannot be empty. Aborting split.", new(MessageType.Error));
             _logger.LogWarning("New chapter title was empty, split aborted by user input");
 
             return false;
         }
 
-        if (cancellationToken.IsCancellationRequested)
-        {
-            return false;
-        }
+        if (cancellationToken.IsCancellationRequested) return false;
 
-        var newChapterSummary = _console
-                                .Ask<string>(
-                                    $"Enter a brief summary for the new chapter part '{Markup.Escape(newChapterTitle)}':")
+        var newChapterSummary = (await _userInteraction
+                                .AskAsync<string>(
+                                    $"Enter a brief summary for the new chapter part '{Markup.Escape(newChapterTitle)}':", cancellationToken: cancellationToken))
                                 .Trim();
 
-        if (cancellationToken.IsCancellationRequested)
-        {
-            return false;
-        }
+        if (cancellationToken.IsCancellationRequested) return false;
 
-        _console.MarkupLine(
+        await _userInteraction.NotifyAsync(
             $"Provide an updated summary for the original chapter (Chapter {sourceChapter.Number}: {Markup.Escape(sourceChapter.Title)}).");
 
         var updatedSourceChapterSummary =
-            _console.Ask<string>($"Updated summary for Chapter {sourceChapter.Number}:").Trim();
+            (await _userInteraction.AskAsync<string>($"Updated summary for Chapter {sourceChapter.Number}:", cancellationToken: cancellationToken)).Trim();
 
-        if (cancellationToken.IsCancellationRequested)
-        {
-            return false;
-        }
+        if (cancellationToken.IsCancellationRequested) return false;
 
         var confirmPrompt =
             $"Confirm split: Original Chapter {sourceChapter.Number} ('{Markup.Escape(sourceChapter.Title)}') will be updated. " +
@@ -101,7 +82,7 @@ public class ChapterSplitterService : IChapterSplitterService
             _logger.LogInformation("User cancelled chapter split operation for chapter {SourceChapterNumber}",
                 sourceChapter.Number);
 
-            _console.MarkupLine("[yellow]Chapter split cancelled.[/]");
+            await _userInteraction.NotifyAsync("Chapter split cancelled.", new(MessageType.Warning));
 
             return false;
         }

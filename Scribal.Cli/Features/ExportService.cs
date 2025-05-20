@@ -10,9 +10,10 @@ namespace Scribal.Cli.Features;
 public partial class ExportService(
     IFileSystem fileSystem,
     WorkspaceManager workspaceManager,
-    IAnsiConsole console,
+    IUserInteraction userInteraction,
     ILogger<ExportService> logger)
 {
+    private readonly IUserInteraction _userInteraction = userInteraction;
     private const string DefaultExportFileName = "exported_story.md";
     private const string ChaptersDirectoryName = "chapters";
     private static readonly Regex DraftFileRegex = CreateDraftFileRegex();
@@ -28,7 +29,7 @@ public partial class ExportService(
 
         if (state is null || !state.Chapters.Any())
         {
-            console.MarkupLine("[yellow]No chapters found in the workspace state to export.[/]");
+            await _userInteraction.NotifyAsync("No chapters found in the workspace state to export.", new(MessageType.Warning));
 
             return;
         }
@@ -37,7 +38,7 @@ public partial class ExportService(
 
         if (string.IsNullOrEmpty(projectRootPath))
         {
-            console.MarkupLine("[red]Could not determine project root path.[/]");
+            await _userInteraction.NotifyAsync("Could not determine project root path.", new(MessageType.Error));
 
             logger.LogError("Could not determine project root path from workspace path {WorkspacePath}",
                 workspaceManager.CurrentWorkspacePath);
@@ -77,13 +78,13 @@ public partial class ExportService(
         if (storyContentBuilder.Length > 0)
         {
             await fileSystem.File.WriteAllTextAsync(outputFilePath, storyContentBuilder.ToString(), cancellationToken);
-            console.MarkupLine($"[green]Story successfully exported to:[/] {outputFilePath}");
+            await _userInteraction.NotifyAsync($"Story successfully exported to: {outputFilePath}", new(MessageType.Informational)); // Green typically maps to Informational or Success
             logger.LogInformation("Story exported to {FilePath}", outputFilePath);
         }
         else
         {
-            console.MarkupLine(
-                "[yellow]No content was exported. All chapters might be missing content or directories.[/]");
+            await _userInteraction.NotifyAsync(
+                "No content was exported. All chapters might be missing content or directories.", new(MessageType.Warning));
 
             logger.LogWarning("Export finished, but no content was generated");
         }

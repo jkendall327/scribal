@@ -25,7 +25,15 @@ public static class ScribalInterfaceServiceCollectionExtensions
         services.AddSingleton<IChapterMergerService, ChapterMergerService>();
         services.AddSingleton<WorkspaceDeleter>();
         services.AddSingleton<ExportService>();
-        services.AddSingleton(AnsiConsole.Console);
-        services.AddSingleton<ConsoleChatRenderer>();
+        services.AddSingleton<StickyTreeSelector>(); // Added StickyTreeSelector
+        // services.AddSingleton(AnsiConsole.Console); // Keep for SpectreUserInteraction if it needs direct IAnsiConsole
+        // services.AddSingleton<ConsoleChatRenderer>(); // Keep for SpectreUserInteraction if it needs it
+        
+        // Ensure IUserInteraction is the primary interface for console interactions.
+        // SpectreUserInteraction itself will take IAnsiConsole and ConsoleChatRenderer if it needs to delegate.
+        // If a service was missed in a previous refactoring step and still directly depends on IAnsiConsole 
+        // or ConsoleChatRenderer (and isn't SpectreUserInteraction), that's an issue.
+        // However, the existing registrations of IAnsiConsole and ConsoleChatRenderer are fine
+        // as long as SpectreUserInteraction is the one consuming them.
     }
 }

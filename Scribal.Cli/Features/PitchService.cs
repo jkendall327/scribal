@@ -17,17 +17,18 @@ public class PitchService(
     IAiChatService chat,
     PromptRenderer renderer,
     Kernel kernel,
-    IAnsiConsole console,
     IOptions<AiSettings> options,
     WorkspaceManager workspaceManager,
     IRefinementService refinementService,
-    ConsoleChatRenderer consoleChatRenderer)
+    IUserInteraction userInteraction)
 {
+    private readonly IUserInteraction _userInteraction = userInteraction;
+
     public async Task CreatePremiseFromPitch(string pitch, CancellationToken ct = default)
     {
         if (options.Value.Primary is null)
         {
-            console.MarkupLine("[red]No primary model is configured. Cannot generate premise.[/]");
+            await _userInteraction.NotifyAsync("No primary model is configured. Cannot generate premise.", new(MessageType.Error), ct);
 
             return;
         }
@@ -37,7 +38,7 @@ public class PitchService(
         var initial = await GenerateInitialPremise(pitch, sid, ct);
         var final = initial;
 
-        var ok = await console.ConfirmAsync("Do you want to refine this premise?", cancellationToken: ct);
+        var ok = await _userInteraction.ConfirmAsync("Do you want to refine this premise?", ct);
 
         if (ok)
         {
@@ -61,31 +62,32 @@ public class PitchService(
         var history = new ChatHistory();
         history.AddSystemMessage(prompt);
 
-        console.MarkupLine("[yellow]Generating initial premise...[/]");
+        await _userInteraction.NotifyAsync("Generating initial premise...", new(MessageType.Warning), ct);
 
         var chatRequest = new ChatRequest(initialPitch, cid, sid);
-
         var premiseStream = chat.StreamAsync(chatRequest, history, ct);
 
-        var premiseBuilder = new StringBuilder();
+        // Stream the initial premise generation using IUserInteraction
+        var generatedPremise = await _userInteraction.DisplayAssistantResponseAsync(premiseStream, ct);
+        
+        if (string.IsNullOrWhiteSpace(generatedPremise))
+        {
+            await _userInteraction.NotifyAsync("AI failed to generate a premise.", new(MessageType.Error), ct);
+            // Return empty or handle as an error case, depending on desired behavior
+            return string.Empty; 
+        }
 
-        // Stream the initial premise generation.
-        await consoleChatRenderer.StreamWithSpinnerAsync(premiseStream.CollectWhileStreaming(premiseBuilder, ct), ct);
+        await _userInteraction.NotifyAsync("Initial Premise Generated.", new(MessageType.Informational), ct); // Cyan -> Informational
+        await _userInteraction.NotifyAsync("", ct); // For spacing
 
-        var generatedPremise = premiseBuilder.ToString().Trim();
-
-        console.MarkupLine("[cyan]Initial Premise Generated.[/]");
-        console.WriteLine();
-
-        return generatedPremise;
+        return generatedPremise.Trim(); // Ensure it's trimmed, though DisplayAssistantResponseAsync might handle this.
     }
 
     private async Task UpdateWorkspaceAfterPremiseFinalizedAsync(string premise, CancellationToken ct)
     {
         if (!workspaceManager.InWorkspace)
         {
-            console.MarkupLine("[yellow]Not in a Scribal workspace. Premise not saved to workspace state.[/]");
-
+            await _userInteraction.NotifyAsync("Not in a Scribal workspace. Premise not saved to workspace state.", new(MessageType.Warning), ct);
             return;
         }
 
@@ -93,14 +95,13 @@ public class PitchService(
 
         if (state is null)
         {
-            console.MarkupLine("[red]Could not load workspace state. Premise not saved.[/]");
-
+            await _userInteraction.NotifyAsync("Could not load workspace state. Premise not saved.", new(MessageType.Error), ct);
             return;
         }
 
         state.Premise = premise;
         state.PipelineStage = PipelineStageType.AwaitingOutline;
         await workspaceManager.SaveWorkspaceStateAsync(state, cancellationToken: ct);
-        console.MarkupLine("[green]Premise saved and pipeline stage updated to AwaitingOutline.[/]");
+        await _userInteraction.NotifyAsync("Premise saved and pipeline stage updated to AwaitingOutline.", new(MessageType.Informational), ct);
     }
 }

@@ -1,72 +1,77 @@
 using Scribal.Context;
 using Spectre.Console;
 
+using Scribal.Cli.Features; // For MessageType, MessageOptions if needed (though IUserInteraction should handle this)
+
 namespace Scribal.Cli.Interface;
 
 public class StickyTreeSelector
 {
-    private readonly FileSystemNode _root;
-    private List<FileSystemNode> _visibleNodes;
+    private readonly IUserInteraction _userInteraction;
+    private FileSystemNode _root = null!; // Initialized in InitializeAsync
+    private List<FileSystemNode> _visibleNodes = null!; // Initialized in InitializeAsync
     private int _currentNodeIndex;
 
     private const string ExpandedPrefix = "v ";
     private const string CollapsedPrefix = "> ";
     private const string FileIcon = "  ";
 
-    private StickyTreeSelector(string rootPath)
+    public StickyTreeSelector(IUserInteraction userInteraction)
     {
-        _root = BuildFileSystemTree(rootPath);
-        _root.IsExpanded = true;
+        _userInteraction = userInteraction;
+    }
+
+    private async Task InitializeAsync(string rootPath)
+    {
+        _root = await BuildFileSystemTreeAsync(rootPath);
+        _root.IsExpanded = true; // Expand the root node by default
         _visibleNodes = GetVisibleNodes(_root);
         _currentNodeIndex = 0;
     }
 
-    public static List<string> Scan(string startPath)
+    public async Task<List<string>> ScanAsync(string startPath, CancellationToken cancellationToken = default)
     {
-        AnsiConsole.MarkupLine($"Scanning starting from: [cyan]{startPath}[/]");
+        await _userInteraction.NotifyAsync($"Scanning starting from: {startPath}", cancellationToken: cancellationToken);
 
         try
         {
-            var selector = new StickyTreeSelector(startPath);
-            var selectedItems = selector.GetSelectedPaths();
+            await InitializeAsync(startPath); // Initialize the tree structure
+            var selectedItems = GetSelectedPaths(); // This remains synchronous as per plan for core logic
 
             if (selectedItems.Any())
             {
-                AnsiConsole.MarkupLine("\n[green]You selected:[/]");
-
+                await _userInteraction.NotifyAsync("\nYou selected:", new(MessageType.Informational), cancellationToken);
                 foreach (var item in selectedItems)
                 {
-                    AnsiConsole.MarkupLine($"- [blue]{item}[/]");
+                    await _userInteraction.NotifyAsync($"- {item}", new(MessageType.Informational), cancellationToken);
                 }
             }
             else
             {
-                AnsiConsole.MarkupLine("\n[yellow]No items were selected.[/]");
+                await _userInteraction.NotifyAsync("\nNo items were selected.", new(MessageType.Warning), cancellationToken);
             }
 
             return selectedItems;
         }
         catch (DirectoryNotFoundException ex)
         {
-            AnsiConsole.MarkupLine($"[red]Error: {ex.Message}[/]");
-
+            await _userInteraction.NotifyAsync($"Error: {ex.Message}", new(MessageType.Error), cancellationToken);
             return [];
         }
         catch (UnauthorizedAccessException ex)
         {
-            AnsiConsole.MarkupLine(
-                $"[red]Error: Insufficient permissions to access parts of the directory tree. {ex.Message}[/]");
-
+            await _userInteraction.NotifyAsync(
+                $"Error: Insufficient permissions to access parts of the directory tree. {ex.Message}", new(MessageType.Error), cancellationToken);
             return [];
         }
         catch (Exception ex)
         {
-            ExceptionDisplay.DisplayException(ex);
-
+            await _userInteraction.NotifyError("An error occurred during file selection.", ex, cancellationToken);
             return [];
         }
     }
 
+    // Core interactive logic remains synchronous as per instructions
     private List<string> GetSelectedPaths()
     {
         Console.Clear();
@@ -168,44 +173,47 @@ public class StickyTreeSelector
         }
     }
 
-    private FileSystemNode BuildFileSystemTree(string path)
+    private async Task<FileSystemNode> BuildFileSystemTreeAsync(string path, CancellationToken cancellationToken = default)
     {
         var dirInfo = new DirectoryInfo(path);
-
         if (!dirInfo.Exists)
         {
             throw new DirectoryNotFoundException($"Directory not found: {path}");
         }
 
         var rootNode = new FileSystemNode(dirInfo.FullName, true);
-        BuildTreeRecursive(rootNode, dirInfo);
-
+        await BuildTreeRecursiveAsync(rootNode, dirInfo, cancellationToken);
         return rootNode;
     }
 
-    private void BuildTreeRecursive(FileSystemNode parentNode, DirectoryInfo currentDir)
+    private async Task BuildTreeRecursiveAsync(FileSystemNode parentNode, DirectoryInfo currentDir, CancellationToken cancellationToken)
     {
         try
         {
             foreach (var dir in currentDir.GetDirectories())
             {
+                if (cancellationToken.IsCancellationRequested) return;
                 var childDirNode = new FileSystemNode(dir.FullName, true);
                 parentNode.AddChild(childDirNode);
-                BuildTreeRecursive(childDirNode, dir);
+                await BuildTreeRecursiveAsync(childDirNode, dir, cancellationToken);
             }
 
             foreach (var file in currentDir.GetFiles("*.md"))
             {
+                if (cancellationToken.IsCancellationRequested) return;
                 var childFileNode = new FileSystemNode(file.FullName, false);
                 parentNode.AddChild(childFileNode);
             }
         }
         catch (UnauthorizedAccessException)
         {
+            // Optionally notify about skipped directories due to permissions
+            // await _userInteraction.NotifyAsync($"Skipping directory due to permissions: {currentDir.FullName}", new(MessageType.Warning), cancellationToken);
         }
         catch (Exception ex)
         {
-            AnsiConsole.MarkupLine($"[red]Error accessing {currentDir.FullName}: {ex.Message}[/]");
+            // Using Error type as original was [red]
+            await _userInteraction.NotifyAsync($"Error accessing {currentDir.FullName}: {ex.Message}", new(MessageType.Error), cancellationToken);
         }
     }
 

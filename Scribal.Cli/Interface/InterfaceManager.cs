@@ -21,199 +21,167 @@ public class InterfaceManager(
     WorkspaceManager workspaceManager,
     IOptions<AiSettings> aiSettings,
     RepoMapStore repoMapStore,
-    ConsoleChatRenderer consoleRenderer)
+    IUserInteraction userInteraction) // Replaced ConsoleChatRenderer
 {
+    private readonly IUserInteraction _userInteraction = userInteraction;
     private readonly Guid _conversationId = Guid.NewGuid();
     private CancellationTokenSource _cts = new();
 
-    public Task DisplayWelcome()
+    public async Task DisplayWelcome()
     {
-        AnsiConsole.Clear();
+        await _userInteraction.ClearAsync();
 
         var figlet = new FigletText("Scribal").LeftJustified().Color(Color.Green);
-
-        AnsiConsole.Write(figlet);
-        AnsiConsole.WriteLine();
+        await _userInteraction.WriteFigletAsync(figlet);
+        await _userInteraction.NotifyAsync(""); // For spacing
 
         if (!gitFactory.TryOpenRepository(out var _))
         {
-            AnsiConsole.MarkupLine(
-                "[red rapidblink]You are not in a valid Git repository! AI edits will be destructive![/]");
+            await _userInteraction.NotifyAsync(
+                "[red rapidblink]You are not in a valid Git repository! AI edits will be destructive![/]", new(MessageType.Error));
         }
 
-        AnsiConsole.MarkupLine("Type [blue]/help[/] for available commands or just start typing to talk.");
-        AnsiConsole.MarkupLine("[yellow](hint: use '{' to enter multi-line mode and '}' to exit)[/]");
-        AnsiConsole.WriteLine();
-
-        return Task.CompletedTask;
+        await _userInteraction.NotifyAsync("Type [blue]/help[/] for available commands or just start typing to talk.");
+        await _userInteraction.NotifyAsync("[yellow](hint: use '{' to enter multi-line mode)[/]"); // Simplified hint
+        await _userInteraction.NotifyAsync(""); // For spacing
     }
 
     [DoesNotReturn]
     public async Task RunMainLoop()
     {
         var parser = commands.Build();
-
-        ReadLine.HistoryEnabled = true;
-        var inMultiLineMode = false;
-        var multiLineInputBuilder = new StringBuilder();
+        // ReadLine.HistoryEnabled = true; // IUserInteraction.GetUserInputAsync may or may not support history. Assuming it does or it's managed elsewhere.
 
         while (true)
         {
-            AnsiConsole.Write(new Rule());
-
+            await _userInteraction.WriteRuleAsync(new Rule());
             await DrawStatusLine(aiSettings.Value.Primary?.ModelId);
+            await _userInteraction.NotifyAsync(""); // For spacing
 
-            AnsiConsole.WriteLine();
+            // IUserInteraction.GetUserInputAsync does not display a prompt prefix.
+            // A general prompt message is preferred before calling GetUserInputAsync.
+            await _userInteraction.NotifyAsync("Enter input ([green]>[/]):"); 
+            var lineInput = await _userInteraction.GetUserInputAsync(_cts.Token);
 
-            // AI: Use a different prompt when in multi-line mode for better UX
-            AnsiConsole.Markup(inMultiLineMode ? "[blue]... [/]" : "[green]> [/]");
-
-            var lineInput = ReadLine.Read();
-
-            if (inMultiLineMode)
+            if (lineInput == "{")
             {
-                if (lineInput == "}")
-                {
-                    inMultiLineMode = false;
-                    var fullInput = multiLineInputBuilder.ToString();
-                    multiLineInputBuilder.Clear();
+                // Prompt for multi-line input is part of GetMultilineInputAsync
+                var fullInput = await _userInteraction.GetMultilineInputAsync(
+                    "Entering multi-line input mode. End with a blank line then Ctrl+D/Ctrl+Z, or type 'eof' on a new line.");
+                
+                await _userInteraction.NotifyAsync(""); // Spacing after multi-line input
 
-                    AnsiConsole.WriteLine();
-
-                    if (!string.IsNullOrWhiteSpace(fullInput))
-                    {
-                        await ActOnInput(fullInput, parser);
-                    }
-                }
-                else
+                if (!string.IsNullOrWhiteSpace(fullInput))
                 {
-                    multiLineInputBuilder.AppendLine(lineInput);
+                    await ActOnInput(fullInput, parser);
                 }
             }
             else
             {
-                if (lineInput == "{")
+                if (string.IsNullOrWhiteSpace(lineInput))
                 {
-                    inMultiLineMode = true;
-                    multiLineInputBuilder.Clear();
+                    continue;
                 }
-                else
-                {
-                    if (string.IsNullOrWhiteSpace(lineInput))
-                    {
-                        continue;
-                    }
-
-                    AnsiConsole.WriteLine();
-                    await ActOnInput(lineInput, parser);
-                }
+                await _userInteraction.NotifyAsync(""); // Spacing after single-line input
+                await ActOnInput(lineInput, parser);
             }
         }
     }
 
     private async Task ActOnInput(string input, Parser parser)
     {
-        // Normal chat/agentic request.
         var command = input.StartsWith('/');
 
         if (!command)
         {
             await ProcessConversation(input);
-
             return;
         }
 
         if (input is "/help")
         {
-            // Working around System.CommandLine seeming to hardcode this.
-            input = "--help";
+            input = "--help"; // System.CommandLine convention
         }
 
         var parsed = parser.Parse(input);
 
         if (parsed.Errors.Any())
         {
-            AnsiConsole.MarkupLine("[red]There was an issue parsing that command, sorry.[/]");
-            AnsiConsole.MarkupLine("[yellow](hint: some commands require their arguments to be quoted)[/]");
-            AnsiConsole.MarkupLine("[yellow](hint: for example, '/outline \"a sci-fi epic about a horse\"')[/]");
+            await _userInteraction.NotifyAsync("There was an issue parsing that command, sorry.", new(MessageType.Error));
+            await _userInteraction.NotifyAsync("(hint: some commands require their arguments to be quoted)", new(MessageType.Hint));
+            await _userInteraction.NotifyAsync("(hint: for example, '/outline \"a sci-fi epic about a horse\"')", new(MessageType.Hint));
         }
         else
         {
-            await parsed.InvokeAsync();
+            // This will internally call methods that now use _userInteraction
+            await parsed.InvokeAsync(); 
         }
     }
 
     private async Task DrawStatusLine(string? modelId)
     {
         var workspace = workspaceManager.InWorkspace
-            ? WorkspaceManager.TryFindWorkspaceFolder(fileSystem)
+            ? WorkspaceManager.TryFindWorkspaceFolder(fileSystem) ?? "N/A" 
             : "not in workspace";
 
         var branch = gitFactory.TryOpenRepository(out var git) ? await git.GetCurrentBranch() : "not in a git repository";
-
         var model = modelId is null ? "[yellow]no model![/]" : $"[yellow]{modelId}[/]";
 
-        AnsiConsole.MarkupLine($"{model} | {workspace} | {branch}");
-
-        DrawPathsIfAny();
+        await _userInteraction.NotifyAsync($"{model} | {workspace} | {branch}");
+        await DrawPathsIfAny();
     }
 
-    private void DrawPathsIfAny()
+    private async Task DrawPathsIfAny()
     {
         if (!repoMapStore.Paths.Any())
         {
             return;
         }
-
-        AnsiConsole.WriteLine();
-
+        await _userInteraction.NotifyAsync(""); // For spacing
         var filenames = repoMapStore.Paths.Select(s => fileSystem.Path.GetFileName(s).ToLowerInvariant()).ToList();
-
         var paths = string.Join(" | ", filenames);
-
-        AnsiConsole.MarkupLine($"[yellow]{paths}[/]");
+        await _userInteraction.NotifyAsync($"[yellow]{paths}[/]");
     }
 
     private async Task ProcessConversation(string userInput)
     {
         Console.CancelKeyPress += PerformCancellation;
 
-        AnsiConsole.Write(new Rule());
-        AnsiConsole.WriteLine();
+        await _userInteraction.WriteRuleAsync(new Rule());
+        await _userInteraction.NotifyAsync(""); // For spacing
 
         if (aiSettings.Value.Primary is null)
         {
-            AnsiConsole.MarkupLine("[red]No model is set. Check '.scribal/scribal.config'.[/]");
-
+            await _userInteraction.NotifyAsync("No model is set. Check '.scribal/scribal.config'.", new(MessageType.Error));
             return;
         }
 
         var files = repoMapStore.Paths.ToList();
-
         foreach (var file in files)
         {
-            AnsiConsole.MarkupLine($"[yellow]{file}[/]");
+            // Displaying files being used in context
+            await _userInteraction.NotifyAsync($"Using context file: [yellow]{file}[/]", new(MessageType.Hint));
         }
 
         try
         {
             var sid = aiSettings.Value.Primary.Provider;
-
             var chatRequest = new ChatRequest(userInput, _conversationId.ToString(), sid);
-
             var enumerable = aiChatService.StreamAsync(chatRequest, null, _cts.Token);
-            await consoleRenderer.StreamWithSpinnerAsync(enumerable, _cts.Token);
+            
+            // Use IUserInteraction to display the streaming response
+            await _userInteraction.DisplayAssistantResponseAsync(enumerable, _cts.Token);
         }
         catch (OperationCanceledException)
         {
-            AnsiConsole.WriteLine();
-            AnsiConsole.WriteLine("(cancelled)");
+            await _userInteraction.NotifyAsync(""); // For spacing
+            await _userInteraction.NotifyAsync("(cancelled)", new(MessageType.Warning));
         }
 
-        AnsiConsole.WriteLine();
+        await _userInteraction.NotifyAsync(""); // For spacing
 
         Console.CancelKeyPress -= PerformCancellation;
-        _cts = new();
+        _cts = new CancellationTokenSource(); // Reset CTS for next operation
     }
 
     private void PerformCancellation(object? sender, ConsoleCancelEventArgs e)

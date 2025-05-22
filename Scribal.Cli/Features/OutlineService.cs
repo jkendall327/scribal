@@ -10,33 +10,22 @@ using Scribal.Context;
 using Scribal.Workspace;
 using Spectre.Console;
 
-// Required for ChatHistory
-// Required for ConsoleChatRenderer and ReadLine
-// Required for StoryOutline and Chapter
-// Required for AnsiConsole
-
-// Required for JsonSerializer
-// Scribal.Workspace; // This was the duplicate, removed. WorkspaceManager is covered by the other Scribal.Workspace using.
-
 namespace Scribal.Cli.Features;
 
 public class OutlineService(
     IAiChatService chat,
     PromptRenderer renderer,
-    // ConsoleChatRenderer consoleRenderer, // No longer needed
+    ConsoleChatRenderer consoleRenderer,
+    IUserInteraction userInteraction,
     Kernel kernel,
     IOptions<AiSettings> options,
-    WorkspaceManager workspaceManager, // Injected WorkspaceManager
-    IUserInteraction userInteraction) 
+    WorkspaceManager workspaceManager) // Injected WorkspaceManager
 {
-    private readonly IUserInteraction _userInteraction = userInteraction;
-    // private readonly ConsoleChatRenderer _consoleRenderer = consoleRenderer; // No longer needed
-
     public async Task CreateOutlineFromPremise(string? premise, CancellationToken ct = default)
     {
         if (options.Value.Primary is null)
         {
-            await _userInteraction.NotifyAsync("No primary model is configured. Cannot generate outline.", new(MessageType.Error));
+            AnsiConsole.MarkupLine("[red]No primary model is configured. Cannot generate outline.[/]");
 
             return;
         }
@@ -52,35 +41,35 @@ public class OutlineService(
 
         var generatedOutlineJson = await GenerateInitialOutline(premise, sid, ct);
 
-        if (!await TryParseOutline(generatedOutlineJson, out var storyOutline, ct)) // Pass ct
+        if (!TryParseOutline(generatedOutlineJson, out var storyOutline))
         {
-            await _userInteraction.NotifyAsync("Failed to parse the initial outline JSON.", new(MessageType.Error));
-            await _userInteraction.NotifyAsync("Displaying raw output:", new(MessageType.Warning));
-            await _userInteraction.NotifyAsync(generatedOutlineJson ?? string.Empty);
+            AnsiConsole.MarkupLine("[red]Failed to parse the initial outline JSON.[/]");
+            AnsiConsole.MarkupLine("[yellow]Displaying raw output:[/]");
+            AnsiConsole.WriteLine(generatedOutlineJson);
         }
         else
         {
-            await DisplayParsedOutline(storyOutline!);
+            DisplayParsedOutline(storyOutline!);
         }
 
         // Refinement loop.
-        var ok = await _userInteraction.ConfirmAsync("Do you want to refine this plot outline?", ct);
+        var ok = await AnsiConsole.ConfirmAsync("Do you want to refine this plot outline?", cancellationToken: ct);
 
         if (!ok)
         {
-            await _userInteraction.NotifyAsync("Plot outline generation complete.", new(MessageType.Warning));
+            AnsiConsole.MarkupLine("[yellow]Plot outline generation complete.[/]");
 
             if (storyOutline != null)
             {
                 await workspaceManager.SavePlotOutlineAsync(storyOutline, premise);
 
-                await _userInteraction.NotifyAsync(
-                    $"Initial plot outline saved to workspace: .scribal/{PlotOutlineFileName}", new(MessageType.Informational));
+                AnsiConsole.MarkupLine(
+                    $"[green]Initial plot outline saved to workspace: .scribal/{PlotOutlineFileName}[/]");
             }
             else
             {
-                await _userInteraction.NotifyAsync(
-                    "Initial plot outline was not parsed successfully and therefore not saved.", new(MessageType.Warning));
+                AnsiConsole.MarkupLine(
+                    "[yellow]Initial plot outline was not parsed successfully and therefore not saved.[/]");
             }
 
             return;
@@ -104,25 +93,25 @@ public class OutlineService(
         // Add the AI's generated outline as the first assistant message
         refinementHistory.AddAssistantMessage(generatedOutlineJson); // Use the raw JSON
 
-        await _userInteraction.NotifyAsync(
+        AnsiConsole.MarkupLine(
             "Entering plot outline refinement chat. Type [blue]/done[/] when finished or [blue]/cancel[/] to abort.");
 
         var finalOutlineJson = await RefineOutline(refinementCid, refinementHistory, sid, generatedOutlineJson, ct);
 
-        await _userInteraction.NotifyAsync("Plot outline refinement finished.", new(MessageType.Warning));
-        await _userInteraction.NotifyAsync("Final plot outline (not saved yet):", new(MessageType.Warning));
+        AnsiConsole.MarkupLine("[yellow]Plot outline refinement finished.[/]");
+        AnsiConsole.MarkupLine("[yellow]Final plot outline (not saved yet):[/]");
 
-        if (!await TryParseOutline(finalOutlineJson, out var finalStoryOutline, ct)) // Pass ct
+        if (!TryParseOutline(finalOutlineJson, out var finalStoryOutline))
         {
-            await _userInteraction.NotifyAsync("Failed to parse the final refined outline JSON.", new(MessageType.Error));
-            await _userInteraction.NotifyAsync("Displaying raw output:", new(MessageType.Warning));
-            await _userInteraction.NotifyAsync(finalOutlineJson ?? string.Empty);
+            AnsiConsole.MarkupLine("[red]Failed to parse the final refined outline JSON.[/]");
+            AnsiConsole.MarkupLine("[yellow]Displaying raw output:[/]");
+            AnsiConsole.WriteLine(finalOutlineJson);
         }
         else
         {
-            await DisplayParsedOutline(finalStoryOutline!);
+            DisplayParsedOutline(finalStoryOutline!);
             await workspaceManager.SavePlotOutlineAsync(finalStoryOutline!, premise);
-            await _userInteraction.NotifyAsync($"Final plot outline saved to workspace: .scribal/{PlotOutlineFileName}", new(MessageType.Informational));
+            AnsiConsole.MarkupLine($"[green]Final plot outline saved to workspace: .scribal/{PlotOutlineFileName}[/]");
         }
     }
 
@@ -143,28 +132,28 @@ public class OutlineService(
                                       "You supplied a premise, but your workspace already has one. Pick which one to use:")
                                   .PageSize(3)
                                   .AddChoices("my existing premise", "the premise I just supplied");
-            
-            // AnsiConsole.Prompt is synchronous, IUserInteraction.PromptAsync is async.
-            // This method is called by CreateOutlineFromPremise which is async.
-            var response = await _userInteraction.PromptAsync(selectionPrompt);
+
+            var response = AnsiConsole.Prompt(selectionPrompt);
 
             return response is "my existing premise" ? existingPremise : premise;
         }
 
         if (!userSuppliedAPremise && workspaceHasPremise)
         {
-            await _userInteraction.DisplayProsePassageAsync(existingPremise!, "Existing premise");
-            await _userInteraction.NotifyAsync(""); // For spacing
+            AnsiConsole.Console.DisplayProsePassage(existingPremise!, "Existing premise");
+
+            AnsiConsole.WriteLine();
 
             var useSavedPremise =
-                await _userInteraction.ConfirmAsync("You have a saved premise. Use this to generate the outline?", ct);
+                await AnsiConsole.ConfirmAsync("You have a saved premise. Use this to generate the outline?",
+                    cancellationToken: ct);
 
             if (useSavedPremise)
             {
                 return existingPremise;
             }
 
-            await _userInteraction.NotifyAsync(
+            AnsiConsole.WriteLine(
                 "Rerun the /outline command with your desired premise, e.g. '/outline \"a sci-fi epic about a horse\"'.");
 
             return null;
@@ -177,10 +166,11 @@ public class OutlineService(
 
         if (!userSuppliedAPremise && !workspaceHasPremise)
         {
-            await _userInteraction.NotifyAsync("Premise cannot be empty.", new(MessageType.Error));
-            await _userInteraction.NotifyAsync("Either use the /pitch command to generate one,", new(MessageType.Warning));
-            await _userInteraction.NotifyAsync(
-                "or rerun the /outline command with your desired premise, e.g. '/outline \"a sci-fi epic about a horse\"'.", new(MessageType.Warning));
+            AnsiConsole.MarkupLine("[red]Premise cannot be empty.[/]");
+            AnsiConsole.MarkupLine("[yellow]Either use the /pitch command to generate one,[/]");
+
+            AnsiConsole.MarkupLine(
+                "[yellow]or rerun the /outline command with your desired premise, e.g. '/outline \"a sci-fi epic about a horse\"'.[/]");
 
             return null;
         }
@@ -192,13 +182,14 @@ public class OutlineService(
     // Alternatively, WorkspaceManager could return the path, or this message could be more generic.
     private const string PlotOutlineFileName = "plot_outline.json";
 
-    private async Task<bool> TryParseOutline(string? jsonText, out StoryOutline? outline, CancellationToken ct) // Added ct
+    private bool TryParseOutline(string jsonText, out StoryOutline? outline)
     {
         outline = null;
 
         if (string.IsNullOrWhiteSpace(jsonText))
         {
-            await _userInteraction.NotifyAsync("Outline JSON is empty.", new(MessageType.Error), ct);
+            AnsiConsole.MarkupLine("[red]Outline JSON is empty.[/]");
+
             return false;
         }
 
@@ -208,7 +199,8 @@ public class OutlineService(
 
         if (jsonStartIndex == -1 || jsonEndIndex == -1 || jsonEndIndex < jsonStartIndex)
         {
-            await _userInteraction.NotifyAsync("Could not find valid JSON structure in the output.", new(MessageType.Error), ct);
+            AnsiConsole.MarkupLine("[red]Could not find valid JSON structure in the output.[/]");
+
             return false;
         }
 
@@ -217,71 +209,69 @@ public class OutlineService(
         try
         {
             outline = JsonSerializer.Deserialize<StoryOutline>(actualJson, JsonDefaults.Context.StoryOutline);
-            if (outline?.Chapters is not {Count: > 0})
-            {
-                await _userInteraction.NotifyAsync("Parsed outline has no chapters.", new(MessageType.Warning), ct);
-                return false; // Or true if an empty outline is valid but undesirable
-            }
-            return true;
+
+            return outline?.Chapters is {Count: > 0};
         }
         catch (JsonException ex)
         {
-            await _userInteraction.NotifyAsync($"Error deserializing outline JSON: {ex.Message}", new(MessageType.Error), ct);
-            await _userInteraction.NotifyAsync($"Path: {ex.Path}, Line: {ex.LineNumber}, BytePos: {ex.BytePositionInLine}", new(MessageType.Error), ct);
+            AnsiConsole.MarkupLine($"[red]Error deserializing outline JSON: {ex.Message}[/]");
+            AnsiConsole.MarkupLine($"[dim]Path: {ex.Path}, Line: {ex.LineNumber}, BytePos: {ex.BytePositionInLine}[/]");
+
             return false;
         }
         catch (Exception ex)
         {
-            await _userInteraction.NotifyError("An unexpected error occurred during JSON parsing.", ex, ct);
+            AnsiConsole.MarkupLine($"[red]An unexpected error occurred during JSON parsing: {ex.Message}[/]");
+
             return false;
         }
     }
 
-    private async Task DisplayParsedOutline(StoryOutline storyOutline)
+    private void DisplayParsedOutline(StoryOutline storyOutline)
     {
-        await _userInteraction.NotifyAsync(""); // For spacing
-        await _userInteraction.WriteRuleAsync(new Rule("[bold cyan]Story Outline[/]").RuleStyle("blue").LeftJustified());
+        AnsiConsole.WriteLine();
+        AnsiConsole.Write(new Rule("[bold cyan]Story Outline[/]").RuleStyle("blue").LeftJustified());
 
         if (!storyOutline.Chapters.Any())
         {
-            await _userInteraction.NotifyAsync("No chapters found in the outline.", new(MessageType.Warning));
+            AnsiConsole.MarkupLine("[yellow]No chapters found in the outline.[/]");
+
             return;
         }
 
         foreach (var chapter in storyOutline.Chapters.OrderBy(c => c.ChapterNumber))
         {
-            await _userInteraction.NotifyAsync(""); // For spacing
+            AnsiConsole.WriteLine();
             var title = $"Chapter {chapter.ChapterNumber}: {Markup.Escape(chapter.Title)}";
-            await _userInteraction.WriteRuleAsync(new Rule($"[bold yellow]{title}[/]").RuleStyle("green").LeftJustified());
+            AnsiConsole.Write(new Rule($"[bold yellow]{title}[/]").RuleStyle("green").LeftJustified());
 
-            // Using DisplayProsePassageAsync for summary if it's potentially long
-            await _userInteraction.DisplayProsePassageAsync(Markup.Escape(chapter.Summary), "Summary");
-            // await _userInteraction.NotifyAsync($"[bold]Summary:[/] {Markup.Escape(chapter.Summary)}");
-
+            AnsiConsole.MarkupLine($"[bold]Summary:[/] {Markup.Escape(chapter.Summary)}");
 
             if (chapter.Beats.Any())
             {
-                await _userInteraction.NotifyAsync("[bold]Beats:[/]");
+                AnsiConsole.MarkupLine("[bold]Beats:[/]");
+
                 foreach (var beat in chapter.Beats)
                 {
-                    await _userInteraction.NotifyAsync($"  - {Markup.Escape(beat)}");
+                    AnsiConsole.MarkupLine($"  - {Markup.Escape(beat)}");
                 }
             }
 
             if (chapter.EstimatedWordCount.HasValue)
             {
-                await _userInteraction.NotifyAsync($"[bold]Estimated Word Count:[/] {chapter.EstimatedWordCount.Value}");
+                AnsiConsole.MarkupLine($"[bold]Estimated Word Count:[/] {chapter.EstimatedWordCount.Value}");
             }
 
             if (chapter.KeyCharacters.Any())
             {
-                await _userInteraction.NotifyAsync(
+                AnsiConsole.MarkupLine(
                     $"[bold]Key Characters:[/] {Markup.Escape(string.Join(", ", chapter.KeyCharacters))}");
             }
         }
-        await _userInteraction.NotifyAsync(""); // For spacing
-        await _userInteraction.WriteRuleAsync(new Rule().RuleStyle("blue"));
-        await _userInteraction.NotifyAsync(""); // For spacing
+
+        AnsiConsole.WriteLine();
+        AnsiConsole.Write(new Rule().RuleStyle("blue"));
+        AnsiConsole.WriteLine();
     }
 
     private async Task<string> GenerateInitialOutline(string? premise, string sid, CancellationToken ct)
@@ -303,21 +293,27 @@ public class OutlineService(
         var history = new ChatHistory();
         history.AddSystemMessage(prompt); // The prompt itself is the system message, premise is part of it via template
 
-        await _userInteraction.NotifyAsync("Generating initial plot outline...", new(MessageType.Warning)); // Yellow -> Warning
+        AnsiConsole.MarkupLine("[yellow]Generating initial plot outline...[/]");
 
+        // The user message to kick off the generation will be the premise,
+        // or an empty message if the premise is already fully incorporated into the system prompt.
+        // For this setup, the premise is part of the rendered system prompt.
+        // So, an empty user message or a simple "Proceed." might be appropriate.
+        // Let's use a simple instruction.
         var initialUserMessage = "Generate the plot outline based on the premise provided in your instructions.";
+
         var chatRequest = new ChatRequest(initialUserMessage, cid, sid);
-        
-        string? resultMessage = null;
-        await _userInteraction.StatusAsync(async statusContext => {
-            var response = await chat.GetFullResponseWithExplicitHistoryAsync(chatRequest, history, ct);
-            resultMessage = response.Message;
-        });
 
-        await _userInteraction.NotifyAsync("Initial Plot Outline Generated.", new(MessageType.Informational)); // Cyan -> Informational
-        await _userInteraction.NotifyAsync(""); // For spacing
+        var task = chat.GetFullResponseWithExplicitHistoryAsync(chatRequest, history, ct);
 
-        return resultMessage ?? string.Empty;
+        await consoleRenderer.WaitWithSpinnerAsync(task, ct);
+
+        AnsiConsole.MarkupLine("[cyan]Initial Plot Outline Generated.[/]");
+
+        // Displaying the outline (parsed or raw) will now be handled by the calling method CreateOutlineFromPremise
+        AnsiConsole.WriteLine();
+
+        return task.Result.Message;
     }
 
     private async Task<string> RefineOutline(string refinementCid,
@@ -332,18 +328,18 @@ public class OutlineService(
         {
             if (ct.IsCancellationRequested)
             {
-                await _userInteraction.NotifyAsync("Refinement cancelled by host.", new(MessageType.Warning), ct);
+                AnsiConsole.MarkupLine("[yellow]Refinement cancelled by host.[/]");
+
                 break;
             }
 
-            await _userInteraction.NotifyAsync(""); // For spacing
-            await _userInteraction.NotifyAsync("(available commands: [blue]/done[/], [blue]/cancel[/])");
-            
-            // IUserInteraction.GetUserInputAsync does not display a prompt itself.
-            // The prompt needs to be sent via NotifyAsync if a visual prefix is desired.
-            // For now, relying on the above help text.
-            // await _userInteraction.NotifyAsync("[green]Refine Plot Outline > [/]", new MessageOptions { NoNewLine = true });
-            var userInput = await _userInteraction.GetUserInputAsync(ct);
+            AnsiConsole.WriteLine();
+
+            AnsiConsole.MarkupLine("(available commands: [blue]/done[/], [blue]/cancel[/])");
+
+            AnsiConsole.Markup("[green]Refine Plot Outline > [/]");
+
+            var userInput = ReadLine.Read();
 
             if (string.IsNullOrWhiteSpace(userInput))
             {
@@ -357,54 +353,48 @@ public class OutlineService(
 
             if (userInput.Equals("/cancel", StringComparison.OrdinalIgnoreCase))
             {
-                await _userInteraction.NotifyAsync("Cancelling refinement...", new(MessageType.Warning), ct);
-                return lastAssistantResponse; 
+                AnsiConsole.MarkupLine("[yellow]Cancelling refinement...[/]");
+
+                // Optionally revert to the outline before this cancel command
+                return lastAssistantResponse; // Or perhaps the outline before starting refinement
             }
 
-            await _userInteraction.NotifyAsync(""); // For spacing
+            AnsiConsole.WriteLine();
 
             try
             {
+                // Add user's latest message to history for the next turn
                 refinementHistory.AddUserMessage(userInput);
+
                 var chatRequest = new ChatRequest(userInput, refinementCid, sid);
 
-                string? newResponse = null;
-                await _userInteraction.StatusAsync(async statusContext => {
-                    var response = await chat.GetFullResponseWithExplicitHistoryAsync(chatRequest, refinementHistory, ct);
-                    newResponse = response.Message;
-                });
-                
-                if (!string.IsNullOrWhiteSpace(newResponse))
+                var refinementStream = chat.GetFullResponseWithExplicitHistoryAsync(chatRequest, refinementHistory, ct);
+
+                await consoleRenderer.WaitWithSpinnerAsync(refinementStream, ct);
+
+                lastAssistantResponse = refinementStream.Result.Message;
+
+                if (!string.IsNullOrWhiteSpace(lastAssistantResponse))
                 {
-                    lastAssistantResponse = newResponse;
                     refinementHistory.AddAssistantMessage(lastAssistantResponse);
-                    // Display the refined outline after each successful step
-                    if (await TryParseOutline(lastAssistantResponse, out var parsedRefinedOutline, ct))
-                    {
-                        await DisplayParsedOutline(parsedRefinedOutline!);
-                    }
-                    else
-                    {
-                        await _userInteraction.NotifyAsync("Displaying raw refined output due to parse failure:", new(MessageType.Warning), ct);
-                        await _userInteraction.NotifyAsync(lastAssistantResponse, cancellationToken: ct);
-                    }
-                }
-                else
-                {
-                    await _userInteraction.NotifyAsync("AI did not return a response for refinement.", new(MessageType.Warning), ct);
                 }
             }
             catch (OperationCanceledException)
             {
-                await _userInteraction.NotifyAsync(""); // For spacing
-                await _userInteraction.NotifyAsync("(Refinement cancelled)", new(MessageType.Warning), ct);
+                AnsiConsole.WriteLine();
+                AnsiConsole.MarkupLine("[yellow](Refinement cancelled)[/]");
+
                 break;
             }
             catch (Exception e)
             {
-                await _userInteraction.NotifyError("An error occurred during refinement.", e, ct);
+                await userInteraction.NotifyError("An error occurred during refinement.", e);
+
+                // Potentially remove the last user message if the turn failed
+                // Or allow user to retry. For now, just log and continue.
             }
         }
-        return lastAssistantResponse;
+
+        return lastAssistantResponse; // Return the latest version of the outline
     }
 }
